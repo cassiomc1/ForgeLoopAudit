@@ -1,0 +1,298 @@
+export type ForgeLoopPhase =
+  | 'RECEIVED'
+  | 'DISCOVERING'
+  | 'CONTRACT_READY'
+  | 'ROUTED'
+  | 'DESIGNING'
+  | 'PLANNED'
+  | 'EXECUTING'
+  | 'VERIFYING'
+  | 'DIAGNOSING'
+  | 'CORRECTING'
+  | 'REVIEWING'
+  | 'COMPLETE'
+  | 'BLOCKED';
+
+export const FORGELOOP_PHASES: ForgeLoopPhase[] = [
+  'RECEIVED',
+  'DISCOVERING',
+  'CONTRACT_READY',
+  'ROUTED',
+  'DESIGNING',
+  'PLANNED',
+  'EXECUTING',
+  'VERIFYING',
+  'DIAGNOSING',
+  'CORRECTING',
+  'REVIEWING',
+  'COMPLETE',
+  'BLOCKED',
+];
+
+export const PHASE_ORDER: Record<ForgeLoopPhase, number> = {
+  RECEIVED: 0,
+  DISCOVERING: 1,
+  CONTRACT_READY: 2,
+  ROUTED: 3,
+  DESIGNING: 4,
+  PLANNED: 5,
+  EXECUTING: 6,
+  VERIFYING: 7,
+  DIAGNOSING: 8,
+  CORRECTING: 9,
+  REVIEWING: 10,
+  COMPLETE: 11,
+  BLOCKED: 99,
+};
+
+export type PhaseState = 'completed' | 'current' | 'pending' | 'blocked' | 'failed';
+
+export interface ProjectDetectionResult {
+  projectRoot: string;
+  forgeLoopRoot: string;
+  protocolVersion: number;
+  schemaVersion: number;
+  forgeLoopVersion?: string;
+  compatible: boolean;
+  warnings: string[];
+}
+
+export interface ProjectSummary {
+  name: string;
+  rootPath: string;
+  branch?: string;
+  head?: string;
+}
+
+export interface ProtocolSummary {
+  protocolVersion: number;
+  schemaVersion: number;
+  packageVersion?: string;
+  compatible: boolean;
+}
+
+export interface BlockerSummary {
+  id: string;
+  message: string;
+  phase?: ForgeLoopPhase;
+}
+
+export interface FailureSummary {
+  id: string;
+  message: string;
+  phase?: ForgeLoopPhase;
+  verificationCycle?: number;
+}
+
+export interface CheckSummary {
+  id: string;
+  requirement: string;
+  status: 'passed' | 'failed' | 'running' | 'pending';
+  evidenceKind: EvidenceKind;
+  verificationCycle?: number;
+  timestamp?: string;
+}
+
+export interface GateSummary {
+  id: string;
+  name: string;
+  status: 'satisfied' | 'unverified' | 'blocked';
+  requiredBy?: string[];
+  decisions?: string[];
+  unknowns?: string[];
+  approvedAssumptions?: string[];
+  artifacts?: string[];
+  evidence?: string[];
+}
+
+export type EvidenceKind = 'OBSERVED' | 'INFERRED' | 'NOT_VERIFIED' | 'BLOCKED' | 'HYPOTHESIS';
+
+export interface EvidenceCoverageSummary {
+  total: number;
+  observed: number;
+  inferred: number;
+  notVerified: number;
+  blocked: number;
+  hypothesis: number;
+  coveragePercent: number;
+}
+
+export interface NextActionSummary {
+  type: 'progress' | 'recovery' | 'blocker' | 'inconsistency';
+  action: string;
+  expectedPhase?: ForgeLoopPhase;
+  details?: string;
+}
+
+export interface ContinuitySummary {
+  previousHarness?: string;
+  previousSession?: string;
+  currentHarness?: string;
+  currentSession?: string;
+  lastCompletedWork?: string;
+  nextIntendedStep?: string;
+  knownBlockers?: string[];
+  reconciliationRequired?: boolean;
+}
+
+export interface TaskSummary {
+  taskId: string;
+  taskKey: string;
+  objective?: string;
+  phase: ForgeLoopPhase;
+  previousPhase?: ForgeLoopPhase;
+  selectedGuides: string[];
+  completedSteps: string[];
+  pendingSteps: string[];
+  blockers: BlockerSummary[];
+  failures: FailureSummary[];
+  checks: CheckSummary[];
+  gates: GateSummary[];
+  evidenceCoverage: EvidenceCoverageSummary;
+  verificationCycle?: number;
+  publicationStatus?: string;
+  lastUpdated?: string;
+  nextAction?: NextActionSummary;
+  continuity?: ContinuitySummary;
+  writeClaims?: string[];
+}
+
+export interface SessionSummary {
+  id: string;
+  createdAt: string;
+  harness?: string;
+  taskId?: string;
+  isActive?: boolean;
+}
+
+export interface PolicySummary {
+  complianceMode: string;
+  ruleCount: number;
+  baselineStatus: 'valid' | 'invalid' | 'unknown';
+  lockStatus: 'valid' | 'invalid' | 'unknown';
+  driftCount: number;
+  taskSnapshot?: Record<string, unknown>;
+}
+
+export interface ProjectHealth {
+  status: 'VALID' | 'INCOMPLETE' | 'STALE' | 'INCONSISTENT' | 'INVALID';
+  protocol: boolean;
+  state: boolean;
+  evidence: boolean;
+  policy: boolean;
+  continuity: boolean;
+}
+
+export interface ProjectSnapshot {
+  project: ProjectSummary;
+  protocol: ProtocolSummary;
+  health: ProjectHealth;
+  tasks: TaskSummary[];
+  activeTaskId?: string;
+  sessions: SessionSummary[];
+  policy?: PolicySummary;
+  updatedAt: string;
+}
+
+export interface EventRecord {
+  seq: number;
+  schemaVersion: number;
+  protocolVersion: number;
+  taskId: string;
+  event: string;
+  at: string;
+  fingerprint?: string;
+  previousHash: string | null;
+  hash: string;
+  details?: Record<string, unknown>;
+}
+
+export interface EventPage {
+  events: EventRecord[];
+  cursor?: string;
+  hasMore: boolean;
+  totalCount?: number;
+}
+
+export interface TaskSnapshot {
+  summary: TaskSummary;
+  contract?: Record<string, unknown>;
+  routing?: Record<string, unknown>;
+  preflight?: Record<string, unknown>;
+  workState?: Record<string, unknown>;
+  continuity?: Record<string, unknown>;
+  executionReceipt?: Record<string, unknown>;
+  events: EventRecord[];
+  policySnapshot?: Record<string, unknown>;
+}
+
+export type StudioErrorCode =
+  | 'PROJECT_NOT_FORGELOOP'
+  | 'PROTOCOL_UNSUPPORTED'
+  | 'ARTIFACT_INVALID'
+  | 'ARTIFACT_UNREADABLE'
+  | 'CLI_NOT_FOUND'
+  | 'CLI_FAILED'
+  | 'PATH_BOUNDARY_VIOLATION'
+  | 'LEDGER_INVALID'
+  | 'WATCHER_FAILED'
+  | 'PROJECT_REMOVED'
+  | 'PERMISSION_DENIED'
+  | 'UNKNOWN_ERROR';
+
+export interface StudioError {
+  code: StudioErrorCode;
+  message: string;
+  recoverable: boolean;
+  details?: string;
+}
+
+export interface RecentProject {
+  path: string;
+  name: string;
+  lastOpenedAt: string;
+}
+
+export type AllowedArtifact =
+  | 'contract.json'
+  | 'routing-result.json'
+  | 'preflight.json'
+  | 'work-state.json'
+  | 'continuity.json'
+  | 'execution-receipt.json'
+  | 'policy-snapshot.json'
+  | 'events.ndjson'
+  | 'task.json';
+
+export interface RawArtifactRequest {
+  taskId: string;
+  artifact: AllowedArtifact;
+}
+
+export interface WatcherStatus {
+  active: boolean;
+  lastEventAt?: string;
+  error?: string;
+}
+
+export interface ForgeLoopStudioAPI {
+  selectProject(): Promise<ProjectDetectionResult | null>;
+  openRecentProject(path: string): Promise<ProjectDetectionResult>;
+  closeProject(): Promise<void>;
+  getProjectSnapshot(): Promise<ProjectSnapshot>;
+  getTask(taskId: string): Promise<TaskSnapshot>;
+  getTaskEvents(taskId: string, cursor?: string, limit?: number): Promise<EventPage>;
+  getRawArtifact(request: RawArtifactRequest): Promise<string>;
+  getRecentProjects(): Promise<RecentProject[]>;
+  addRecentProject(project: RecentProject): Promise<void>;
+  removeRecentProject(path: string): Promise<void>;
+  subscribeProjectUpdates(listener: (update: ProjectUpdate) => void): () => void;
+}
+
+export interface ProjectUpdate {
+  type: 'task-added' | 'task-updated' | 'task-removed' | 'project-health-changed' | 'policy-changed' | 'session-changed' | 'snapshot-refreshed' | 'watcher-status' | 'error';
+  taskId?: string;
+  snapshot?: ProjectSnapshot;
+  data?: unknown;
+  timestamp: string;
+}
