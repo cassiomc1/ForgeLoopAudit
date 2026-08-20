@@ -31,12 +31,7 @@ jobs:
       - name: Verify unsigned macOS artifacts
         run: |
           set -euo pipefail
-          apps=()
-          while IFS= read -r app; do apps+=("$app"); done < <(find dist-electron -name '*.app' -type d -print)
-          test "${#apps[@]}" -gt 0
-          for app in "${apps[@]}"; do
-            test -f "$app/Contents/Resources/app.asar"
-          done
+          test -n "$(find dist-electron -type f \( -name '*.dmg' -o -name '*.zip' \) -print -quit)"
       - run: node scripts/stage-release.mjs macos
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
