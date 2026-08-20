@@ -18,10 +18,8 @@ export class TaskIndexer {
   constructor(private readonly pathBoundary: PathBoundary) {}
 
   listTasks(): TaskIndexEntry[] {
-    const taskStateDir = this.pathBoundary.validateForgeLoopPath(TASK_STATE_DIR);
-    if (!existsSync(taskStateDir)) {
-      return [];
-    }
+    const taskStateDir = this.pathBoundary.resolveForgeLoopPathLexically(TASK_STATE_DIR);
+    if (!existsSync(taskStateDir)) return [];
 
     const entries = readdirSync(taskStateDir);
     const tasks: TaskIndexEntry[] = [];
@@ -59,10 +57,9 @@ export class TaskEventReader {
   constructor(private readonly pathBoundary: PathBoundary) {}
 
   readEvents(taskKey: string, limit = 1000): EventRecord[] {
-    const eventsPath = this.pathBoundary.validateForgeLoopPath(join(TASK_STATE_DIR, taskKey, 'events.ndjson'));
-    if (!existsSync(eventsPath)) {
-      return [];
-    }
+    const candidate = this.pathBoundary.resolveForgeLoopPathLexically(join(TASK_STATE_DIR, taskKey, 'events.ndjson'));
+    if (!existsSync(candidate)) return [];
+    const eventsPath = this.pathBoundary.validatePath(candidate);
 
     const content = readFileSync(eventsPath, 'utf8');
     const events = parseNdjsonSafely<EventRecord>(content, limit);
@@ -96,10 +93,8 @@ export class GateReader {
   constructor(private readonly pathBoundary: PathBoundary) {}
 
   readGates(taskKey: string): GateSummary[] {
-    const gatesDir = this.pathBoundary.validateForgeLoopPath(join(TASK_STATE_DIR, taskKey, GATES_DIR));
-    if (!existsSync(gatesDir)) {
-      return [];
-    }
+    const gatesDir = this.pathBoundary.resolveForgeLoopPathLexically(join(TASK_STATE_DIR, taskKey, GATES_DIR));
+    if (!existsSync(gatesDir)) return [];
 
     const entries = readdirSync(gatesDir).filter((e) => e.endsWith('.json'));
     const gates: GateSummary[] = [];
@@ -133,7 +128,8 @@ export class GateReader {
 
 export class TaskSnapshotBuilder {
   constructor(
-    private readonly eventLedgerReader: EventLedgerReader
+    private readonly eventLedgerReader: EventLedgerReader,
+    private readonly gateReader: GateReader
   ) {}
 
   buildSnapshot(taskKey: string, artifacts: RawTaskArtifacts, nextResult?: Record<string, unknown>): {
@@ -141,6 +137,8 @@ export class TaskSnapshotBuilder {
     events: EventRecord[];
   } {
     const summary = buildTaskSummary(taskKey, artifacts, nextResult);
+    const gateDetails = this.gateReader.readGates(taskKey);
+    summary.gates = [...summary.gates.filter((gate) => !gateDetails.some((detail) => detail.id === gate.id)), ...gateDetails];
     const events = this.eventLedgerReader.readEvents(taskKey);
 
     return { summary, events };
@@ -162,7 +160,7 @@ export function createGateReader(pathBoundary: PathBoundary): GateReader {
 export function createTaskSnapshotBuilder(
   _pathBoundary: PathBoundary,
   eventLedgerReader: EventLedgerReader,
-  _gateReader: GateReader
+  gateReader: GateReader
 ): TaskSnapshotBuilder {
-  return new TaskSnapshotBuilder(eventLedgerReader);
+  return new TaskSnapshotBuilder(eventLedgerReader, gateReader);
 }

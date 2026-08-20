@@ -55,11 +55,11 @@ export function Evidence({ snapshot }: EvidenceProps) {
           </div>
           <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-10 p-4">
             <p className="text-xs text-forge-text-muted mb-1">Observed</p>
-            <p className="text-2xl font-semibold text-forge-success">{evidence.observed}</p>
+            <p className="text-2xl font-semibold text-forge-success">{evidence.covered}</p>
           </div>
           <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-10 p-4">
             <p className="text-xs text-forge-text-muted mb-1">Inferred</p>
-            <p className="text-2xl font-semibold text-forge-info">{evidence.inferred}</p>
+            <p className="text-2xl font-semibold text-forge-info">{evidence.partial}</p>
           </div>
           <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-10 p-4">
             <p className="text-xs text-forge-text-muted mb-1">Not Verified</p>
@@ -83,8 +83,8 @@ export function Evidence({ snapshot }: EvidenceProps) {
                 <span className={cn('text-sm font-medium w-6', {
                   'text-forge-success': check.status === 'passed',
                   'text-forge-danger': check.status === 'failed',
-                  'text-forge-accent': check.status === 'running',
-                  'text-forge-text-muted': check.status === 'pending',
+                  'text-forge-accent': check.status === 'not-run',
+                  'text-forge-text-muted': check.status === 'blocked',
                 })}>
                   {check.status === 'passed' ? '✓' : check.status === 'failed' ? '✗' : '○'}
                 </span>

@@ -147,7 +147,7 @@ export class ProjectReader {
   }
 
   readPolicySnapshot(taskKey: string): Record<string, unknown> | null {
-    const policyDir = join(this.forgeLoopRoot, TASK_STATE_DIR, taskKey);
+    const policyDir = this.pathBoundary.resolveForgeLoopPathLexically(join(TASK_STATE_DIR, taskKey));
     if (!existsSync(policyDir)) {
       return null;
     }

@@ -1,5 +1,5 @@
 import { PHASE_ORDER } from '@shared/domain';
-import type { TaskSummary, ForgeLoopPhase, EvidenceCoverageSummary, BlockerSummary, FailureSummary, CheckSummary, GateSummary, NextActionSummary, ContinuitySummary } from '@shared/domain';
+import type { TaskSummary, ForgeLoopPhase, EvidenceCoverageSummary, BlockerSummary, FailureSummary, CheckSummary, GateSummary, NextActionSummary, ContinuitySummary, ContinuityWorkItem } from '@shared/domain';
 import type { AllowedArtifact } from '@shared/domain';
 
 export interface RawTaskArtifacts {
@@ -37,26 +37,25 @@ function parsePhase(value: unknown): ForgeLoopPhase | undefined {
 function buildEvidenceCoverage(workState: Record<string, unknown> | undefined): EvidenceCoverageSummary {
   const evidenceCoverage = workState?.evidenceCoverage as unknown[] | undefined;
   if (!Array.isArray(evidenceCoverage)) {
-    return { total: 0, observed: 0, inferred: 0, notVerified: 0, blocked: 0, hypothesis: 0, coveragePercent: 0 };
+    return { total: 0, covered: 0, partial: 0, notVerified: 0, blocked: 0, coveragePercent: 0 };
   }
 
-  let observed = 0;
-  let inferred = 0;
+  let covered = 0;
+  let partial = 0;
   let notVerified = 0;
   let blocked = 0;
-  let hypothesis = 0;
 
   for (const item of evidenceCoverage) {
     if (item && typeof item === 'object' && 'status' in item) {
       const status = String(item.status);
       switch (status) {
         case 'COVERED':
-          observed++;
+          covered++;
           break;
         case 'PARTIAL':
-          inferred++;
+          partial++;
           break;
-        case 'NOT_COVERED':
+        case 'NOT_VERIFIED':
           notVerified++;
           break;
         case 'BLOCKED':
@@ -69,10 +68,9 @@ function buildEvidenceCoverage(workState: Record<string, unknown> | undefined): 
   }
 
   const total = evidenceCoverage.length;
-  const covered = observed + inferred;
-  const coveragePercent = total > 0 ? Math.round((covered / total) * 100) : 0;
+  const coveragePercent = total > 0 ? Math.round(((covered + partial * 0.5) / total) * 100) : 0;
 
-  return { total, observed, inferred, notVerified, blocked, hypothesis, coveragePercent };
+  return { total, covered, partial, notVerified, blocked, coveragePercent };
 }
 
 function buildBlockers(workState: Record<string, unknown> | undefined): BlockerSummary[] {
@@ -111,7 +109,7 @@ function buildChecks(workState: Record<string, unknown> | undefined): CheckSumma
     .map((c) => ({
       id: safeString(c, 'id') || 'unknown',
       requirement: safeString(c, 'requirement') || safeString(c, 'text') || 'Unknown requirement',
-      status: (safeString(c, 'status') as CheckSummary['status']) || 'pending',
+      status: (safeString(c, 'status') as CheckSummary['status']) || 'not-run',
       evidenceKind: (safeString(c, 'evidenceKind') as CheckSummary['evidenceKind']) || 'NOT_VERIFIED',
       verificationCycle: safeNumber(c, 'verificationCycle'),
       timestamp: safeString(c, 'timestamp'),
@@ -160,39 +158,18 @@ function buildGates(workState: Record<string, unknown> | undefined, preflight: R
   return Array.from(gateMap.values());
 }
 
-function buildNextAction(workState: Record<string, unknown> | undefined, nextResult: Record<string, unknown> | undefined): NextActionSummary | undefined {
+function buildNextAction(_workState: Record<string, unknown> | undefined, nextResult: Record<string, unknown> | undefined): NextActionSummary | undefined {
   if (nextResult) {
-    const action = safeString(nextResult, 'action');
-    const actionType = safeString(nextResult, 'type') as NextActionSummary['type'] | undefined;
-    if (action) {
-      return {
-        type: actionType || 'progress',
-        action,
-        expectedPhase: parsePhase(nextResult.expectedPhase),
-        details: safeString(nextResult, 'details'),
-      };
-    }
-  }
-
-  const phase = parsePhase(workState?.phase);
-  if (!phase || phase === 'COMPLETE' || phase === 'BLOCKED') return undefined;
-
-  return {
-    type: 'progress',
-    action: `Advance from ${phase} to next phase`,
-    expectedPhase: getNextPhase(phase),
-  };
-}
-
-function getNextPhase(current: ForgeLoopPhase): ForgeLoopPhase | undefined {
-  const order = PHASE_ORDER[current];
-  const phases = Object.keys(PHASE_ORDER) as ForgeLoopPhase[];
-  for (const phase of phases) {
-    if (PHASE_ORDER[phase] === order + 1) {
-      return phase;
-    }
+    const action = safeString(nextResult, 'nextAction');
+    if (!action) return undefined;
+    const terminal = nextResult.terminal === true || action === 'NONE';
+    return { type: terminal ? 'terminal' : 'progress', action, terminal, currentPhase: parsePhase(nextResult.currentPhase), reasonCodes: safeStringArray(nextResult, 'reasonCodes'), missingArtifacts: safeStringArray(nextResult, 'missingArtifacts'), commandSynopses: safeStringArray(nextResult, 'commands'), reasons: Array.isArray(nextResult.reasons) ? nextResult.reasons as NextActionSummary['reasons'] : [] };
   }
   return undefined;
+}
+
+function parseWorkItems(value: unknown): ContinuityWorkItem[] {
+  return Array.isArray(value) ? value.filter((item): item is Record<string, unknown> => !!item && typeof item === 'object').map((item) => ({ id: safeString(item, 'id') || 'unknown', summary: safeString(item, 'summary') || 'Unknown work item' })) : [];
 }
 
 function buildContinuity(continuity: Record<string, unknown> | undefined): ContinuitySummary | undefined {
@@ -203,8 +180,8 @@ function buildContinuity(continuity: Record<string, unknown> | undefined): Conti
     phase: safeString(continuity, 'phase'),
     updatedAt: safeString(continuity, 'updatedAt'),
     currentFocus: continuity.currentFocus,
-    remainingWork: safeStringArray(continuity, 'remainingWork'),
-    knownIssues: safeStringArray(continuity, 'knownIssues'),
+    remainingWork: parseWorkItems(continuity.remainingWork),
+    knownIssues: parseWorkItems(continuity.knownIssues),
     changedAreas: safeStringArray(continuity, 'changedAreas'),
     inspectFirst: safeStringArray(continuity, 'inspectFirst'),
     resumeNote: safeString(continuity, 'resumeNote'),

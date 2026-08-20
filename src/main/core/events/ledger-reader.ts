@@ -9,29 +9,28 @@ export class EventLedgerReader {
   constructor(private readonly pathBoundary: PathBoundary) {}
 
   readEvents(taskKey: string, limit = 1000): EventRecord[] {
-    const eventsPath = this.pathBoundary.validateForgeLoopPath(join(TASK_STATE_DIR, taskKey, 'events.ndjson'));
-    if (!existsSync(eventsPath)) {
-      return [];
-    }
+    const candidate = this.pathBoundary.resolveForgeLoopPathLexically(join(TASK_STATE_DIR, taskKey, 'events.ndjson'));
+    if (!existsSync(candidate)) return [];
+    const eventsPath = this.pathBoundary.validatePath(candidate);
 
     const content = readFileSync(eventsPath, 'utf8');
-    const events = parseNdjsonSafely<EventRecord>(content, limit);
+    const events = parseNdjsonSafely<EventRecord>(content).slice(-limit);
     return events.reverse();
   }
 
   readEventsPaginated(taskKey: string, cursor?: string, limit = 100): EventPage {
-    const allEvents = this.readEvents(taskKey, limit * 2);
+    const allEvents = this.readEvents(taskKey, Number.MAX_SAFE_INTEGER);
     let startIndex = 0;
 
     if (cursor) {
-      const cursorIndex = allEvents.findIndex((e) => e.hash === cursor);
+      const cursorIndex = allEvents.findIndex((e) => e.hash === cursor || String(e.seq) === cursor);
       if (cursorIndex >= 0) {
         startIndex = cursorIndex + 1;
       }
     }
 
     const pageEvents = allEvents.slice(startIndex, startIndex + limit);
-    const nextCursor = pageEvents.length > 0 ? pageEvents[pageEvents.length - 1].hash : undefined;
+    const nextCursor = pageEvents.length > 0 ? (pageEvents[pageEvents.length - 1].hash || String(pageEvents[pageEvents.length - 1].seq)) : undefined;
     const hasMore = startIndex + limit < allEvents.length;
 
     return {

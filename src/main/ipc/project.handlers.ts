@@ -10,6 +10,7 @@ import { createProjectWatcher } from '@main/watcher/project-watcher';
 import { createTaskIndexer, createTaskSnapshotBuilder, createGateReader, type TaskIndexer, type TaskSnapshotBuilder } from '@main/core/tasks/task-index';
 import { createEventLedgerReader, type EventLedgerReader } from '@main/core/events/ledger-reader';
 import Store from 'electron-store';
+import { z } from 'zod';
 
 const store = new Store<{ recentProjects: RecentProject[] }>({
   name: 'forgeloop-studio-settings',
@@ -25,13 +26,21 @@ let currentForgeCli: ForgeCli | null = null;
 let currentWatcher: ReturnType<typeof createProjectWatcher> | null = null;
 let currentSnapshotBuilder: ProjectSnapshotBuilder | null = null;
 let currentMainWindow: BrowserWindow | null = null;
-let updateSubscribers: Set<(update: any) => void> = new Set();
+const TaskIdSchema = z.string().min(1).max(200);
+const RecentProjectSchema = z.object({ path: z.string().min(1).max(4096), name: z.string().max(300), lastOpenedAt: z.string().max(100) });
+const RawArtifactSchema = z.object({ taskId: TaskIdSchema, artifact: z.enum(['task.json', 'contract.json', 'routing-result.json', 'preflight.json', 'work-state.json', 'continuity.json', 'execution-receipt.json', 'policy-snapshot.json', 'events.ndjson']) });
+
+function assertTrustedSender(event: Electron.IpcMainInvokeEvent): void {
+  const url = event.senderFrame?.url || '';
+  if (url && !url.startsWith('file://') && !url.startsWith('http://localhost:5173')) throw ForgeLoopStudioError.unknown('Untrusted IPC sender');
+}
 
 export function registerProjectIpc(mainWindow: BrowserWindow): void {
   currentMainWindow = mainWindow;
 
-  ipcMain.handle(IPC_CHANNELS.SELECT_PROJECT, async (): Promise<ProjectDetectionResult | null> => {
-    const result = await dialog.showOpenDialog(mainWindow, {
+  ipcMain.handle(IPC_CHANNELS.SELECT_PROJECT, async (event): Promise<ProjectDetectionResult | null> => {
+    assertTrustedSender(event);
+    const result = await dialog.showOpenDialog(currentMainWindow || mainWindow, {
       title: 'Select ForgeLoop Project',
       buttonLabel: 'Open Project',
       properties: ['openDirectory', 'createDirectory'],
@@ -45,7 +54,8 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
     return openProject(projectRoot);
   });
 
-  ipcMain.handle(IPC_CHANNELS.OPEN_RECENT_PROJECT, async (_, path: string): Promise<ProjectDetectionResult> => {
+  ipcMain.handle(IPC_CHANNELS.OPEN_RECENT_PROJECT, async (event, path: string): Promise<ProjectDetectionResult> => {
+    assertTrustedSender(event); TaskIdSchema.parse(path);
     return openProject(path);
   });
 
@@ -102,21 +112,22 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
     return currentEventReader.readEventsPaginated(task.taskKey, cursor, limit);
   });
 
-  ipcMain.handle(IPC_CHANNELS.GET_RAW_ARTIFACT, async (_, request: { taskId: string; artifact: string }): Promise<string> => {
+  ipcMain.handle(IPC_CHANNELS.GET_RAW_ARTIFACT, async (event, request: { taskId: string; artifact: string }): Promise<string> => {
+    assertTrustedSender(event); const safeRequest = RawArtifactSchema.parse(request);
     if (!currentTaskIndexer || !currentProjectReader) {
       throw ForgeLoopStudioError.unknown('No project open');
     }
 
     const tasks = currentTaskIndexer.listTasks();
-    const task = tasks.find((t) => t.taskId === request.taskId || t.taskKey === request.taskId);
+    const task = tasks.find((t) => t.taskId === safeRequest.taskId || t.taskKey === safeRequest.taskId);
     if (!task) {
       throw ForgeLoopStudioError.artifactUnreadable(request.taskId, 'Task not found');
     }
 
     const artifacts = currentProjectReader.readTaskArtifacts(task.taskKey);
-    const content = artifacts[request.artifact as keyof typeof artifacts];
+    const content = artifacts[safeRequest.artifact as keyof typeof artifacts];
     if (content === undefined) {
-      throw ForgeLoopStudioError.artifactUnreadable(request.artifact, 'Artifact not found');
+      throw ForgeLoopStudioError.artifactUnreadable(safeRequest.artifact, 'Artifact not found');
     }
 
     return typeof content === 'string' ? content : JSON.stringify(content, null, 2);
@@ -126,25 +137,20 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
     return store.get('recentProjects') || [];
   });
 
-  ipcMain.handle(IPC_CHANNELS.ADD_RECENT_PROJECT, async (_, project: RecentProject): Promise<void> => {
+  ipcMain.handle(IPC_CHANNELS.ADD_RECENT_PROJECT, async (event, project: RecentProject): Promise<void> => {
+    assertTrustedSender(event); RecentProjectSchema.parse(project);
     const recent = store.get('recentProjects') || [];
     const filtered = recent.filter((p) => p.path !== project.path);
     filtered.unshift(project);
     store.set('recentProjects', filtered.slice(0, 10));
   });
 
-  ipcMain.handle(IPC_CHANNELS.REMOVE_RECENT_PROJECT, async (_, path: string): Promise<void> => {
+  ipcMain.handle(IPC_CHANNELS.REMOVE_RECENT_PROJECT, async (event, path: string): Promise<void> => {
+    assertTrustedSender(event); z.string().min(1).max(4096).parse(path);
     const recent = store.get('recentProjects') || [];
     store.set('recentProjects', recent.filter((p) => p.path !== path));
   });
 
-  ipcMain.on(IPC_CHANNELS.SUBSCRIBE_UPDATES, (_, listener: (update: any) => void) => {
-    updateSubscribers.add(listener);
-  });
-
-  ipcMain.on(IPC_CHANNELS.UNSUBSCRIBE_UPDATES, (_, listener: (update: any) => void) => {
-    updateSubscribers.delete(listener);
-  });
 }
 
 async function openProject(projectRoot: string): Promise<ProjectDetectionResult> {
@@ -245,13 +251,6 @@ function handleWatcherStatusChange(active: boolean): void {
 function notifyUpdate(update: any): void {
   if (currentMainWindow && !currentMainWindow.isDestroyed()) {
     currentMainWindow.webContents.send(IPC_CHANNELS.PROJECT_UPDATE, update);
-  }
-  for (const subscriber of updateSubscribers) {
-    try {
-      subscriber(update);
-    } catch {
-      // Ignore subscriber errors
-    }
   }
 }
 

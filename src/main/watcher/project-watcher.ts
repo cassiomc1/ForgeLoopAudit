@@ -43,6 +43,7 @@ export class ProjectWatcher {
         join(this.forgeLoopRoot, TASK_STATE_DIR, '**', '*.ndjson'),
         join(this.forgeLoopRoot, SESSIONS_DIR, '*.json'),
         join(this.forgeLoopRoot, POLICY_DIR, '**', '*.json'),
+        join(this.forgeLoopRoot, POLICY_DIR, 'policy.lock'),
       ];
 
       this.watcher = chokidar.watch(watchPaths, {

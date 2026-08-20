@@ -73,10 +73,10 @@ describe('task-reader', () => {
       };
       const result = buildTaskSummary('test-key', artifacts);
       expect(result.evidenceCoverage.total).toBe(4);
-      expect(result.evidenceCoverage.observed).toBe(2);
-      expect(result.evidenceCoverage.inferred).toBe(1);
+      expect(result.evidenceCoverage.covered).toBe(2);
+      expect(result.evidenceCoverage.partial).toBe(1);
       expect(result.evidenceCoverage.notVerified).toBe(1);
-      expect(result.evidenceCoverage.coveragePercent).toBe(75);
+      expect(result.evidenceCoverage.coveragePercent).toBe(63);
     });
 
     it('should parse blockers from work-state.json', () => {
@@ -128,28 +128,28 @@ describe('task-reader', () => {
       const artifacts: RawTaskArtifacts = {
         'continuity.json': {
           taskId: 'task-1', phase: 'EXECUTING', updatedAt: '2026-08-20T00:00:00Z',
-          remainingWork: ['Write tests'], knownIssues: ['Missing dependency'],
+          remainingWork: [{ id: 'work-1', summary: 'Write tests' }], knownIssues: [{ id: 'issue-1', summary: 'Missing dependency' }],
         },
       };
       const result = buildTaskSummary('test-key', artifacts);
       expect(result.continuity).toBeDefined();
       expect(result.continuity?.taskId).toBe('task-1');
-      expect(result.continuity?.remainingWork).toEqual(['Write tests']);
-      expect(result.continuity?.knownIssues).toEqual(['Missing dependency']);
+      expect(result.continuity?.remainingWork).toEqual([{ id: 'work-1', summary: 'Write tests' }]);
+      expect(result.continuity?.knownIssues).toEqual([{ id: 'issue-1', summary: 'Missing dependency' }]);
     });
 
     it('should build nextAction from nextResult', () => {
       const artifacts: RawTaskArtifacts = {};
       const nextResult = {
-        action: 'Run tests',
-        type: 'progress',
-        expectedPhase: 'VERIFYING',
+        nextAction: 'VERIFY_RULE',
+        currentPhase: 'VERIFYING',
+        terminal: false,
       };
       const result = buildTaskSummary('test-key', artifacts, nextResult);
       expect(result.nextAction).toBeDefined();
-      expect(result.nextAction?.action).toBe('Run tests');
+      expect(result.nextAction?.action).toBe('VERIFY_RULE');
       expect(result.nextAction?.type).toBe('progress');
-      expect(result.nextAction?.expectedPhase).toBe('VERIFYING');
+      expect(result.nextAction?.currentPhase).toBe('VERIFYING');
     });
 
     it('should return undefined nextAction for COMPLETE phase', () => {

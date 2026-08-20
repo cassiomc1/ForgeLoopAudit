@@ -72,6 +72,10 @@ export class PathBoundary {
     return normalizedRequested;
   }
 
+  resolveForgeLoopPathLexically(relativePath: string): string {
+    return this.validateLexicalPath(resolve(this.projectRoot, FORGELOOP_DIR_NAME, relativePath));
+  }
+
   validateForgeLoopPath(relativePath: string): string {
     const fullPath = resolve(this.projectRoot, FORGELOOP_DIR_NAME, relativePath);
     return this.validatePath(fullPath);

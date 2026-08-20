@@ -20,7 +20,7 @@ function createWindow(): BrowserWindow {
       contextIsolation: true,
       sandbox: true,
       webSecurity: true,
-      preload: join(__dirname, '../preload/index.js'),
+      preload: join(__dirname, '../preload/index.cjs'),
       devTools: isDevelopment,
     },
     show: false,

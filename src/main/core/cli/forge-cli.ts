@@ -1,4 +1,6 @@
 import { spawn, SpawnOptions } from 'child_process';
+import { existsSync, realpathSync } from 'fs';
+import { delimiter, isAbsolute, join, sep } from 'path';
 import { ForgeLoopStudioError } from '@shared/errors';
 import { ALLOWED_CLI_COMMANDS, CLI_TIMEOUT_MS, CLI_MAX_STDOUT_BYTES } from '@shared/constants';
 import { parseJsonSafely } from '@main/security/resource-limits';
@@ -16,7 +18,7 @@ export class ForgeCli {
 
   constructor(projectRoot: string, forgeLoopPath: string = 'forgeloop') {
     this.projectRoot = projectRoot;
-    this.forgeLoopPath = forgeLoopPath;
+    this.forgeLoopPath = resolveTrustedForgeLoopPath(forgeLoopPath, projectRoot);
   }
 
   private async executeCommand(args: string[]): Promise<CliResult<unknown>> {
@@ -290,4 +292,14 @@ export class ForgeCli {
       return result.success;
     } catch { return false; }
   }
+}
+
+export function resolveTrustedForgeLoopPath(requested: string, projectRoot: string): string {
+  const candidates = isAbsolute(requested) ? [requested] : (process.env.PATH || '').split(delimiter).flatMap((dir) => [join(dir, requested), ...(process.platform === 'win32' ? [join(dir, `${requested}.exe`)] : [])]);
+  const projectReal = realpathSync(projectRoot);
+  const resolved = candidates.find((candidate) => {
+    try { return existsSync(candidate) && !realpathSync(candidate).startsWith(`${projectReal}${sep}`); } catch { return false; }
+  });
+  if (!resolved) throw ForgeLoopStudioError.cliFailed(requested, -1, `Trusted ForgeLoop CLI not found outside project: ${requested}`);
+  return realpathSync(resolved);
 }
