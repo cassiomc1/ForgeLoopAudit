@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join, resolve } from 'path';
 import { PathBoundary } from '@main/security/path-boundary';
-import { ProjectReader } from '@main/core/project/project-reader';
+import { ProjectDetector, ProjectReader } from '@main/core/project/project-reader';
 import { SchemaValidator } from '@main/core/protocol/validator';
 import { GateReader } from '@main/core/tasks/task-index';
 import { EventLedgerReader } from '@main/core/events/ledger-reader';
@@ -37,6 +37,48 @@ function validWorkState(): Record<string, unknown> {
 }
 
 describe('sixth review protocol hardening', () => {
+  it('validates project config through the real-path boundary and trusted schema', () => {
+    const root = makeProject();
+    try {
+      writeFileSync(join(root, '.forgeloop', 'config.json'), JSON.stringify({ schemaVersion: 1, protocolVersion: 1, complianceMode: 'strict' }));
+      const detector = new ProjectDetector(new PathBoundary(root), new SchemaValidator(schemasDir));
+      expect(detector.detect()).toMatchObject({ protocolVersion: 1, schemaVersion: 1, compatible: true });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a project-level .forgeloop symlink before reading config', () => {
+    const root = mkdtempSync(join(tmpdir(), 'forgeloop-detector-'));
+    const outside = mkdtempSync(join(tmpdir(), 'forgeloop-outside-'));
+    try {
+      writeFileSync(join(outside, 'config.json'), JSON.stringify({ schemaVersion: 1, protocolVersion: 1, complianceMode: 'strict', secret: 'outside' }));
+      symlinkSync(outside, join(root, '.forgeloop'));
+      const detector = new ProjectDetector(new PathBoundary(root), new SchemaValidator(schemasDir));
+      expect(() => detector.detect()).toThrow();
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a config symlink and schema-invalid config before CLI use', () => {
+    const root = makeProject();
+    const outside = join(root, '..', `detector-config-${Date.now()}.json`);
+    try {
+      writeFileSync(outside, JSON.stringify({ schemaVersion: 1, protocolVersion: 1, complianceMode: 'strict', unexpected: true }));
+      symlinkSync(outside, join(root, '.forgeloop', 'config.json'));
+      const detector = new ProjectDetector(new PathBoundary(root), new SchemaValidator(schemasDir));
+      expect(() => detector.detect()).toThrow();
+      rmSync(join(root, '.forgeloop', 'config.json'), { force: true });
+      writeFileSync(join(root, '.forgeloop', 'config.json'), JSON.stringify({ schemaVersion: 2, protocolVersion: 1, complianceMode: 'strict' }));
+      expect(() => detector.detect()).toThrow();
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(outside, { force: true });
+    }
+  });
+
   it('accepts canonical activation sessions and rejects policy snapshots', () => {
     const root = makeProject();
     try {
@@ -139,6 +181,17 @@ describe('sixth review protocol hardening', () => {
     }
   });
 
+  it('reports invalid gate artifacts instead of silently omitting them', () => {
+    const root = makeProject();
+    try {
+      writeFileSync(join(root, '.forgeloop', 'task-state', 'task-1', 'gates', 'broken.json'), JSON.stringify({ status: 'satisfied' }));
+      const reader = new GateReader(new PathBoundary(root), new SchemaValidator(schemasDir));
+      expect(reader.readGateResult('task-1')).toMatchObject({ gates: [], errors: [expect.stringContaining('broken.json')] });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('validates persisted events with the canonical schema', () => {
     const root = makeProject();
     try {
@@ -155,6 +208,26 @@ describe('sixth review protocol hardening', () => {
       }) + '\n');
       const reader = new EventLedgerReader(new PathBoundary(root), new SchemaValidator(schemasDir));
       expect(reader.readEventsPaginated('task-1').validation).toMatchObject({ schema: 'INVALID', invalidLineCount: 1 });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('reports a stale cursor without classifying valid events as corrupt', () => {
+    const root = makeProject();
+    try {
+      writeFileSync(join(root, '.forgeloop', 'task-state', 'task-1', 'events.ndjson'), JSON.stringify({
+        seq: 1,
+        schemaVersion: 1,
+        protocolVersion: 1,
+        taskId: 'task-1',
+        event: 'TASK_CREATED',
+        at: '2026-08-20T00:00:00.000Z',
+        previousHash: null,
+        hash: sha,
+      }) + '\n');
+      const reader = new EventLedgerReader(new PathBoundary(root), new SchemaValidator(schemasDir));
+      expect(reader.readEventsPaginated('task-1', 'stale-cursor').validation).toMatchObject({ schema: 'VALID', cursor: 'NOT_FOUND', invalidLineCount: 0 });
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

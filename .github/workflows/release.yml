@@ -17,6 +17,7 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with: { node-version: 22, cache: npm }
       - run: npm ci
+      - run: npm run audit:prod
       - run: npm run verify
       - name: Build signed macOS unpacked app
         run: npm run build && npx --no-install electron-builder --mac --dir --config electron-builder.release.yml
@@ -48,10 +49,11 @@ jobs:
         run: |
           set -euo pipefail
           find dist-electron -maxdepth 1 -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 shasum -a 256 > dist-electron/SHA256SUMS-macos
+      - run: node scripts/stage-release.mjs macos
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: forgeloop-studio-macos
-          path: dist-electron/*
+          path: release-staging/macos/*
 
   windows:
     runs-on: windows-latest
@@ -61,6 +63,7 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with: { node-version: 22, cache: npm }
       - run: npm ci
+      - run: npm run audit:prod
       - run: npm run verify
       - name: Build Windows unpacked app
         run: npm run build && npx --no-install electron-builder --win --dir
@@ -74,10 +77,11 @@ jobs:
           Get-ChildItem -File dist-electron | Where-Object { $_.Name -ne 'SHA256SUMS-windows' } | Get-FileHash -Algorithm SHA256 |
             ForEach-Object { "$($_.Hash.ToLower())  $([System.IO.Path]::GetFileName($_.Path))" } |
             Set-Content -Encoding ascii dist-electron/SHA256SUMS-windows
+      - run: node scripts/stage-release.mjs windows
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: forgeloop-studio-windows
-          path: dist-electron/*
+          path: release-staging/windows/*
 
   linux:
     runs-on: ubuntu-latest
@@ -87,6 +91,7 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with: { node-version: 22, cache: npm }
       - run: npm ci
+      - run: npm run audit:prod
       - run: npm run verify
       - name: Build Linux unpacked app
         run: npm run build && npx --no-install electron-builder --linux --dir
@@ -98,10 +103,11 @@ jobs:
         run: |
           set -euo pipefail
           find dist-electron -maxdepth 1 -type f ! -name SHA256SUMS-linux -print0 | sort -z | xargs -0 sha256sum > dist-electron/SHA256SUMS-linux
+      - run: node scripts/stage-release.mjs linux
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: forgeloop-studio-linux
-          path: dist-electron/*
+          path: release-staging/linux/*
 
   publish:
     needs: [macos, windows, linux]

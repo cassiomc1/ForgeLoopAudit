@@ -6,7 +6,7 @@ ForgeLoop Studio is a local-first desktop companion for ForgeLoop. Open a ForgeL
 
 ## Status
 
-Beta candidate — the read-only Studio runtime, protocol integration and multi-platform CI are implemented. Packaged release validation and platform trust checks remain release-gated.
+Release candidate — the read-only Studio runtime, trusted protocol validation, functional fixture E2E and multi-platform release staging are implemented. Windows release assets are explicitly marked unsigned preview until certificate-backed signing is configured; Apple notarization/Gatekeeper acceptance remains an external release gate.
 
 ## Stack
 
@@ -44,5 +44,7 @@ npm run dev
 ```
 
 Use `npm run verify` for typecheck, tests and a deterministic production build. See [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for packaged macOS diagnostics and CLI/runtime limitations.
+
+Use `npm run audit:prod` to block high/critical production dependency advisories. `npm audit` may still report development-tool findings; the current production audit is clean.
 
 Use `npm run test:electron-smoke` for source/built Electron smoke and `npm run test:packaged-smoke` to build and launch the electron-builder unpacked application. When ForgeLoop CLI is unavailable, Studio remains readable in explicit artifact-only compatibility mode.

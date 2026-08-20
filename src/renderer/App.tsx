@@ -56,6 +56,11 @@ export function App() {
 
   const handleProjectUpdate = useCallback((update: ProjectUpdate) => {
     switch (update.type) {
+      case 'project-opened':
+        if (update.detection) setDetectionResult(update.detection);
+        if (update.snapshot) setSnapshot(update.snapshot);
+        setActiveNav('overview');
+        break;
       case 'snapshot-refreshed':
         if (update.snapshot) {
           setSnapshot(update.snapshot);

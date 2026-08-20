@@ -40,6 +40,7 @@ export function TaskRow({ task, isActive, onClick }: TaskRowProps) {
             <p className="text-xs text-forge-text-muted truncate mt-0.5 max-w-[300px]">{task.objective}</p>
           )}
           {task.artifactErrors && task.artifactErrors.length > 0 && <p className="text-xs text-forge-warning mt-1">Artifact validation warning</p>}
+          {task.gateErrors && task.gateErrors.length > 0 && <p className="text-xs text-forge-danger mt-1">Gate validation error</p>}
         </div>
       </div>
 

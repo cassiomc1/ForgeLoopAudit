@@ -114,6 +114,7 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
     assertTrustedSender(event);
     const safeTaskId = taskId === undefined ? undefined : TaskIdSchema.parse(taskId);
     if (!currentForgeCli || !currentProjectReader) throw ForgeLoopStudioError.unknown('No project open');
+    if (isFixtureProjectMode()) return null;
     const result = await currentForgeCli.policyStatus<Record<string, unknown>>(safeTaskId);
     if (!result.success) return null;
     const config = currentProjectReader.readConfig();
@@ -196,14 +197,6 @@ async function openProject(projectRoot: string): Promise<ProjectDetectionResult>
 
   const pathBoundary = new PathBoundary(projectRoot);
 
-  const detector = createProjectDetector(pathBoundary);
-  const detectionResult = detector.detect(projectRoot);
-
-  if (!detectionResult.compatible) {
-    throw ForgeLoopStudioError.protocolUnsupported(detectionResult.protocolVersion, projectRoot);
-  }
-
-  currentProjectBoundary = pathBoundary;
   const schemaDir = resolveTrustedSchemaDirectory({
     allowEnvironmentOverride: !app.isPackaged,
     appPath: app.getAppPath(),
@@ -212,8 +205,17 @@ async function openProject(projectRoot: string): Promise<ProjectDetectionResult>
     moduleDir: __dirname,
   });
   const protocolSchemas = new SchemaValidator(schemaDir);
+  const detector = createProjectDetector(pathBoundary, protocolSchemas);
+  const detectionResult = detector.detect();
+
+  if (!detectionResult.compatible) {
+    throw ForgeLoopStudioError.protocolUnsupported(detectionResult.protocolVersion, projectRoot);
+  }
+
+  currentProjectBoundary = pathBoundary;
   currentProjectReader = createProjectReader(pathBoundary, protocolSchemas);
-  currentForgeCli = new ForgeCli(projectRoot);
+  const fixtureCliDisabled = isFixtureProjectMode();
+  currentForgeCli = new ForgeCli(projectRoot, fixtureCliDisabled ? '__fixture_cli_unavailable__' : 'forgeloop');
   const protocolInfo = await currentForgeCli.protocolInfo<{ protocolVersion: number; schemaVersion: number; packageVersion?: string }>();
   if (protocolInfo.success && protocolInfo.data) {
     if (protocolInfo.data.protocolVersion !== detectionResult.protocolVersion || protocolInfo.data.schemaVersion !== detectionResult.schemaVersion) {
@@ -241,7 +243,8 @@ async function openProject(projectRoot: string): Promise<ProjectDetectionResult>
     pathBoundary,
     currentProjectReader,
     currentForgeCli,
-    compatibilityContext
+    compatibilityContext,
+    !fixtureCliDisabled
   );
 
   currentWatcher = createProjectWatcher(
@@ -259,9 +262,21 @@ async function openProject(projectRoot: string): Promise<ProjectDetectionResult>
   };
   store.set('recentProjects', [recentProject, ...(store.get('recentProjects') || []).filter((p) => p.path !== projectRoot)].slice(0, 10));
 
-  notifyUpdate({ type: 'snapshot-refreshed', snapshot: await currentSnapshotBuilder.build(), timestamp: new Date().toISOString() });
+  notifyUpdate({ type: 'project-opened', detection: detectionResult, snapshot: await currentSnapshotBuilder.build(), timestamp: new Date().toISOString() });
 
   return detectionResult;
+}
+
+function isFixtureProjectMode(): boolean {
+  return process.env.FORGELOOP_STUDIO_SMOKE === '1' && Boolean(process.env.FORGELOOP_STUDIO_FIXTURE_PROJECT);
+}
+
+export async function openProjectForAutomation(projectRoot: string): Promise<ProjectDetectionResult> {
+  return openProject(projectRoot);
+}
+
+export function shutdownProject(): void {
+  closeProject();
 }
 
 function closeProject(): void {

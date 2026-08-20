@@ -177,6 +177,7 @@ export interface TaskSummary {
   writeClaims?: string[];
   policySnapshot?: Record<string, unknown>;
   artifactErrors?: string[];
+  gateErrors?: string[];
 }
 
 export interface SessionSummary {
@@ -258,6 +259,7 @@ export interface EventPage {
   validation?: {
     schema: 'VALID' | 'INVALID' | 'NOT_RUN';
     chain: 'VALID' | 'INVALID' | 'NOT_RUN';
+    cursor?: 'FOUND' | 'NOT_FOUND' | 'NOT_RUN';
     scope?: 'PAGE' | 'LEDGER';
     invalidLineCount?: number;
     errors?: string[];
@@ -341,9 +343,10 @@ export interface ForgeLoopStudioAPI {
 }
 
 export interface ProjectUpdate {
-  type: 'task-added' | 'task-updated' | 'task-removed' | 'project-health-changed' | 'policy-changed' | 'session-changed' | 'snapshot-refreshed' | 'watcher-status' | 'error';
+  type: 'task-added' | 'task-updated' | 'task-removed' | 'project-health-changed' | 'policy-changed' | 'session-changed' | 'snapshot-refreshed' | 'project-opened' | 'watcher-status' | 'error';
   taskId?: string;
   snapshot?: ProjectSnapshot;
+  detection?: ProjectDetectionResult;
   data?: unknown;
   timestamp: string;
 }

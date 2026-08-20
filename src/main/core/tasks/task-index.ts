@@ -3,7 +3,7 @@ import { join } from 'path';
 import { PathBoundary } from '@main/security/path-boundary';
 import { TASK_STATE_DIR, GATES_DIR } from '@shared/constants';
 import type { TaskSummary, EventRecord, GateSummary } from '@shared/domain';
-import { parseJsonSafely, parseNdjsonSafely } from '@main/security/resource-limits';
+import { parseJsonSafely } from '@main/security/resource-limits';
 import { buildTaskSummary, type RawTaskArtifacts } from './task-reader';
 import type { EventLedgerReader } from '../events/ledger-reader';
 import type { ProjectReader } from '../project/project-reader';
@@ -14,6 +14,11 @@ export interface TaskIndexEntry {
   taskId: string;
   phase: string;
   lastUpdated?: string;
+}
+
+export interface GateReadResult {
+  gates: GateSummary[];
+  errors: string[];
 }
 
 export class TaskIndexer {
@@ -60,42 +65,6 @@ export class TaskIndexer {
   }
 }
 
-export class TaskEventReader {
-  constructor(private readonly pathBoundary: PathBoundary) {}
-
-  readEvents(taskKey: string, limit = 1000): EventRecord[] {
-    const candidate = this.pathBoundary.resolveForgeLoopPathLexically(join(TASK_STATE_DIR, taskKey, 'events.ndjson'));
-    if (!existsSync(candidate)) return [];
-    const eventsPath = this.pathBoundary.validatePath(candidate);
-
-    const content = readFileSync(eventsPath, 'utf8');
-    const events = parseNdjsonSafely<EventRecord>(content, limit);
-    return events.reverse();
-  }
-
-  readEventsPaginated(taskKey: string, cursor?: string, limit = 100): { events: EventRecord[]; cursor?: string; hasMore: boolean } {
-    const allEvents = this.readEvents(taskKey, limit * 2);
-    let startIndex = 0;
-
-    if (cursor) {
-      const cursorIndex = allEvents.findIndex((e) => e.hash === cursor);
-      if (cursorIndex >= 0) {
-        startIndex = cursorIndex + 1;
-      }
-    }
-
-    const pageEvents = allEvents.slice(startIndex, startIndex + limit);
-    const nextCursor = pageEvents.length > 0 ? pageEvents[pageEvents.length - 1].hash : undefined;
-    const hasMore = startIndex + limit < allEvents.length;
-
-    return {
-      events: pageEvents,
-      cursor: nextCursor,
-      hasMore,
-    };
-  }
-}
-
 export class GateReader {
   constructor(
     private readonly pathBoundary: PathBoundary,
@@ -103,20 +72,31 @@ export class GateReader {
   ) {}
 
   readGates(taskKey: string): GateSummary[] {
+    return this.readGateResult(taskKey).gates;
+  }
+
+  readGateResult(taskKey: string): GateReadResult {
     const gatesDir = this.pathBoundary.resolveForgeLoopPathLexically(join(TASK_STATE_DIR, taskKey, GATES_DIR));
-    if (!existsSync(gatesDir)) return [];
+    if (!existsSync(gatesDir)) return { gates: [], errors: [] };
 
     const entries = readdirSync(gatesDir).filter((e) => e.endsWith('.json'));
     const gates: GateSummary[] = [];
+    const errors: string[] = [];
 
     for (const entry of entries) {
       const gatePath = join(gatesDir, entry);
       try {
-        if (!lstatSync(gatePath).isFile() || lstatSync(gatePath).isSymbolicLink()) continue;
+        if (!lstatSync(gatePath).isFile() || lstatSync(gatePath).isSymbolicLink()) {
+          errors.push(`${entry}: symbolic links and non-file gate artifacts are not allowed`);
+          continue;
+        }
         const validatedPath = this.pathBoundary.validatePath(gatePath);
         const gateData = parseJsonSafely<Record<string, unknown>>(readFileSync(validatedPath, 'utf8'));
         const validation = this.validator.validate('gate.schema.json', gateData);
-        if (!validation.valid) continue;
+        if (!validation.valid) {
+          errors.push(`${entry}: ${validation.errors?.join('; ') || 'gate schema validation failed'}`);
+          continue;
+        }
 
         gates.push({
           id: typeof gateData.gate === 'string' ? gateData.gate : entry.replace('.json', ''),
@@ -129,12 +109,12 @@ export class GateReader {
           artifacts: gateData.artifacts as GateSummary['artifacts'],
           evidence: gateData.evidence as GateSummary['evidence'],
         });
-      } catch {
-        // Skip invalid gate files
+      } catch (error) {
+        errors.push(`${entry}: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
 
-    return gates;
+    return { gates, errors };
   }
 }
 
@@ -149,8 +129,9 @@ export class TaskSnapshotBuilder {
     events: EventRecord[];
   } {
     const summary = buildTaskSummary(taskKey, artifacts, nextResult);
-    const gateDetails = this.gateReader.readGates(taskKey);
-    summary.gates = [...summary.gates.filter((gate) => !gateDetails.some((detail) => detail.id === gate.id)), ...gateDetails];
+    const gateResult = this.gateReader.readGateResult(taskKey);
+    summary.gates = [...summary.gates.filter((gate) => !gateResult.gates.some((detail) => detail.id === gate.id)), ...gateResult.gates];
+    summary.gateErrors = gateResult.errors.length > 0 ? gateResult.errors : undefined;
     const events = this.eventLedgerReader.readEvents(taskKey);
 
     return { summary, events };
@@ -159,10 +140,6 @@ export class TaskSnapshotBuilder {
 
 export function createTaskIndexer(pathBoundary: PathBoundary, projectReader: ProjectReader): TaskIndexer {
   return new TaskIndexer(pathBoundary, projectReader);
-}
-
-export function createTaskEventReader(pathBoundary: PathBoundary): TaskEventReader {
-  return new TaskEventReader(pathBoundary);
 }
 
 export function createGateReader(pathBoundary: PathBoundary, validator: SchemaValidator): GateReader {
