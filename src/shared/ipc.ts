@@ -3,6 +3,7 @@ import type {
   ProjectSnapshot,
   TaskSnapshot,
   EventPage,
+  PolicySummary,
   StudioError,
   RecentProject,
   RawArtifactRequest,
@@ -15,6 +16,8 @@ export interface ForgeLoopStudioAPI {
   getProjectSnapshot(): Promise<ProjectSnapshot>;
   getTask(taskId: string): Promise<TaskSnapshot>;
   getTaskEvents(taskId: string, cursor?: string, limit?: number): Promise<EventPage>;
+  validateEventLedger(taskId: string): Promise<NonNullable<EventPage['validation']>>;
+  getPolicyStatus(taskId?: string): Promise<PolicySummary | null>;
   getRawArtifact(request: RawArtifactRequest): Promise<string>;
   getRecentProjects(): Promise<RecentProject[]>;
   addRecentProject(project: RecentProject): Promise<void>;
@@ -51,6 +54,8 @@ export const IPC_CHANNELS = {
   GET_PROJECT_SNAPSHOT: 'studio:get-project-snapshot',
   GET_TASK: 'studio:get-task',
   GET_TASK_EVENTS: 'studio:get-task-events',
+  GET_POLICY_STATUS: 'studio:get-policy-status',
+  VALIDATE_EVENT_LEDGER: 'studio:validate-event-ledger',
   GET_RAW_ARTIFACT: 'studio:get-raw-artifact',
   GET_RECENT_PROJECTS: 'studio:get-recent-projects',
   ADD_RECENT_PROJECT: 'studio:add-recent-project',

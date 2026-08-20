@@ -3,7 +3,7 @@ import { PathBoundary } from '@main/security/path-boundary';
 import { ForgeLoopStudioError } from '@shared/errors';
 import type { ProjectDetectionResult, RecentProject, StudioError } from '@shared/domain';
 import { IPC_CHANNELS } from '@shared/ipc';
-import { createProjectSnapshotBuilder, type ProjectSnapshotBuilder, type ProjectCompatibilityContext } from '@main/core/project/project-snapshot';
+import { createProjectSnapshotBuilder, normalizePolicyStatus, type ProjectSnapshotBuilder, type ProjectCompatibilityContext } from '@main/core/project/project-snapshot';
 import { createProjectDetector, createProjectReader, type ProjectReader } from '@main/core/project/project-reader';
 import { ForgeCli } from '@main/core/cli/forge-cli';
 import { createProjectWatcher } from '@main/watcher/project-watcher';
@@ -92,7 +92,7 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
       throw ForgeLoopStudioError.artifactUnreadable(taskId, 'Task not found');
     }
 
-    const artifacts = currentProjectReader!.readTaskArtifacts(task.taskKey);
+    const artifacts = currentProjectReader!.readTaskSummaryArtifacts(task.taskKey);
     const nextResult = await currentForgeCli!.next(taskId);
     const { summary, events } = currentTaskSnapshotBuilder.buildSnapshot(task.taskKey, artifacts, nextResult.success ? nextResult.data : undefined);
 
@@ -109,6 +109,16 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
     };
   });
 
+  ipcMain.handle(IPC_CHANNELS.GET_POLICY_STATUS, async (event, taskId?: string): Promise<any> => {
+    assertTrustedSender(event);
+    const safeTaskId = taskId === undefined ? undefined : TaskIdSchema.parse(taskId);
+    if (!currentForgeCli || !currentProjectReader) throw ForgeLoopStudioError.unknown('No project open');
+    const result = await currentForgeCli.policyStatus<Record<string, unknown>>(safeTaskId);
+    if (!result.success) return null;
+    const config = currentProjectReader.readConfig();
+    return normalizePolicyStatus(result.data, typeof config.complianceMode === 'string' ? config.complianceMode : 'Unknown', 'POLICY_STATUS');
+  });
+
   ipcMain.handle(IPC_CHANNELS.GET_TASK_EVENTS, async (event, taskId: string, cursor?: string, limit?: number): Promise<any> => {
     assertTrustedSender(event); const query = EventQuerySchema.parse({ taskId, cursor, limit });
     if (!currentTaskIndexer || !currentEventReader) {
@@ -122,6 +132,15 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
     }
 
     return currentEventReader.readEventsPaginated(task.taskKey, query.cursor, query.limit);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.VALIDATE_EVENT_LEDGER, async (event, taskId: string): Promise<any> => {
+    assertTrustedSender(event); const safeTaskId = TaskIdSchema.parse(taskId);
+    if (!currentTaskIndexer || !currentEventReader) throw ForgeLoopStudioError.unknown('No project open');
+    const task = currentTaskIndexer.listTasks().find((entry) => entry.taskId === safeTaskId || entry.taskKey === safeTaskId);
+    if (!task) throw ForgeLoopStudioError.artifactUnreadable(safeTaskId, 'Task not found');
+    const result = currentEventReader.validateIntegrity(task.taskKey);
+    return { ...result, scope: 'LEDGER' };
   });
 
   ipcMain.handle(IPC_CHANNELS.GET_RAW_ARTIFACT, async (event, request: { taskId: string; artifact: string }): Promise<string> => {

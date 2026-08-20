@@ -1,5 +1,6 @@
 import { parseJsonSafely } from '@main/security/resource-limits';
 import { closeSync, existsSync, fstatSync, openSync, readSync, readFileSync } from 'fs';
+import { createHash } from 'crypto';
 import { join } from 'path';
 import { PathBoundary } from '@main/security/path-boundary';
 import { TASK_STATE_DIR } from '@shared/constants';
@@ -10,10 +11,23 @@ const CHUNK_BYTES = 64 * 1024;
 function isEventRecord(value: unknown): value is EventRecord {
   if (!value || typeof value !== 'object') return false;
   const event = value as Record<string, unknown>;
-  return Number.isInteger(event.seq) && typeof event.schemaVersion === 'number' &&
-    typeof event.protocolVersion === 'number' && typeof event.taskId === 'string' &&
+  return Number.isInteger(event.seq) && Number(event.seq) >= 1 && event.schemaVersion === 1 &&
+    event.protocolVersion === 1 && typeof event.taskId === 'string' &&
     typeof event.event === 'string' && typeof event.at === 'string' &&
-    (event.previousHash === null || typeof event.previousHash === 'string') && typeof event.hash === 'string';
+    (event.previousHash === null || /^[a-f0-9]{64}$/.test(String(event.previousHash))) && /^[a-f0-9]{64}$/.test(String(event.hash));
+}
+
+function canonicalize(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.keys(value as Record<string, unknown>).sort().map((key) => [key, canonicalize((value as Record<string, unknown>)[key])]));
+  }
+  return value;
+}
+
+function eventHash(event: EventRecord): string {
+  const { hash: _hash, ...body } = event;
+  return createHash('sha256').update(JSON.stringify(canonicalize(body))).digest('hex');
 }
 
 export class EventLedgerReader {
@@ -30,11 +44,12 @@ export class EventLedgerReader {
 
   readEventsPaginated(taskKey: string, cursor?: string, limit = 100): EventPage {
     const eventsPath = this.eventPath(taskKey);
-    if (!eventsPath) return { events: [], hasMore: false, totalCount: 0, validation: { schema: 'NOT_RUN', chain: 'NOT_RUN' } };
+    if (!eventsPath) return { events: [], hasMore: false, validation: { schema: 'NOT_RUN', chain: 'NOT_RUN', scope: 'PAGE' } };
     const boundedLimit = Math.min(Math.max(limit, 1), 500);
     const collected: EventRecord[] = [];
     let foundCursor = !cursor;
     let hasOlder = false;
+    let invalidLineCount = 0;
     let pending = '';
     const fd = openSync(eventsPath, 'r');
     let position = fstatSync(fd).size;
@@ -50,8 +65,8 @@ export class EventLedgerReader {
           const line = lines[index].trim();
           if (!line) continue;
           let parsed: unknown;
-          try { parsed = parseJsonSafely(line); } catch { continue; }
-          if (!isEventRecord(parsed)) continue;
+          try { parsed = parseJsonSafely(line); } catch { invalidLineCount++; continue; }
+          if (!isEventRecord(parsed)) { invalidLineCount++; continue; }
           const event = parsed;
           if (!foundCursor) {
             if (event.hash === cursor || String(event.seq) === cursor) foundCursor = true;
@@ -66,6 +81,7 @@ export class EventLedgerReader {
         try {
           const parsed = parseJsonSafely(pending.trim());
           if (isEventRecord(parsed) && foundCursor && collected.length < boundedLimit) collected.push(parsed);
+          else if (pending.trim()) invalidLineCount++;
         } catch { /* incomplete or malformed append is ignored until next write */ }
       }
     } finally { closeSync(fd); }
@@ -75,31 +91,29 @@ export class EventLedgerReader {
       events: collected,
       cursor: nextCursor,
       hasMore: hasOlder,
-      totalCount: this.getEventCount(taskKey),
-      validation: { schema: collected.every(isEventRecord) ? 'VALID' : 'INVALID', chain: 'NOT_RUN' },
+      validation: { schema: invalidLineCount === 0 ? 'VALID' : 'INVALID', chain: 'NOT_RUN', scope: 'PAGE', invalidLineCount },
     };
   }
 
-  validateIntegrity(taskKey: string): { schema: 'VALID' | 'INVALID'; chain: 'VALID' | 'INVALID' } {
+  validateIntegrity(taskKey: string): { schema: 'VALID' | 'INVALID'; chain: 'VALID' | 'INVALID'; scope: 'LEDGER'; errors?: string[] } {
     const eventsPath = this.eventPath(taskKey);
-    if (!eventsPath) return { schema: 'VALID', chain: 'VALID' };
+    if (!eventsPath) return { schema: 'VALID', chain: 'VALID', scope: 'LEDGER' };
     const lines = readFileSync(eventsPath, 'utf8').split('\n').filter((line) => line.trim());
     let previous: EventRecord | undefined;
-    for (const line of lines) {
+    const errors: string[] = [];
+    for (const [index, line] of lines.entries()) {
       let parsed: unknown;
-      try { parsed = parseJsonSafely(line); } catch { return { schema: 'INVALID', chain: 'INVALID' }; }
-      if (!isEventRecord(parsed)) return { schema: 'INVALID', chain: 'INVALID' };
+      try { parsed = parseJsonSafely(line); } catch { errors.push(`line ${index + 1}: invalid JSON`); continue; }
+      if (!isEventRecord(parsed)) { errors.push(`line ${index + 1}: event schema invalid`); continue; }
       const event = parsed;
-      if (previous && (event.seq !== previous.seq + 1 || event.previousHash !== previous.hash || event.taskId !== previous.taskId)) return { schema: 'VALID', chain: 'INVALID' };
+      if (!previous && (event.seq !== 1 || event.previousHash !== null)) errors.push(`event ${event.seq}: invalid first sequence or previousHash`);
+      if (previous && event.seq !== previous.seq + 1) errors.push(`event ${event.seq}: sequence gap`);
+      if (previous && event.previousHash !== previous.hash) errors.push(`event ${event.seq}: previousHash mismatch`);
+      if (previous && event.taskId !== previous.taskId) errors.push(`event ${event.seq}: taskId changed`);
+      if (event.hash !== eventHash(event)) errors.push(`event ${event.seq}: stored hash mismatch`);
       previous = event;
     }
-    return { schema: 'VALID', chain: 'VALID' };
-  }
-
-  getEventCount(taskKey: string): number {
-    const eventsPath = this.eventPath(taskKey);
-    if (!eventsPath) return 0;
-    return readFileSync(eventsPath, 'utf8').split('\n').filter((line) => line.trim().length > 0).length;
+    return { schema: errors.some((error) => error.includes('schema') || error.includes('JSON')) ? 'INVALID' : 'VALID', chain: errors.length > 0 ? 'INVALID' : 'VALID', scope: 'LEDGER', errors: errors.length > 0 ? errors : undefined };
   }
 }
 

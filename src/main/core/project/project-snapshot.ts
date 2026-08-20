@@ -54,21 +54,25 @@ export class ProjectSnapshotBuilder {
     let activeTaskId: string | undefined;
     const authoritativeStatuses: string[] = [];
 
-    for (const taskKey of taskKeys) {
-      try {
-        const artifacts = this.projectReader.readTaskSummaryArtifacts(taskKey);
-        const nextResult = await this.forgeCli.next(String((artifacts['task.json'] as Record<string, unknown>)?.taskId || taskKey));
-        const statusResult = await this.forgeCli.status(String((artifacts['task.json'] as Record<string, unknown>)?.taskId || taskKey));
-        const status = extractHealthStatus(statusResult.data);
-        if (statusResult.success && status) authoritativeStatuses.push(status);
-        const taskSummary = buildTaskSummary(taskKey, artifacts as any, nextResult.success ? nextResult.data as Record<string, unknown> : undefined);
-        tasks.push(taskSummary);
-
-        if (!activeTaskId && (taskSummary.phase !== 'COMPLETE' && taskSummary.phase !== 'BLOCKED')) {
-          activeTaskId = taskSummary.taskId;
+    for (let offset = 0; offset < taskKeys.length; offset += 4) {
+      const batch = await Promise.all(taskKeys.slice(offset, offset + 4).map(async (taskKey) => {
+        try {
+          const artifacts = this.projectReader.readTaskSummaryArtifacts(taskKey);
+          const taskId = String((artifacts['task.json'] as Record<string, unknown>)?.taskId || taskKey);
+          const [nextResult, statusResult] = await Promise.all([this.forgeCli.next(taskId), this.forgeCli.status(taskId)]);
+          const status = extractHealthStatus(statusResult.data);
+          const taskSummary = buildTaskSummary(taskKey, artifacts as any, nextResult.success ? nextResult.data as Record<string, unknown> : undefined);
+          return { taskSummary, status: statusResult.success ? status : undefined };
+        } catch (error) {
+          console.warn(`Failed to build summary for task ${taskKey}:`, error);
+          return null;
         }
-      } catch (error) {
-        console.warn(`Failed to build summary for task ${taskKey}:`, error);
+      }));
+      for (const result of batch) {
+        if (!result) continue;
+        tasks.push(result.taskSummary);
+        if (result.status) authoritativeStatuses.push(result.status);
+        if (!activeTaskId && result.taskSummary.phase !== 'COMPLETE' && result.taskSummary.phase !== 'BLOCKED') activeTaskId = result.taskSummary.taskId;
       }
     }
 
@@ -111,7 +115,7 @@ export class ProjectSnapshotBuilder {
       : knownStatuses.length > 0
         ? knownStatuses.sort((a, b) => HEALTH_PRECEDENCE.indexOf(a) - HEALTH_PRECEDENCE.indexOf(b))[0]
         : 'UNKNOWN';
-    const source = !protocol.compatible ? 'ARTIFACT_VALIDATION' : knownStatuses.length > 0 ? 'FORGELOOP_STATUS' : 'UNKNOWN';
+    const source = !protocol.compatible ? 'ARTIFACT_VALIDATION' : knownStatuses.length > 0 ? 'FORGELOOP_STATUS_AGGREGATE' : 'UNKNOWN';
 
     return {
       status,
@@ -120,7 +124,7 @@ export class ProjectSnapshotBuilder {
       state: tasks.length > 0,
       evidence: tasks.length > 0,
       policy: policy?.integritySource === 'POLICY_STATUS'
-        ? policy.baselineStatus === 'valid' && policy.lockStatus === 'valid' && policy.driftCount === 0
+        ? policy.overallStatus === 'valid'
         : undefined,
       continuity: tasks.every((t) => Boolean(t.continuity)),
     };
@@ -132,17 +136,16 @@ export class ProjectSnapshotBuilder {
     const config = this.projectReader.readConfig();
     const ruleCount = rules && typeof rules === 'object' && Array.isArray((rules as Record<string, unknown>).rules) ? ((rules as Record<string, unknown>).rules as unknown[]).length : undefined;
     const cliStatus = await this.forgeCli.policyStatus<Record<string, unknown>>();
-    const cliData = cliStatus.success ? cliStatus.data : undefined;
-    const driftCount = extractDriftCount(cliData);
-    const cliState = extractPolicyState(cliData);
+    const complianceMode = typeof (config as unknown as Record<string, unknown>).complianceMode === 'string' ? String((config as unknown as Record<string, unknown>).complianceMode) : 'Unknown';
+    if (cliStatus.success) return normalizePolicyStatus(cliStatus.data, complianceMode, 'POLICY_STATUS');
     return {
-      complianceMode: typeof (config as unknown as Record<string, unknown>).complianceMode === 'string' ? String((config as unknown as Record<string, unknown>).complianceMode) : 'Unknown',
+      overallStatus: 'unknown',
+      complianceMode,
       ruleCount,
-      baselineStatus: cliState === 'invalid' ? 'invalid' : cliState === 'valid' ? 'valid' : 'unknown',
-      lockStatus: cliState === 'invalid' ? 'invalid' : cliState === 'valid' ? 'valid' : 'unknown',
-      driftCount,
-      integritySource: cliStatus.success ? 'POLICY_STATUS' : Object.keys(policy).length > 0 ? 'ARTIFACTS' : 'UNKNOWN',
-      integrityMessage: cliStatus.success ? undefined : 'Policy integrity was not verified by ForgeLoop CLI.',
+      lockStatus: 'unknown',
+      drift: null,
+      integritySource: Object.keys(policy).length > 0 ? 'ARTIFACTS' : 'UNKNOWN',
+      integrityMessage: 'Policy integrity was not verified by ForgeLoop CLI.',
     };
   }
 
@@ -205,20 +208,48 @@ function extractHealthStatus(value: unknown): string | undefined {
   const candidate = [record.status, record.stateStatus, record.state, record.health].find((item) => typeof item === 'string');
   return typeof candidate === 'string' ? candidate.toUpperCase() : undefined;
 }
-function extractDriftCount(value: unknown): number {
-  if (!value || typeof value !== 'object') return 0;
-  const record = value as Record<string, unknown>;
-  if (typeof record.driftCount === 'number') return record.driftCount;
-  if (Array.isArray(record.drifts)) return record.drifts.length;
-  return 0;
+export function normalizePolicyStatus(value: unknown, complianceMode = 'Unknown', integritySource: PolicySummary['integritySource'] = 'UNKNOWN'): PolicySummary {
+  const record = value && typeof value === 'object' ? value as Record<string, unknown> : {};
+  const status = typeof record.status === 'string' ? record.status.toUpperCase() : '';
+  const lock = record.lock && typeof record.lock === 'object' ? record.lock as Record<string, unknown> : undefined;
+  const errors = Array.isArray(record.errors) ? record.errors.map((error) => formatPolicyMessage(error)).filter(Boolean) : [];
+  const warnings = Array.isArray(record.warnings) ? record.warnings.map((warning) => formatPolicyMessage(warning)).filter(Boolean) : [];
+  const driftRecord = record.drift && typeof record.drift === 'object' ? record.drift as Record<string, unknown> : null;
+  const drift = driftRecord ? {
+    detected: driftRecord.detected === true,
+    classification: typeof driftRecord.classification === 'string' ? driftRecord.classification : undefined,
+    changeCount: Array.isArray(driftRecord.changes) ? driftRecord.changes.length : undefined,
+    snapshotDigest: typeof driftRecord.snapshotDigest === 'string' ? driftRecord.snapshotDigest : undefined,
+    currentDigest: typeof driftRecord.currentDigest === 'string' ? driftRecord.currentDigest : undefined,
+    changes: Array.isArray(driftRecord.changes) ? driftRecord.changes : undefined,
+  } : null;
+  const lockStatus: PolicySummary['lockStatus'] = lock?.status === 'NOT_APPLICABLE'
+    ? 'not-applicable'
+    : errors.some((error) => error.includes('POLICY_LOCK_MISMATCH'))
+      ? 'invalid'
+      : typeof lock?.digest === 'string' ? 'valid' : 'unknown';
+  return {
+    overallStatus: status === 'VALID' ? 'valid' : status === 'INVALID' || status === 'MISMATCH' ? 'invalid' : 'unknown',
+    complianceMode,
+    ruleCount: Array.isArray(record.rules) ? record.rules.length : undefined,
+    provenRules: typeof record.provenRules === 'number' ? record.provenRules : undefined,
+    inertRules: typeof record.inertRules === 'number' ? record.inertRules : undefined,
+    unsupportedRules: typeof record.unsupportedRules === 'number' ? record.unsupportedRules : undefined,
+    baselineViolations: typeof record.baselineViolations === 'number' ? record.baselineViolations : undefined,
+    newViolations: Array.isArray(record.newViolations) ? record.newViolations.length : undefined,
+    lockStatus,
+    drift,
+    integritySource,
+    errors,
+    warnings,
+  };
 }
-function extractPolicyState(value: unknown): 'valid' | 'invalid' | 'unknown' {
-  if (!value || typeof value !== 'object') return 'unknown';
-  const state = (value as Record<string, unknown>).status;
-  if (typeof state !== 'string') return 'unknown';
-  if (['VALID', 'COMPLIANT', 'OK'].includes(state.toUpperCase())) return 'valid';
-  if (['INVALID', 'DRIFT', 'NON_COMPLIANT'].includes(state.toUpperCase())) return 'invalid';
-  return 'unknown';
+
+function formatPolicyMessage(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (!value || typeof value !== 'object') return '';
+  const item = value as Record<string, unknown>;
+  return [item.code, item.why || item.message || item.ruleId].filter((part): part is string => typeof part === 'string').join(': ');
 }
 
 export function createProjectSnapshotBuilder(

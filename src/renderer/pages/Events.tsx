@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { ProjectSnapshot, TaskSummary, EventRecord } from '@shared/domain';
+import type { ProjectSnapshot, TaskSummary, EventRecord, EventPage } from '@shared/domain';
 import { NoEventsState } from '../components/ui/EmptyState';
 import { cn, formatDate, shortHash } from '../lib/utils';
 import { ChevronDown, ChevronUp } from 'lucide-react';
@@ -19,6 +19,7 @@ export function Events({ snapshot, selectedTaskId, onSelectedTaskChange }: Event
   const [selectedEvent, setSelectedEvent] = useState<EventRecord | null>(null);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<string>('all');
+  const [validation, setValidation] = useState<EventPage['validation']>();
 
   useEffect(() => {
     if (selectedTask) {
@@ -31,12 +32,19 @@ export function Events({ snapshot, selectedTaskId, onSelectedTaskChange }: Event
     try {
       const result = await window.forgeLoopStudio.getTaskEvents(taskId, undefined, 100);
       setEvents(result.events || []);
+      setValidation(result.validation);
     } catch (err) {
       console.error('Failed to load events:', err);
       setEvents([]);
     } finally {
       setLoading(false);
     }
+  };
+
+  const validateLedger = async () => {
+    if (!selectedTask) return;
+    try { setValidation(await window.forgeLoopStudio.validateEventLedger(selectedTask.taskId)); }
+    catch { setValidation({ schema: 'INVALID', chain: 'INVALID', scope: 'LEDGER', errors: ['Ledger validation failed'] }); }
   };
 
   const filteredEvents = events.filter((event) => {
@@ -66,7 +74,7 @@ export function Events({ snapshot, selectedTaskId, onSelectedTaskChange }: Event
           <h1 className="text-xl font-semibold text-forge-text-primary">Event Ledger</h1>
           <p className="text-sm text-forge-text-muted mt-1">Chronological engineering timeline</p>
         </div>
-        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3">
           <select
             className="input w-48"
             value={selectedTask?.taskId || ''}
@@ -81,7 +89,8 @@ export function Events({ snapshot, selectedTaskId, onSelectedTaskChange }: Event
                 {task.taskId}
               </option>
             ))}
-          </select>
+            </select>
+            <button className="button-secondary text-xs" onClick={() => void validateLedger()}>Validate ledger</button>
           <div className="flex items-center gap-1 bg-forge-secondary-surface rounded-6 p-0.5">
             {['all', 'verification', 'lifecycle', 'policy', 'errors'].map((f) => (
               <button
@@ -100,6 +109,14 @@ export function Events({ snapshot, selectedTaskId, onSelectedTaskChange }: Event
           </div>
         </div>
       </div>
+
+      {validation && (
+        <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-10 p-3 text-xs text-forge-text-secondary">
+          <span>Page schema: {validation.schema}</span> · <span>Ledger chain: {validation.chain}</span>
+          {validation.invalidLineCount ? <span> · Invalid lines: {validation.invalidLineCount}</span> : null}
+          {validation.errors && validation.errors.length > 0 ? <p className="mt-1 text-forge-danger">{validation.errors.join(' · ')}</p> : null}
+        </div>
+      )}
 
       <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-10 overflow-hidden">
         {loading ? (

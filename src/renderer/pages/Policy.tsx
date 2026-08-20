@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { ProjectSnapshot, TaskSummary } from '@shared/domain';
+import type { ProjectSnapshot, TaskSummary, PolicySummary } from '@shared/domain';
 import { EmptyState } from '../components/ui/EmptyState';
 import { cn } from '../lib/utils';
 import { Shield, AlertTriangle, Lock, FileText, Activity } from 'lucide-react';
@@ -14,7 +14,19 @@ export function Policy({ snapshot, selectedTaskId, onSelectedTaskChange }: Polic
   const [selectedTask, setSelectedTask] = useState<TaskSummary | null>(
     snapshot.tasks.find((t) => t.taskId === snapshot.activeTaskId) || snapshot.tasks[0] || null
   );
+  const [taskPolicy, setTaskPolicy] = useState<PolicySummary | null>(null);
+  const [policyLoading, setPolicyLoading] = useState(false);
   useEffect(() => { setSelectedTask(snapshot.tasks.find((t) => t.taskId === selectedTaskId) || snapshot.tasks.find((t) => t.taskId === snapshot.activeTaskId) || snapshot.tasks[0] || null); }, [snapshot, selectedTaskId]);
+  useEffect(() => {
+    if (!selectedTask) { setTaskPolicy(null); return; }
+    let cancelled = false;
+    setPolicyLoading(true);
+    window.forgeLoopStudio.getPolicyStatus(selectedTask.taskId)
+      .then((result) => { if (!cancelled) setTaskPolicy(result); })
+      .catch(() => { if (!cancelled) setTaskPolicy(null); })
+      .finally(() => { if (!cancelled) setPolicyLoading(false); });
+    return () => { cancelled = true; };
+  }, [selectedTask]);
 
   if (snapshot.tasks.length === 0) {
     return <EmptyState title="No tasks available" description="Select a task to view policy information." />;
@@ -65,16 +77,16 @@ export function Policy({ snapshot, selectedTaskId, onSelectedTaskChange }: Polic
             </div>
             <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-10 p-4">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs text-forge-text-muted uppercase tracking-wider">Baseline</span>
+                <span className="text-xs text-forge-text-muted uppercase tracking-wider">Overall</span>
                 <Activity className="w-4 h-4 text-forge-text-muted" />
               </div>
               <div className="flex items-center gap-2">
                 <span className={cn('w-2 h-2 rounded-full', {
-                  'bg-forge-success': policy.baselineStatus === 'valid',
-                  'bg-forge-danger': policy.baselineStatus === 'invalid',
-                  'bg-forge-text-muted': policy.baselineStatus === 'unknown',
+                  'bg-forge-success': policy.overallStatus === 'valid',
+                  'bg-forge-danger': policy.overallStatus === 'invalid',
+                  'bg-forge-text-muted': policy.overallStatus === 'unknown',
                 })} />
-                <p className="text-lg font-semibold text-forge-text-primary capitalize">{policy.baselineStatus}</p>
+                <p className="text-lg font-semibold text-forge-text-primary capitalize">{policy.overallStatus}</p>
               </div>
             </div>
             <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-10 p-4">
@@ -93,17 +105,29 @@ export function Policy({ snapshot, selectedTaskId, onSelectedTaskChange }: Polic
             </div>
           </div>
 
-          {policy.driftCount > 0 && (
+          {policy.drift?.detected && (
             <div className="bg-forge-warning/5 border border-forge-warning/20 rounded-10 p-4">
               <h3 className="text-sm font-semibold text-forge-warning mb-2 flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4" />
                 Policy Drift Detected
               </h3>
               <p className="text-sm text-forge-text-secondary">
-                {policy.driftCount} policy drift{policy.driftCount !== 1 ? 's' : ''} detected. Consider running <code className="font-mono text-forge-accent">RESTORE_POLICY</code> to restore compliance.
+                {policy.drift.changeCount ?? 0} policy change{policy.drift.changeCount !== 1 ? 's' : ''} detected ({policy.drift.classification || 'unknown'}). Re-verification may be required.
               </p>
             </div>
           )}
+
+          <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-10 p-4">
+            <h3 className="text-xs font-semibold text-forge-text-muted uppercase tracking-wider mb-3">Policy Details</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+              <span>Proven rules: {policy.provenRules ?? 'Unknown'}</span>
+              <span>Inert rules: {policy.inertRules ?? 'Unknown'}</span>
+              <span>Baseline violations: {policy.baselineViolations ?? 'Unknown'}</span>
+              <span>New violations: {policy.newViolations ?? 'Unknown'}</span>
+            </div>
+            {policy.errors && policy.errors.length > 0 && <p className="mt-3 text-xs text-forge-danger">Errors: {policy.errors.join(' · ')}</p>}
+            {policy.warnings && policy.warnings.length > 0 && <p className="mt-2 text-xs text-forge-warning">Warnings: {policy.warnings.join(' · ')}</p>}
+          </div>
 
           {selectedTask?.policySnapshot && Object.keys(selectedTask.policySnapshot).length > 0 && (
             <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-10 p-4">
@@ -113,6 +137,18 @@ export function Policy({ snapshot, selectedTaskId, onSelectedTaskChange }: Polic
               </pre>
             </div>
           )}
+          <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-10 p-4">
+            <h3 className="text-xs font-semibold text-forge-text-muted uppercase tracking-wider mb-3">Selected Task Policy Status</h3>
+            {policyLoading ? <p className="text-sm text-forge-text-muted">Checking task policy…</p> : taskPolicy ? (
+              <div className="text-sm space-y-2">
+                <p>Status: <span className="font-medium">{taskPolicy.overallStatus}</span></p>
+                <p>Lock: {taskPolicy.lockStatus}</p>
+                <p>Drift: {taskPolicy.drift?.detected ? `${taskPolicy.drift.classification || 'detected'} (${taskPolicy.drift.changeCount ?? 0} changes)` : 'none'}</p>
+                {taskPolicy.drift?.snapshotDigest && <p className="text-xs font-mono break-all">Snapshot: {taskPolicy.drift.snapshotDigest}</p>}
+                {taskPolicy.drift?.currentDigest && <p className="text-xs font-mono break-all">Current: {taskPolicy.drift.currentDigest}</p>}
+              </div>
+            ) : <p className="text-sm text-forge-text-muted">Task policy status unavailable.</p>}
+          </div>
         </>
       ) : (
         <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-10 p-8">
