@@ -1,4 +1,6 @@
-forceCodeSigning: true
+forceCodeSigning: false
+appId: com.forgeloop.studio
+productName: ForgeLoop Studio
 directories:
   output: dist-electron
 files:
@@ -6,3 +8,5 @@ files:
   - '!dist/**/*.map'
   - schemas/**/*
   - node_modules/**/*
+mac:
+  notarize: false
