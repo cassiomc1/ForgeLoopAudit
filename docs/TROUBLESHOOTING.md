@@ -13,6 +13,8 @@ xcrun stapler validate "/Applications/ForgeLoop Studio.app"
 
 Unsigned development builds may be rejected by Gatekeeper. Official release artifacts must be signed and notarized.
 
+If macOS shows “Malware Blocked and Moved to Trash” for `Electron.app`, the local Electron runtime was quarantined or rejected before ForgeLoop Studio started. Reinstall the dependency from a trusted source and verify the signed/notarized release artifact; do not disable Gatekeeper as a project release strategy.
+
 ## ForgeLoop CLI not found
 
 Check the binary available to the Finder-launched application and compare it with the terminal `PATH`. Studio uses `shell: false`, a bounded timeout and an explicit `--version` probe; it does not execute arbitrary commands.

@@ -16,3 +16,5 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
+      - run: if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then xvfb-run -a npm run test:electron-smoke; else npm run test:electron-smoke; fi
+        shell: bash

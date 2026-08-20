@@ -41,13 +41,11 @@ export function App() {
   const [error, setError] = useState<StudioError | null>(null);
   const [watcherStatus, setWatcherStatus] = useState<WatcherStatus>({ active: false });
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
   const api = getApi();
 
-  useEffect(() => {
-    loadRecentProjects();
-    subscribeToUpdates();
-  }, []);
+  useEffect(() => { void loadRecentProjects(); return subscribeToUpdates(); }, [api]);
 
   const loadRecentProjects = async () => {
     try {
@@ -175,9 +173,9 @@ export function App() {
       case 'overview':
         return <Overview snapshot={snapshot} watcherStatus={watcherStatus} />;
       case 'tasks':
-        return <Tasks snapshot={snapshot} onTaskSelect={(_taskId) => { setActiveNav('flow'); }} />;
+        return <Tasks snapshot={snapshot} onTaskSelect={(taskId) => { setSelectedTaskId(taskId); setActiveNav('flow'); }} />;
       case 'flow':
-        return <Flow snapshot={snapshot} />;
+        return <Flow snapshot={snapshot} selectedTaskId={selectedTaskId} />;
       case 'contract':
         return <Contract snapshot={snapshot} />;
       case 'evidence':
@@ -197,7 +195,7 @@ export function App() {
 
   return (
     <AppShell
-      projectName={detectionResult.projectRoot.split('/').pop() || 'Project'}
+      projectName={snapshot?.project.name || 'Project'}
       branch={snapshot?.project.branch}
       head={snapshot?.project.head}
       protocolVersion={detectionResult.protocolVersion}

@@ -125,11 +125,11 @@ export function InspectorPanel({ task, onClose }: InspectorPanelProps) {
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className="flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-forge-success" />
-                    <span className="text-forge-text-muted">Observed: {task.evidenceCoverage.observed}</span>
+                    <span className="text-forge-text-muted">Covered: {task.evidenceCoverage.covered}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-forge-info" />
-                    <span className="text-forge-text-muted">Inferred: {task.evidenceCoverage.inferred}</span>
+                    <span className="text-forge-text-muted">Partial: {task.evidenceCoverage.partial}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-forge-text-muted" />

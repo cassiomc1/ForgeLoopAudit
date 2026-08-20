@@ -4,8 +4,6 @@ import {
   Background,
   Controls,
   MiniMap,
-  useNodesState,
-  useEdgesState,
   type Node,
   type Edge,
   BackgroundVariant,
@@ -19,6 +17,7 @@ import { InspectorPanel } from '../components/inspectors/InspectorPanel';
 
 interface FlowProps {
   snapshot: ProjectSnapshot;
+  selectedTaskId?: string | null;
 }
 
 const nodeTypes = { flowNode: FlowNode as any };
@@ -55,15 +54,15 @@ const PHASE_EDGES: [ForgeLoopPhase, ForgeLoopPhase][] = [
   ['EXECUTING', 'BLOCKED'],
 ];
 
-export function Flow({ snapshot }: FlowProps) {
+export function Flow({ snapshot, selectedTaskId }: FlowProps) {
   const [selectedTask, setSelectedTask] = useState<TaskSummary | null>(
-    snapshot.tasks.find((t) => t.taskId === snapshot.activeTaskId) || snapshot.tasks[0] || null
+    snapshot.tasks.find((t) => t.taskId === selectedTaskId) || snapshot.tasks.find((t) => t.taskId === snapshot.activeTaskId) || snapshot.tasks[0] || null
   );
   const [inspectorOpen, setInspectorOpen] = useState(false);
 
   const getPhaseState = useCallback((phase: ForgeLoopPhase, task: TaskSummary): 'completed' | 'current' | 'pending' | 'blocked' | 'failed' => {
+    if (task.phase === 'BLOCKED') return phase === 'BLOCKED' ? 'blocked' : (phase === task.previousPhase ? 'failed' : 'pending');
     if (task.phase === phase) return 'current';
-    if (task.phase === 'BLOCKED' && phase === 'BLOCKED') return 'blocked';
     if (task.phase === 'COMPLETE') return 'completed';
 
     const currentPhaseOrder = PHASE_ORDER[task.phase] ?? 0;
@@ -126,9 +125,6 @@ export function Flow({ snapshot }: FlowProps) {
     }));
   }, []);
 
-  const [flowNodes, , onNodesChange] = useNodesState(nodes);
-  const [flowEdges, , onEdgesChange] = useEdgesState(edges);
-
   const handleNodeClick = useCallback(() => {
     setInspectorOpen(true);
   }, []);
@@ -169,10 +165,10 @@ export function Flow({ snapshot }: FlowProps) {
 
         <div className="flex-1 bg-forge-primary-surface border border-forge-border-subtle rounded-10 overflow-hidden">
           <ReactFlow
-            nodes={flowNodes}
-            edges={flowEdges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
+            nodes={nodes}
+            edges={edges}
+            nodesDraggable={false}
+            nodesConnectable={false}
             onNodeClick={handleNodeClick}
             nodeTypes={nodeTypes}
             fitView

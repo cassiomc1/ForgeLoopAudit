@@ -87,7 +87,7 @@ export interface FailureSummary {
 export interface CheckSummary {
   id: string;
   requirement: string;
-  status: 'passed' | 'failed' | 'running' | 'pending';
+  status: 'passed' | 'failed' | 'blocked' | 'not-run';
   evidenceKind: EvidenceKind;
   verificationCycle?: number;
   timestamp?: string;
@@ -109,17 +109,22 @@ export type EvidenceKind = 'OBSERVED' | 'INFERRED' | 'NOT_VERIFIED' | 'BLOCKED' 
 
 export interface EvidenceCoverageSummary {
   total: number;
-  observed: number;
-  inferred: number;
+  covered: number;
+  partial: number;
   notVerified: number;
   blocked: number;
-  hypothesis: number;
   coveragePercent: number;
 }
 
 export interface NextActionSummary {
-  type: 'progress' | 'recovery' | 'blocker' | 'inconsistency';
+  type: 'progress' | 'recovery' | 'blocker' | 'inconsistency' | 'terminal';
   action: string;
+  currentPhase?: ForgeLoopPhase;
+  terminal?: boolean;
+  reasonCodes?: string[];
+  reasons?: Array<{ code: string; message: string; artifacts?: string[]; resolution?: unknown }>;
+  missingArtifacts?: string[];
+  commandSynopses?: string[];
   expectedPhase?: ForgeLoopPhase;
   details?: string;
 }
@@ -129,8 +134,8 @@ export interface ContinuitySummary {
   phase?: string;
   updatedAt?: string;
   currentFocus?: unknown;
-  remainingWork?: string[];
-  knownIssues?: string[];
+  remainingWork?: ContinuityWorkItem[];
+  knownIssues?: ContinuityWorkItem[];
   changedAreas?: string[];
   inspectFirst?: string[];
   resumeNote?: string;
@@ -146,6 +151,8 @@ export interface ContinuitySummary {
   knownBlockers?: never;
   reconciliationRequired?: never;
 }
+
+export interface ContinuityWorkItem { id: string; summary: string; }
 
 export interface TaskSummary {
   taskId: string;
