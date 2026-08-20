@@ -21,3 +21,13 @@ jobs:
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      - name: Verify macOS artifacts
+        run: |
+          set -euo pipefail
+          find dist-electron -name '*.app' -print -exec codesign --verify --deep --strict --verbose=4 {} \;
+          find dist-electron -name '*.app' -print -exec spctl --assess --type execute --verbose=4 {} \;
+      - run: shasum -a 256 dist-electron/* > dist-electron/SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: forgeloop-studio-macos
+          path: dist-electron/*

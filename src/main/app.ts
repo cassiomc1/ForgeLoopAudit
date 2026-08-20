@@ -1,6 +1,6 @@
 import { app, BrowserWindow, session, shell } from 'electron';
 import { join } from 'path';
-import { registerIpc } from './ipc/register-ipc';
+import { registerIpc, updateProjectIpcWindow } from './ipc/register-ipc';
 import { IPC_CHANNELS } from '@shared/ipc';
 
 let mainWindow: BrowserWindow | null = null;
@@ -70,6 +70,7 @@ app.whenReady().then(() => {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       mainWindow = createWindow();
+      updateProjectIpcWindow(mainWindow);
     }
   });
 });

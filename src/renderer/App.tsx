@@ -45,21 +45,14 @@ export function App() {
 
   const api = getApi();
 
-  useEffect(() => { void loadRecentProjects(); return subscribeToUpdates(); }, [api]);
-
-  const loadRecentProjects = async () => {
+  const loadRecentProjects = useCallback(async () => {
     try {
       const projects = await api.getRecentProjects();
       setRecentProjects(projects);
     } catch (err) {
       console.error('Failed to load recent projects:', err);
     }
-  };
-
-  const subscribeToUpdates = () => {
-    const unsubscribe = api.subscribeProjectUpdates(handleProjectUpdate);
-    return unsubscribe;
-  };
+  }, [api]);
 
   const handleProjectUpdate = useCallback((update: ProjectUpdate) => {
     switch (update.type) {
@@ -85,23 +78,14 @@ export function App() {
       case 'project-health-changed':
       case 'policy-changed':
       case 'session-changed':
-        refreshSnapshot();
         break;
     }
   }, []);
 
-  const refreshSnapshot = async () => {
-    if (!detectionResult) return;
-    try {
-      setIsLoading(true);
-      const newSnapshot = await api.getProjectSnapshot();
-      setSnapshot(newSnapshot);
-    } catch (err) {
-      console.error('Failed to refresh snapshot:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  useEffect(() => {
+    void loadRecentProjects();
+    return api.subscribeProjectUpdates(handleProjectUpdate);
+  }, [api, handleProjectUpdate, loadRecentProjects]);
 
   const handleOpenProject = async () => {
     try {
@@ -111,7 +95,7 @@ export function App() {
       if (result) {
         setDetectionResult(result);
         setActiveNav('overview');
-        await refreshSnapshot();
+        setSnapshot(await api.getProjectSnapshot());
       }
     } catch (err) {
       const studioError: StudioError = err instanceof Error
@@ -130,7 +114,7 @@ export function App() {
       const result = await api.openRecentProject(path);
       setDetectionResult(result);
       setActiveNav('overview');
-      await refreshSnapshot();
+      setSnapshot(await api.getProjectSnapshot());
     } catch (err) {
       const studioError: StudioError = err instanceof Error
         ? { code: 'UNKNOWN_ERROR', message: err.message, recoverable: true }
@@ -175,17 +159,17 @@ export function App() {
       case 'tasks':
         return <Tasks snapshot={snapshot} onTaskSelect={(taskId) => { setSelectedTaskId(taskId); setActiveNav('flow'); }} />;
       case 'flow':
-        return <Flow snapshot={snapshot} selectedTaskId={selectedTaskId} />;
+        return <Flow snapshot={snapshot} selectedTaskId={selectedTaskId} onSelectedTaskChange={setSelectedTaskId} />;
       case 'contract':
-        return <Contract snapshot={snapshot} />;
+        return <Contract snapshot={snapshot} selectedTaskId={selectedTaskId} onSelectedTaskChange={setSelectedTaskId} />;
       case 'evidence':
-        return <Evidence snapshot={snapshot} />;
+        return <Evidence snapshot={snapshot} selectedTaskId={selectedTaskId} onSelectedTaskChange={setSelectedTaskId} />;
       case 'events':
-        return <Events snapshot={snapshot} />;
+        return <Events snapshot={snapshot} selectedTaskId={selectedTaskId} onSelectedTaskChange={setSelectedTaskId} />;
       case 'continuity':
-        return <Continuity snapshot={snapshot} />;
+        return <Continuity snapshot={snapshot} selectedTaskId={selectedTaskId} onSelectedTaskChange={setSelectedTaskId} />;
       case 'policy':
-        return <Policy snapshot={snapshot} />;
+        return <Policy snapshot={snapshot} selectedTaskId={selectedTaskId} onSelectedTaskChange={setSelectedTaskId} />;
       case 'settings':
         return <Settings />;
       default:

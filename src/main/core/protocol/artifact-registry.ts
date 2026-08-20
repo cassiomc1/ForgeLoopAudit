@@ -11,10 +11,10 @@ export const ARTIFACT_SCHEMAS = {
   'gate.json': 'gate.schema.json',
   'event': 'event.schema.json',
   'policy-snapshot.json': 'policy-snapshot.schema.json',
-  'policy.json': 'policy.schema.json',
-  'policy-rules.json': 'policy-rules.schema.json',
-  'policy-baseline.json': 'policy-baseline.schema.json',
-  'policy-lock.json': 'policy-lock.schema.json',
+  'policy/rules.json': 'policy-rules.schema.json',
+  'policy/discovery.json': 'policy-discovery.schema.json',
+  'policy/baseline.json': 'policy-baseline.schema.json',
+  'policy/policy.lock': 'policy-lock.schema.json',
 } as const;
 
 export type ArtifactName = keyof typeof ARTIFACT_SCHEMAS;

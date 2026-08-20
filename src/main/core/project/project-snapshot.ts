@@ -58,7 +58,7 @@ export class ProjectSnapshotBuilder {
     }
 
     const health = this.buildHealth(tasks, protocolSummary);
-    const policy = this.buildPolicy(tasks);
+    const policy = this.buildPolicy();
 
     return {
       project: projectSummary,
@@ -110,19 +110,26 @@ export class ProjectSnapshotBuilder {
       status,
       protocol: protocol.compatible,
       state: tasks.length > 0,
-      evidence: tasks.every((t) => t.evidenceCoverage.coveragePercent >= 80 || t.phase === 'COMPLETE'),
-      policy: false,
+      evidence: tasks.length > 0,
+      policy: undefined,
       continuity: tasks.every((t) => Boolean(t.continuity)),
     };
   }
 
-  private buildPolicy(_tasks: TaskSummary[]): PolicySummary | undefined {
+  private buildPolicy(): PolicySummary | undefined {
+    const policy = this.projectReader.readGlobalPolicy();
+    const rules = policy['rules.json'];
+    const config = this.projectReader.readConfig();
+    const ruleCount = rules && typeof rules === 'object' && Array.isArray((rules as Record<string, unknown>).rules) ? ((rules as Record<string, unknown>).rules as unknown[]).length : undefined;
+    const baseline = policy['baseline.json'];
+    const lock = policy['policy.lock'];
     return {
-      complianceMode: 'Unknown',
-      ruleCount: 0,
-      baselineStatus: 'unknown',
-      lockStatus: 'unknown',
+      complianceMode: typeof (config as unknown as Record<string, unknown>).complianceMode === 'string' ? String((config as unknown as Record<string, unknown>).complianceMode) : 'Unknown',
+      ruleCount,
+      baselineStatus: baseline && !(baseline as Record<string, unknown>)._invalid ? 'valid' : 'unknown',
+      lockStatus: lock && !(lock as Record<string, unknown>)._invalid ? 'valid' : 'unknown',
       driftCount: 0,
+      taskSnapshot: policy,
     };
   }
 

@@ -1,4 +1,4 @@
-import { parseNdjsonSafely } from '@main/security/resource-limits';
+import { parseJsonSafely } from '@main/security/resource-limits';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { PathBoundary } from '@main/security/path-boundary';
@@ -14,7 +14,8 @@ export class EventLedgerReader {
     const eventsPath = this.pathBoundary.validatePath(candidate);
 
     const content = readFileSync(eventsPath, 'utf8');
-    const events = parseNdjsonSafely<EventRecord>(content).slice(-limit);
+    const lines = content.split('\n').filter((line, index, all) => line.trim().length > 0 && !(index === all.length - 1 && !line.endsWith('\n')));
+    const events = lines.map((line) => parseJsonSafely<EventRecord>(line)).slice(-limit);
     return events.reverse();
   }
 
@@ -42,13 +43,13 @@ export class EventLedgerReader {
   }
 
   getEventCount(taskKey: string): number {
-    const eventsPath = this.pathBoundary.validateForgeLoopPath(join(TASK_STATE_DIR, taskKey, 'events.ndjson'));
-    if (!existsSync(eventsPath)) {
+    const candidate = this.pathBoundary.resolveForgeLoopPathLexically(join(TASK_STATE_DIR, taskKey, 'events.ndjson'));
+    if (!existsSync(candidate)) {
       return 0;
     }
-
+    const eventsPath = this.pathBoundary.validatePath(candidate);
     const content = readFileSync(eventsPath, 'utf8');
-    return content.trim().split('\n').filter((line: string) => line.trim().length > 0).length;
+    return content.split('\n').filter((line: string) => line.trim().length > 0).length;
   }
 }
 

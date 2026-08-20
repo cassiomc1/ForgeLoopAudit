@@ -14,7 +14,7 @@ export interface CliResult<T> {
 
 export class ForgeCli {
   private readonly projectRoot: string;
-  private readonly forgeLoopPath: string;
+  private readonly forgeLoopPath: string | null;
 
   constructor(projectRoot: string, forgeLoopPath: string = 'forgeloop') {
     this.projectRoot = projectRoot;
@@ -22,6 +22,8 @@ export class ForgeCli {
   }
 
   private async executeCommand(args: string[]): Promise<CliResult<unknown>> {
+    const executable = this.forgeLoopPath;
+    if (!executable) return { success: false, error: 'ForgeLoop CLI unavailable', exitCode: -1 };
     const commandName = args[0];
 
     if (!ALLOWED_CLI_COMMANDS.includes(commandName as typeof ALLOWED_CLI_COMMANDS[number])) {
@@ -39,7 +41,7 @@ export class ForgeCli {
     };
 
     return new Promise((resolve) => {
-      const child = spawn(this.forgeLoopPath, args, options);
+      const child = spawn(executable, args, options);
       let stdout = '';
       let stderr = '';
       let stdoutBytes = 0;
@@ -282,6 +284,7 @@ export class ForgeCli {
   async checkCliAvailable(): Promise<boolean> {
     try {
       const result = await new Promise<CliResult<unknown>>((resolve) => {
+        if (!this.forgeLoopPath) { resolve({ success: false, error: 'ForgeLoop CLI unavailable', exitCode: -1 }); return; }
         const child = spawn(this.forgeLoopPath, ['--version'], { cwd: this.projectRoot, shell: false, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, FORGELOOP_NO_COLOR: '1' } });
         let settled = false;
         const finish = (value: CliResult<unknown>) => { if (!settled) { settled = true; resolve(value); } };
@@ -294,12 +297,11 @@ export class ForgeCli {
   }
 }
 
-export function resolveTrustedForgeLoopPath(requested: string, projectRoot: string): string {
-  const candidates = isAbsolute(requested) ? [requested] : (process.env.PATH || '').split(delimiter).flatMap((dir) => [join(dir, requested), ...(process.platform === 'win32' ? [join(dir, `${requested}.exe`)] : [])]);
+export function resolveTrustedForgeLoopPath(requested: string, projectRoot: string): string | null {
+  const candidates = isAbsolute(requested) ? [requested] : (process.env.PATH || '').split(delimiter).flatMap((dir) => [join(dir, requested), ...(process.platform === 'win32' ? [join(dir, `${requested}.exe`), join(dir, `${requested}.cmd`)] : [])]);
   const projectReal = realpathSync(projectRoot);
   const resolved = candidates.find((candidate) => {
     try { return existsSync(candidate) && !realpathSync(candidate).startsWith(`${projectReal}${sep}`); } catch { return false; }
   });
-  if (!resolved) throw ForgeLoopStudioError.cliFailed(requested, -1, `Trusted ForgeLoop CLI not found outside project: ${requested}`);
-  return realpathSync(resolved);
+  return resolved ? realpathSync(resolved) : null;
 }

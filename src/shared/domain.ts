@@ -69,6 +69,7 @@ export interface ProtocolSummary {
   schemaVersion: number;
   packageVersion?: string;
   compatible: boolean;
+  compatibilitySource?: 'PROTOCOL_INFO' | 'ARTIFACT_ONLY';
 }
 
 export interface BlockerSummary {
@@ -186,7 +187,7 @@ export interface SessionSummary {
 
 export interface PolicySummary {
   complianceMode: string;
-  ruleCount: number;
+  ruleCount?: number;
   baselineStatus: 'valid' | 'invalid' | 'unknown';
   lockStatus: 'valid' | 'invalid' | 'unknown';
   driftCount: number;
@@ -198,7 +199,7 @@ export interface ProjectHealth {
   protocol: boolean;
   state: boolean;
   evidence: boolean;
-  policy: boolean;
+  policy?: boolean;
   continuity: boolean;
 }
 
