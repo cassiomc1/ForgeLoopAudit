@@ -20,12 +20,12 @@ describe('stage-release', () => {
       execFileSync(process.execPath, [script, 'windows'], { cwd: root });
 
       const staged = join(root, 'release-staging', 'windows');
-      expect(readFileSync(join(staged, 'SHA256SUMS-windows'), 'utf8')).toMatch(/ForgeLoop Studio Setup\.exe/);
-      expect(readFileSync(join(staged, 'SHA256SUMS-windows'), 'utf8')).toMatch(/ForgeLoop Studio Portable\.exe/);
+      expect(readFileSync(join(staged, 'SHA256SUMS-windows'), 'utf8')).toMatch(/ForgeLoop\.Studio\.Setup\.exe/);
+      expect(readFileSync(join(staged, 'SHA256SUMS-windows'), 'utf8')).toMatch(/ForgeLoop\.Studio\.Portable\.exe/);
       expect(readFileSync(join(staged, 'SHA256SUMS-windows'), 'utf8')).not.toMatch(/blockmap|latest\.yml/);
       expect(JSON.parse(readFileSync(join(staged, 'RELEASE-METADATA-windows.json'), 'utf8')).publicAssets).toEqual([
-        'ForgeLoop Studio Portable.exe',
-        'ForgeLoop Studio Setup.exe',
+        'ForgeLoop.Studio.Portable.exe',
+        'ForgeLoop.Studio.Setup.exe',
         'SHA256SUMS-windows',
       ]);
     } finally {
@@ -45,7 +45,7 @@ describe('stage-release', () => {
       for (const name of privateFiles) writeFileSync(join(source, name), name);
       execFileSync(process.execPath, [script, platform], { cwd: root });
       const staged = join(root, 'release-staging', platform);
-      expect(readFileSync(join(staged, `SHA256SUMS-${platform}`), 'utf8')).toContain(publicFiles[0]);
+      expect(readFileSync(join(staged, `SHA256SUMS-${platform}`), 'utf8')).toContain(publicFiles[0].replaceAll(' ', '.'));
       expect(readFileSync(join(staged, `SHA256SUMS-${platform}`), 'utf8')).not.toContain(privateFiles[0]);
     } finally {
       rmSync(root, { recursive: true, force: true });

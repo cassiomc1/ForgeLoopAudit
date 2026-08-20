@@ -25,17 +25,21 @@ const distributables = readdirSync(sourceDir)
   .sort();
 
 if (distributables.length === 0) throw new Error(`No public ${platform} release assets found in ${sourceDir}`);
-for (const name of distributables) copyFileSync(join(sourceDir, name), join(stageDir, name));
+// GitHub normalizes spaces in uploaded release asset names to dots. Stage the
+// normalized names up front so published checksum manifests remain usable.
+const stagedNames = new Map(distributables.map((name) => [name, name.replaceAll(' ', '.') ]));
+for (const name of distributables) copyFileSync(join(sourceDir, name), join(stageDir, stagedNames.get(name)));
 
 const checksumName = `SHA256SUMS-${platform}`;
 const checksums = distributables.map((name) => {
-  const digest = createHash('sha256').update(readFileSync(join(stageDir, name))).digest('hex');
-  return `${digest}  ${name}`;
+  const stagedName = stagedNames.get(name);
+  const digest = createHash('sha256').update(readFileSync(join(stageDir, stagedName))).digest('hex');
+  return `${digest}  ${stagedName}`;
 }).join('\n') + '\n';
 writeFileSync(join(stageDir, checksumName), checksums);
 
 writeFileSync(join(stageDir, `RELEASE-METADATA-${platform}.json`), `${JSON.stringify({
   platform,
   windowsSigning: platform === 'windows' ? 'unsigned-preview' : 'not-applicable',
-  publicAssets: [...distributables, checksumName],
+  publicAssets: [...stagedNames.values(), checksumName],
 }, null, 2)}\n`);
