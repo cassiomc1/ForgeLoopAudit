@@ -23,7 +23,7 @@ jobs:
       - run: npm run audit:prod
       - run: npm run verify
       - name: Build signed macOS unpacked app
-        run: npm run build && npx --no-install electron-builder --mac --dir --config electron-builder.release.yml
+        run: npm run build && npx --no-install electron-builder --mac --dir --config electron-builder.release.yml --publish never
         env:
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
@@ -34,7 +34,7 @@ jobs:
       - name: Smoke signed macOS packaged app
         run: node scripts/packaged-smoke.mjs
       - name: Build macOS distributables
-        run: npx --no-install electron-builder --mac --config electron-builder.release.yml
+        run: npx --no-install electron-builder --mac --config electron-builder.release.yml --publish never
         env:
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
@@ -68,11 +68,11 @@ jobs:
       - run: npm run audit:prod
       - run: npm run verify
       - name: Build Windows unpacked app
-        run: npm run build && npx --no-install electron-builder --win --dir
+        run: npm run build && npx --no-install electron-builder --win --dir --publish never
       - name: Smoke Windows packaged app
         run: node scripts/packaged-smoke.mjs
       - name: Build Windows distributables
-        run: npx --no-install electron-builder --win
+        run: npx --no-install electron-builder --win --publish never
       - run: node scripts/stage-release.mjs windows
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -93,11 +93,11 @@ jobs:
       - run: npm run audit:prod
       - run: npm run verify
       - name: Build Linux unpacked app
-        run: npm run build && npx --no-install electron-builder --linux --dir
+        run: npm run build && npx --no-install electron-builder --linux --dir --publish never
       - name: Smoke Linux packaged app
-        run: node scripts/packaged-smoke.mjs
+        run: xvfb-run -a node scripts/packaged-smoke.mjs
       - name: Build Linux distributables
-        run: npx --no-install electron-builder --linux
+        run: npx --no-install electron-builder --linux --publish never
       - run: node scripts/stage-release.mjs linux
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
