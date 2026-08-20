@@ -24,24 +24,10 @@ jobs:
       - run: npm run verify
       - name: Build unsigned macOS preview app
         run: npm run build && npx --no-install electron-builder --mac --dir --config electron-builder.release.yml --publish never
-        env:
-          CSC_LINK: ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
-          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
-          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
       - name: Smoke macOS packaged app
         run: node scripts/packaged-smoke.mjs
       - name: Build macOS unsigned distributables
         run: npx --no-install electron-builder --mac --config electron-builder.release.yml --publish never
-        env:
-          CSC_LINK: ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
-          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
-          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
       - name: Verify unsigned macOS artifacts
         run: |
           set -euo pipefail
