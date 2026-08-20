@@ -24,6 +24,7 @@ const api = {
   getRecentProjects: (): Promise<RecentProject[]> => ipcRenderer.invoke(IPC_CHANNELS.GET_RECENT_PROJECTS),
   addRecentProject: (project: RecentProject): Promise<void> => ipcRenderer.invoke(IPC_CHANNELS.ADD_RECENT_PROJECT, project),
   removeRecentProject: (path: string): Promise<void> => ipcRenderer.invoke(IPC_CHANNELS.REMOVE_RECENT_PROJECT, path),
+  notifyRendererReady: (): Promise<void> => ipcRenderer.invoke(IPC_CHANNELS.RENDERER_READY),
 
   subscribeProjectUpdates: (listener: (update: ProjectUpdate) => void): (() => void) => {
     const handler = (_event: IpcRendererEvent, update: ProjectUpdate) => listener(update);

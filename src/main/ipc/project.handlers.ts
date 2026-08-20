@@ -186,6 +186,13 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
     store.set('recentProjects', recent.filter((p) => p.path !== path));
   });
 
+  ipcMain.handle(IPC_CHANNELS.RENDERER_READY, async (event): Promise<void> => {
+    assertTrustedSender(event);
+    if (!app.isPackaged && process.env.FORGELOOP_STUDIO_SMOKE === '1' && process.env.FORGELOOP_STUDIO_FIXTURE_PROJECT) {
+      await openProject(process.env.FORGELOOP_STUDIO_FIXTURE_PROJECT);
+    }
+  });
+
 }
 
 export function updateProjectIpcWindow(mainWindow: BrowserWindow): void {

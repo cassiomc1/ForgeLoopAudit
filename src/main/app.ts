@@ -1,7 +1,7 @@
 import { app, BrowserWindow, session, shell } from 'electron';
 import { join } from 'path';
 import { registerIpc, updateProjectIpcWindow } from './ipc/register-ipc';
-import { openProjectForAutomation, shutdownProject } from './ipc/project.handlers';
+import { shutdownProject } from './ipc/project.handlers';
 import { IPC_CHANNELS } from '@shared/ipc';
 
 let mainWindow: BrowserWindow | null = null;
@@ -67,15 +67,6 @@ app.whenReady().then(() => {
     registerIpc(mainWindow);
     ipcRegistered = true;
   }
-  if (process.env.FORGELOOP_STUDIO_SMOKE === '1' && process.env.FORGELOOP_STUDIO_FIXTURE_PROJECT) {
-    const fixtureProject = process.env.FORGELOOP_STUDIO_FIXTURE_PROJECT;
-    mainWindow.webContents.once('did-finish-load', () => {
-      setTimeout(() => {
-        void openProjectForAutomation(fixtureProject).catch((error) => console.error('Fixture project failed to open:', error));
-      }, 1500);
-    });
-  }
-
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       mainWindow = createWindow();

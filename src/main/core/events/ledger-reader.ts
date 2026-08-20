@@ -99,9 +99,9 @@ export class EventLedgerReader {
     };
   }
 
-  validateIntegrity(taskKey: string): { schema: 'VALID' | 'INVALID'; chain: 'VALID' | 'INVALID'; scope: 'LEDGER'; errors?: string[] } {
+  validateIntegrity(taskKey: string): { schema: 'VALID' | 'INVALID' | 'NOT_RUN'; chain: 'VALID' | 'INVALID' | 'NOT_RUN'; scope: 'LEDGER'; errors?: string[] } {
     const eventsPath = this.eventPath(taskKey);
-    if (!eventsPath) return { schema: 'VALID', chain: 'VALID', scope: 'LEDGER' };
+    if (!eventsPath) return { schema: 'NOT_RUN', chain: 'NOT_RUN', scope: 'LEDGER' };
     const lines = readFileSync(eventsPath, 'utf8').split('\n').filter((line) => line.trim());
     let previous: EventRecord | undefined;
     const errors: string[] = [];

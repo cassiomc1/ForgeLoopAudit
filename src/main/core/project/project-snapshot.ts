@@ -9,6 +9,7 @@ import type {
   SessionSummary,
   PolicySummary,
   ProjectHealth,
+  ProjectObservations,
 } from '@shared/domain';
 import { ProjectReader } from './project-reader';
 import { ForgeCli } from '@main/core/cli/forge-cli';
@@ -80,12 +81,14 @@ export class ProjectSnapshotBuilder {
     }
 
     const policy = await this.buildPolicy();
-    const health = this.buildHealth(tasks, protocolSummary, authoritativeStatuses, policy);
+    const health = this.buildHealth(protocolSummary, authoritativeStatuses);
+    const observations = this.buildObservations(tasks);
 
     return {
       project: projectSummary,
       protocol: protocolSummary,
       health,
+      observations,
       tasks,
       activeTaskId,
       sessions,
@@ -111,7 +114,7 @@ export class ProjectSnapshotBuilder {
     });
   }
 
-  private buildHealth(tasks: TaskSummary[], protocol: ProtocolSummary, authoritativeStatuses: string[], policy?: PolicySummary): ProjectHealth {
+  private buildHealth(protocol: ProtocolSummary, authoritativeStatuses: string[]): ProjectHealth {
     const knownStatuses = authoritativeStatuses.filter(isHealthStatus);
     const status = !protocol.compatible
       ? 'INVALID'
@@ -123,13 +126,23 @@ export class ProjectSnapshotBuilder {
     return {
       status,
       source,
-      protocol: protocol.compatible,
-      state: tasks.length > 0,
-      evidence: tasks.length > 0,
-      policy: policy?.integritySource === 'POLICY_STATUS'
-        ? policy.overallStatus === 'valid'
-        : undefined,
-      continuity: tasks.every((t) => Boolean(t.continuity)),
+    };
+  }
+
+  private buildObservations(tasks: TaskSummary[]): ProjectObservations {
+    return {
+      taskCount: tasks.length,
+      evidence: tasks.reduce((totals, task) => ({
+        covered: totals.covered + task.evidenceCoverage.covered,
+        partial: totals.partial + task.evidenceCoverage.partial,
+        notVerified: totals.notVerified + task.evidenceCoverage.notVerified,
+        blocked: totals.blocked + task.evidenceCoverage.blocked,
+      }), { covered: 0, partial: 0, notVerified: 0, blocked: 0 }),
+      continuity: {
+        present: tasks.filter((task) => Boolean(task.continuity)).length,
+        missing: tasks.filter((task) => !task.continuity).length,
+      },
+      artifactValidationErrors: tasks.reduce((count, task) => count + (task.artifactErrors?.length || 0) + (task.gateErrors?.length || 0), 0),
     };
   }
 
