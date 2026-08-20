@@ -30,6 +30,20 @@ function safeNumber(obj: Record<string, unknown> | undefined, key: string): numb
   return typeof value === 'number' ? value : undefined;
 }
 
+function safeGateArtifacts(value: unknown): Array<{ path: string; sha256: string }> | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value.filter((item): item is { path: string; sha256: string } => {
+    if (!item || typeof item !== 'object') return false;
+    const record = item as Record<string, unknown>;
+    return typeof record.path === 'string' && typeof record.sha256 === 'string';
+  });
+}
+
+function safeEvidenceObjects(value: unknown): Array<Record<string, unknown>> | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object' && !Array.isArray(item));
+}
+
 function parsePhase(value: unknown): ForgeLoopPhase | undefined {
   if (typeof value !== 'string') return undefined;
   return PHASE_ORDER[value as ForgeLoopPhase] !== undefined ? (value as ForgeLoopPhase) : undefined;
@@ -148,8 +162,8 @@ function buildGates(workState: Record<string, unknown> | undefined, preflight: R
             decisions: safeStringArray(gateObj, 'decisions'),
             unknowns: safeStringArray(gateObj, 'unknowns'),
             approvedAssumptions: safeStringArray(gateObj, 'approvedAssumptions'),
-            artifacts: safeStringArray(gateObj, 'artifacts'),
-            evidence: safeStringArray(gateObj, 'evidence'),
+            artifacts: safeGateArtifacts(gateObj.artifacts),
+            evidence: safeEvidenceObjects(gateObj.evidence),
           });
         }
       }

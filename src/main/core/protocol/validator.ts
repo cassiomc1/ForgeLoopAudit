@@ -4,6 +4,7 @@ import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { ForgeLoopStudioError } from '@shared/errors';
 import { parseJsonSafely } from '@main/security/resource-limits';
+import { getMissingArtifactSchemas } from './artifact-registry';
 
 export interface ValidationResult {
   valid: boolean;
@@ -22,6 +23,10 @@ export class SchemaValidator {
 
   hasSchema(schemaName: string): boolean {
     return existsSync(join(this.schemasDir, schemaName));
+  }
+
+  getSchemasDir(): string {
+    return this.schemasDir;
   }
 
   private loadSchema(schemaName: string): object {
@@ -77,4 +82,32 @@ export class SchemaValidator {
 
 export function createValidator(schemasDir: string): SchemaValidator {
   return new SchemaValidator(schemasDir);
+}
+
+export function resolveTrustedSchemaDirectory(options: {
+  allowEnvironmentOverride?: boolean;
+  appPath?: string;
+  resourcesPath?: string;
+  cwd?: string;
+  moduleDir?: string;
+} = {}): string {
+  const candidates = [
+    options.allowEnvironmentOverride ? process.env.FORGELOOP_SCHEMA_DIR : undefined,
+    options.appPath ? join(options.appPath, 'schemas') : undefined,
+    options.resourcesPath ? join(options.resourcesPath, 'schemas') : undefined,
+    options.cwd ? join(options.cwd, 'schemas') : undefined,
+    options.moduleDir ? join(options.moduleDir, '..', '..', 'schemas') : undefined,
+  ].filter((candidate): candidate is string => Boolean(candidate));
+
+  const schemaDir = candidates.find((candidate) => existsSync(candidate));
+  if (!schemaDir) {
+    throw ForgeLoopStudioError.artifactUnreadable('schemas', 'Trusted ForgeLoop protocol schemas are not installed');
+  }
+
+  const missing = getMissingArtifactSchemas(schemaDir);
+  if (missing.length > 0) {
+    throw ForgeLoopStudioError.artifactUnreadable('schemas', `Missing trusted schemas: ${missing.join(', ')}`);
+  }
+
+  return schemaDir;
 }

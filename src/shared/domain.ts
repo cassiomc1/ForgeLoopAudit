@@ -102,8 +102,8 @@ export interface GateSummary {
   decisions?: string[];
   unknowns?: string[];
   approvedAssumptions?: string[];
-  artifacts?: string[];
-  evidence?: string[];
+  artifacts?: Array<{ path: string; sha256: string }>;
+  evidence?: Array<Record<string, unknown>>;
 }
 
 export type EvidenceKind = 'OBSERVED' | 'INFERRED' | 'NOT_VERIFIED' | 'BLOCKED' | 'HYPOTHESIS';

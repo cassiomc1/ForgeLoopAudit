@@ -1,11 +1,13 @@
-import { readdirSync, statSync, existsSync, readFileSync } from 'fs';
+import { readdirSync, lstatSync, existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { PathBoundary } from '@main/security/path-boundary';
 import { TASK_STATE_DIR, GATES_DIR } from '@shared/constants';
 import type { TaskSummary, EventRecord, GateSummary } from '@shared/domain';
-import { parseNdjsonSafely } from '@main/security/resource-limits';
+import { parseJsonSafely, parseNdjsonSafely } from '@main/security/resource-limits';
 import { buildTaskSummary, type RawTaskArtifacts } from './task-reader';
 import type { EventLedgerReader } from '../events/ledger-reader';
+import type { ProjectReader } from '../project/project-reader';
+import { SchemaValidator } from '../protocol/validator';
 
 export interface TaskIndexEntry {
   taskKey: string;
@@ -15,7 +17,10 @@ export interface TaskIndexEntry {
 }
 
 export class TaskIndexer {
-  constructor(private readonly pathBoundary: PathBoundary) {}
+  constructor(
+    private readonly pathBoundary: PathBoundary,
+    private readonly projectReader: ProjectReader
+  ) {}
 
   listTasks(): TaskIndexEntry[] {
     const taskStateDir = this.pathBoundary.resolveForgeLoopPathLexically(TASK_STATE_DIR);
@@ -27,7 +32,7 @@ export class TaskIndexer {
     for (const entry of entries) {
       const taskDir = join(taskStateDir, entry);
       try {
-        if (!statSync(taskDir).isDirectory()) continue;
+        if (!lstatSync(taskDir).isDirectory() || lstatSync(taskDir).isSymbolicLink()) continue;
         this.pathBoundary.validatePath(taskDir);
       } catch { continue; }
 
@@ -35,13 +40,12 @@ export class TaskIndexer {
       if (!existsSync(taskJsonPath)) continue;
 
       try {
-        const content = this.pathBoundary.validatePath(taskJsonPath);
-        const taskData = JSON.parse(readFileSync(content, 'utf8'));
+        const taskData = this.projectReader.readTaskDescriptor(entry);
         tasks.push({
           taskKey: entry,
-          taskId: taskData.taskId || entry,
-          phase: taskData.phase || 'UNKNOWN',
-          lastUpdated: taskData.updatedAt,
+          taskId: typeof taskData.taskId === 'string' ? taskData.taskId : entry,
+          phase: typeof taskData.phase === 'string' ? taskData.phase : 'UNKNOWN',
+          lastUpdated: typeof taskData.updatedAt === 'string' ? taskData.updatedAt : undefined,
         });
       } catch {
         tasks.push({
@@ -93,7 +97,10 @@ export class TaskEventReader {
 }
 
 export class GateReader {
-  constructor(private readonly pathBoundary: PathBoundary) {}
+  constructor(
+    private readonly pathBoundary: PathBoundary,
+    private readonly validator: SchemaValidator
+  ) {}
 
   readGates(taskKey: string): GateSummary[] {
     const gatesDir = this.pathBoundary.resolveForgeLoopPathLexically(join(TASK_STATE_DIR, taskKey, GATES_DIR));
@@ -105,20 +112,22 @@ export class GateReader {
     for (const entry of entries) {
       const gatePath = join(gatesDir, entry);
       try {
+        if (!lstatSync(gatePath).isFile() || lstatSync(gatePath).isSymbolicLink()) continue;
         const validatedPath = this.pathBoundary.validatePath(gatePath);
-        const content = readFileSync(validatedPath, 'utf8');
-        const gateData = JSON.parse(content);
+        const gateData = parseJsonSafely<Record<string, unknown>>(readFileSync(validatedPath, 'utf8'));
+        const validation = this.validator.validate('gate.schema.json', gateData);
+        if (!validation.valid) continue;
 
         gates.push({
-          id: gateData.id || entry.replace('.json', ''),
-          name: gateData.name || gateData.id || entry.replace('.json', ''),
-          status: gateData.status || 'unverified',
-          requiredBy: gateData.requiredBy,
-          decisions: gateData.decisions,
-          unknowns: gateData.unknowns,
-          approvedAssumptions: gateData.approvedAssumptions,
-          artifacts: gateData.artifacts,
-          evidence: gateData.evidence,
+          id: typeof gateData.gate === 'string' ? gateData.gate : entry.replace('.json', ''),
+          name: typeof gateData.gate === 'string' ? gateData.gate : entry.replace('.json', ''),
+          status: gateData.status as GateSummary['status'],
+          requiredBy: gateData.requiredBy as string[],
+          decisions: gateData.decisions as string[],
+          unknowns: gateData.unknowns as string[],
+          approvedAssumptions: gateData.approvedAssumptions as string[],
+          artifacts: gateData.artifacts as GateSummary['artifacts'],
+          evidence: gateData.evidence as GateSummary['evidence'],
         });
       } catch {
         // Skip invalid gate files
@@ -148,16 +157,16 @@ export class TaskSnapshotBuilder {
   }
 }
 
-export function createTaskIndexer(pathBoundary: PathBoundary): TaskIndexer {
-  return new TaskIndexer(pathBoundary);
+export function createTaskIndexer(pathBoundary: PathBoundary, projectReader: ProjectReader): TaskIndexer {
+  return new TaskIndexer(pathBoundary, projectReader);
 }
 
 export function createTaskEventReader(pathBoundary: PathBoundary): TaskEventReader {
   return new TaskEventReader(pathBoundary);
 }
 
-export function createGateReader(pathBoundary: PathBoundary): GateReader {
-  return new GateReader(pathBoundary);
+export function createGateReader(pathBoundary: PathBoundary, validator: SchemaValidator): GateReader {
+  return new GateReader(pathBoundary, validator);
 }
 
 export function createTaskSnapshotBuilder(

@@ -1,21 +1,13 @@
 import { parseJsonSafely } from '@main/security/resource-limits';
-import { closeSync, existsSync, fstatSync, openSync, readSync, readFileSync } from 'fs';
+import { closeSync, existsSync, fstatSync, lstatSync, openSync, readSync, readFileSync } from 'fs';
 import { createHash } from 'crypto';
 import { join } from 'path';
 import { PathBoundary } from '@main/security/path-boundary';
 import { TASK_STATE_DIR } from '@shared/constants';
 import type { EventRecord, EventPage } from '@shared/domain';
+import { SchemaValidator } from '@main/core/protocol/validator';
 
 const CHUNK_BYTES = 64 * 1024;
-
-function isEventRecord(value: unknown): value is EventRecord {
-  if (!value || typeof value !== 'object') return false;
-  const event = value as Record<string, unknown>;
-  return Number.isInteger(event.seq) && Number(event.seq) >= 1 && event.schemaVersion === 1 &&
-    event.protocolVersion === 1 && typeof event.taskId === 'string' &&
-    typeof event.event === 'string' && typeof event.at === 'string' &&
-    (event.previousHash === null || /^[a-f0-9]{64}$/.test(String(event.previousHash))) && /^[a-f0-9]{64}$/.test(String(event.hash));
-}
 
 function canonicalize(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(canonicalize);
@@ -31,11 +23,22 @@ function eventHash(event: EventRecord): string {
 }
 
 export class EventLedgerReader {
-  constructor(private readonly pathBoundary: PathBoundary) {}
+  constructor(
+    private readonly pathBoundary: PathBoundary,
+    private readonly validator: SchemaValidator
+  ) {}
+
+  private isPersistedEvent(value: unknown): value is EventRecord {
+    const validation = this.validator.validate('event.schema.json', value);
+    if (!validation.valid || !value || typeof value !== 'object') return false;
+    const event = value as Record<string, unknown>;
+    return typeof event.hash === 'string' && /^[a-f0-9]{64}$/.test(event.hash);
+  }
 
   private eventPath(taskKey: string): string | null {
     const candidate = this.pathBoundary.resolveForgeLoopPathLexically(join(TASK_STATE_DIR, taskKey, 'events.ndjson'));
-    return existsSync(candidate) ? this.pathBoundary.validatePath(candidate) : null;
+    if (!existsSync(candidate) || lstatSync(candidate).isSymbolicLink()) return null;
+    return this.pathBoundary.validatePath(candidate);
   }
 
   readEvents(taskKey: string, limit = 1000): EventRecord[] {
@@ -66,7 +69,7 @@ export class EventLedgerReader {
           if (!line) continue;
           let parsed: unknown;
           try { parsed = parseJsonSafely(line); } catch { invalidLineCount++; continue; }
-          if (!isEventRecord(parsed)) { invalidLineCount++; continue; }
+          if (!this.isPersistedEvent(parsed)) { invalidLineCount++; continue; }
           const event = parsed;
           if (!foundCursor) {
             if (event.hash === cursor || String(event.seq) === cursor) foundCursor = true;
@@ -80,7 +83,7 @@ export class EventLedgerReader {
       if (position === 0 && pending.trim()) {
         try {
           const parsed = parseJsonSafely(pending.trim());
-          if (isEventRecord(parsed) && foundCursor && collected.length < boundedLimit) collected.push(parsed);
+          if (this.isPersistedEvent(parsed) && foundCursor && collected.length < boundedLimit) collected.push(parsed);
           else if (pending.trim()) invalidLineCount++;
         } catch { /* incomplete or malformed append is ignored until next write */ }
       }
@@ -104,7 +107,7 @@ export class EventLedgerReader {
     for (const [index, line] of lines.entries()) {
       let parsed: unknown;
       try { parsed = parseJsonSafely(line); } catch { errors.push(`line ${index + 1}: invalid JSON`); continue; }
-      if (!isEventRecord(parsed)) { errors.push(`line ${index + 1}: event schema invalid`); continue; }
+      if (!this.isPersistedEvent(parsed)) { errors.push(`line ${index + 1}: event schema invalid`); continue; }
       const event = parsed;
       if (!previous && (event.seq !== 1 || event.previousHash !== null)) errors.push(`event ${event.seq}: invalid first sequence or previousHash`);
       if (previous && event.seq !== previous.seq + 1) errors.push(`event ${event.seq}: sequence gap`);
@@ -117,6 +120,6 @@ export class EventLedgerReader {
   }
 }
 
-export function createEventLedgerReader(pathBoundary: PathBoundary): EventLedgerReader {
-  return new EventLedgerReader(pathBoundary);
+export function createEventLedgerReader(pathBoundary: PathBoundary, validator: SchemaValidator): EventLedgerReader {
+  return new EventLedgerReader(pathBoundary, validator);
 }
