@@ -19,6 +19,18 @@ export interface ForgeLoopSources {
   sources: Record<string, { kind: string; summary: string; status: string }>;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isCanonicalArtifact(name: string, value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  if (name === 'task.json') return typeof value.taskId === 'string' && value.taskId.length > 0;
+  if (name === 'work-state.json') return value.phase === undefined || typeof value.phase === 'string';
+  if (name === 'policy.lock') return typeof value.digest === 'string' || typeof value.rulesDigest === 'string' || typeof value.baselineDigest === 'string';
+  return true;
+}
+
 export class ProjectDetector {
   detect(projectRoot: string): ProjectDetectionResult {
     const forgeLoopRoot = join(projectRoot, FORGELOOP_DIR_NAME);
@@ -75,7 +87,11 @@ export class ProjectReader {
     const configPath = join(this.forgeLoopRoot, CONFIG_FILE);
     const validatedPath = this.pathBoundary.validatePath(configPath);
     const content = readFileSync(validatedPath, 'utf8');
-    return parseJsonSafely<ForgeLoopConfig>(content);
+    const config = parseJsonSafely<ForgeLoopConfig>(content);
+    if (typeof config.protocolVersion !== 'number' || typeof config.schemaVersion !== 'number') {
+      throw ForgeLoopStudioError.artifactInvalid(CONFIG_FILE, 'Config does not satisfy the canonical protocol shape');
+    }
+    return config;
   }
 
   readSources(): ForgeLoopSources {
@@ -94,11 +110,23 @@ export class ProjectReader {
     const entries = readdirSync(taskStateDir);
     return entries.filter((entry) => {
       const fullPath = join(taskStateDir, entry);
-      return statSync(fullPath).isDirectory();
+      try {
+        return statSync(fullPath).isDirectory() && this.pathBoundary.validatePath(fullPath) !== '';
+      } catch {
+        return false;
+      }
     });
   }
 
   readTaskArtifacts(taskKey: string): Record<string, unknown> {
+    return this.readTaskArtifactsForSummary(taskKey, true);
+  }
+
+  readTaskSummaryArtifacts(taskKey: string): Record<string, unknown> {
+    return this.readTaskArtifactsForSummary(taskKey, false);
+  }
+
+  private readTaskArtifactsForSummary(taskKey: string, includeEvents: boolean): Record<string, unknown> {
     const taskDir = join(this.forgeLoopRoot, TASK_STATE_DIR, taskKey);
     const validatedPath = this.pathBoundary.validatePath(taskDir);
 
@@ -111,11 +139,12 @@ export class ProjectReader {
 
     for (const entry of entries) {
       const filePath = join(validatedPath, entry);
-      if (statSync(filePath).isFile() && (entry.endsWith('.json') || entry.endsWith('.ndjson'))) {
+      if (statSync(filePath).isFile() && (entry.endsWith('.json') || (includeEvents && entry.endsWith('.ndjson')))) {
         try {
           const content = readFileSync(filePath, 'utf8');
           if (entry.endsWith('.json')) {
-            artifacts[entry] = parseJsonSafely(content);
+            const parsed = parseJsonSafely(content);
+            artifacts[entry] = isCanonicalArtifact(entry, parsed) ? parsed : { _schemaInvalid: true, _value: parsed };
           } else {
             artifacts[entry] = content;
           }
@@ -135,7 +164,10 @@ export class ProjectReader {
     }
 
     return readdirSync(sessionsDir)
-      .filter((entry) => entry.endsWith('.json'))
+      .filter((entry) => {
+        if (!entry.endsWith('.json')) return false;
+        try { this.pathBoundary.validatePath(join(sessionsDir, entry)); return true; } catch { return false; }
+      })
       .map((entry) => entry.replace('.json', ''));
   }
 
@@ -144,6 +176,17 @@ export class ProjectReader {
     const validatedPath = this.pathBoundary.validatePath(sessionPath);
     const content = readFileSync(validatedPath, 'utf8');
     return parseJsonSafely(content);
+  }
+
+  readEventPreview(taskKey: string, maxBytes = 64 * 1024): string {
+    const eventPath = this.pathBoundary.resolveForgeLoopPathLexically(join(TASK_STATE_DIR, taskKey, 'events.ndjson'));
+    if (!existsSync(eventPath)) return '';
+    const validatedPath = this.pathBoundary.validatePath(eventPath);
+    const content = readFileSync(validatedPath, 'utf8');
+    if (Buffer.byteLength(content, 'utf8') <= maxBytes) return content;
+    const head = content.slice(0, Math.floor(maxBytes / 2));
+    const tail = content.slice(-Math.floor(maxBytes / 2));
+    return `${head}\n... [Truncated preview] ...\n${tail}`;
   }
 
   readPolicySnapshot(taskKey: string): Record<string, unknown> | null {
@@ -169,7 +212,10 @@ export class ProjectReader {
     for (const name of ['rules.json', 'discovery.json', 'baseline.json', 'policy.lock']) {
       const candidate = join(policyRoot, name);
       if (!existsSync(candidate)) continue;
-      try { result[name] = parseJsonSafely(readFileSync(this.pathBoundary.validatePath(candidate), 'utf8')); } catch { result[name] = { _invalid: true }; }
+      try {
+        const parsed = parseJsonSafely(readFileSync(this.pathBoundary.validatePath(candidate), 'utf8'));
+        result[name] = isCanonicalArtifact(name, parsed) ? parsed : { _invalid: true, _schemaInvalid: true };
+      } catch { result[name] = { _invalid: true }; }
     }
     return result;
   }

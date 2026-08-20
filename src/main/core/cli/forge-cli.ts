@@ -1,6 +1,6 @@
 import { spawn, SpawnOptions } from 'child_process';
-import { existsSync, realpathSync } from 'fs';
-import { delimiter, isAbsolute, join, sep } from 'path';
+import { existsSync, realpathSync, readFileSync } from 'fs';
+import { delimiter, dirname, isAbsolute, join, sep } from 'path';
 import { ForgeLoopStudioError } from '@shared/errors';
 import { ALLOWED_CLI_COMMANDS, CLI_TIMEOUT_MS, CLI_MAX_STDOUT_BYTES } from '@shared/constants';
 import { parseJsonSafely } from '@main/security/resource-limits';
@@ -40,15 +40,26 @@ export class ForgeCli {
       },
     };
 
+    const invocation = resolveInvocation(executable, args);
+    if (!invocation) return { success: false, error: 'ForgeLoop CLI shim has no trusted JavaScript entrypoint', exitCode: -1 };
+
     return new Promise((resolve) => {
-      const child = spawn(executable, args, options);
+      const child = spawn(invocation.executable, invocation.args, options);
       let stdout = '';
       let stderr = '';
       let stdoutBytes = 0;
+      let stderrBytes = 0;
+      let settled = false;
+      const finish = (result: CliResult<unknown>) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        resolve(result);
+      };
 
       const timeout = setTimeout(() => {
         child.kill('SIGTERM');
-        resolve({
+        finish({
           success: false,
           error: `Command timed out after ${CLI_TIMEOUT_MS}ms`,
           exitCode: -1,
@@ -59,8 +70,7 @@ export class ForgeCli {
         stdoutBytes += chunk.length;
         if (stdoutBytes > CLI_MAX_STDOUT_BYTES) {
           child.kill('SIGTERM');
-          clearTimeout(timeout);
-          resolve({
+          finish({
             success: false,
             error: `Command output exceeded maximum size of ${CLI_MAX_STDOUT_BYTES} bytes`,
             exitCode: -1,
@@ -70,20 +80,25 @@ export class ForgeCli {
       });
 
       child.stderr?.on('data', (chunk: Buffer) => {
+        stderrBytes += chunk.length;
+        if (stderrBytes > CLI_MAX_STDOUT_BYTES) {
+          child.kill('SIGTERM');
+          finish({ success: false, error: `Command stderr exceeded maximum size of ${CLI_MAX_STDOUT_BYTES} bytes`, exitCode: -1 });
+          return;
+        }
         stderr += chunk.toString('utf8');
       });
 
       child.on('error', (error) => {
-        clearTimeout(timeout);
         const nodeError = error as NodeJS.ErrnoException;
         if (nodeError.code === 'ENOENT') {
-          resolve({
+          finish({
             success: false,
             error: `ForgeLoop CLI not found: ${this.forgeLoopPath}`,
             exitCode: -1,
           });
         } else {
-          resolve({
+          finish({
             success: false,
             error: `Failed to spawn process: ${error.message}`,
             exitCode: -1,
@@ -92,15 +107,14 @@ export class ForgeCli {
       });
 
       child.on('close', (code) => {
-        clearTimeout(timeout);
         if (code === 0) {
-          resolve({
+          finish({
             success: true,
             data: stdout,
             exitCode: code,
           });
         } else {
-          resolve({
+          finish({
             success: false,
             data: stdout,
             error: stderr || `Process exited with code ${code}`,
@@ -285,7 +299,9 @@ export class ForgeCli {
     try {
       const result = await new Promise<CliResult<unknown>>((resolve) => {
         if (!this.forgeLoopPath) { resolve({ success: false, error: 'ForgeLoop CLI unavailable', exitCode: -1 }); return; }
-        const child = spawn(this.forgeLoopPath, ['--version'], { cwd: this.projectRoot, shell: false, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, FORGELOOP_NO_COLOR: '1' } });
+        const invocation = resolveInvocation(this.forgeLoopPath, ['--version']);
+        if (!invocation) { resolve({ success: false, error: 'ForgeLoop CLI shim has no trusted JavaScript entrypoint', exitCode: -1 }); return; }
+        const child = spawn(invocation.executable, invocation.args, { cwd: this.projectRoot, shell: false, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, FORGELOOP_NO_COLOR: '1' } });
         let settled = false;
         const finish = (value: CliResult<unknown>) => { if (!settled) { settled = true; resolve(value); } };
         const timeout = setTimeout(() => { child.kill('SIGTERM'); finish({ success: false, error: 'Version probe timed out', exitCode: -1 }); }, CLI_TIMEOUT_MS);
@@ -295,6 +311,22 @@ export class ForgeCli {
       return result.success;
     } catch { return false; }
   }
+}
+
+interface SpawnInvocation { executable: string; args: string[]; }
+
+function resolveInvocation(executable: string | null, args: string[]): SpawnInvocation | null {
+  if (!executable) return null;
+  if (process.platform === 'win32' && executable.toLowerCase().endsWith('.cmd')) {
+    try {
+      const shim = readFileSync(executable, 'utf8');
+      const match = shim.match(/(?:%dp0%|%~dp0%)[\\/]+([^"\r\n]+?\.js)/i);
+      if (!match) return null;
+      const script = realpathSync(join(dirname(executable), match[1].replaceAll('\\', sep)));
+      return { executable: process.execPath, args: [script, ...args] };
+    } catch { return null; }
+  }
+  return { executable, args };
 }
 
 export function resolveTrustedForgeLoopPath(requested: string, projectRoot: string): string | null {

@@ -232,6 +232,7 @@ export function buildTaskSummary(
     nextAction,
     continuity: continuitySummary,
     writeClaims: safeStringArray(taskJson, 'writeClaims'),
+    policySnapshot: artifacts['policy-snapshot.json'],
   };
 }
 

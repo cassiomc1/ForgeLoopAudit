@@ -26,7 +26,10 @@ export class TaskIndexer {
 
     for (const entry of entries) {
       const taskDir = join(taskStateDir, entry);
-      if (!statSync(taskDir).isDirectory()) continue;
+      try {
+        if (!statSync(taskDir).isDirectory()) continue;
+        this.pathBoundary.validatePath(taskDir);
+      } catch { continue; }
 
       const taskJsonPath = join(taskDir, 'task.json');
       if (!existsSync(taskJsonPath)) continue;

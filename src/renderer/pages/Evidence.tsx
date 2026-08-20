@@ -48,7 +48,7 @@ export function Evidence({ snapshot, selectedTaskId, onSelectedTaskChange }: Evi
       {evidence && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-10 p-4">
-            <p className="text-xs text-forge-text-muted mb-1">Coverage</p>
+            <p className="text-xs text-forge-text-muted mb-1">Studio Coverage Score</p>
             <p className="text-2xl font-semibold text-forge-text-primary">{evidence.coveragePercent}%</p>
             <div className="mt-2 h-1.5 bg-forge-border-subtle rounded-full overflow-hidden">
               <div
@@ -58,11 +58,11 @@ export function Evidence({ snapshot, selectedTaskId, onSelectedTaskChange }: Evi
             </div>
           </div>
           <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-10 p-4">
-            <p className="text-xs text-forge-text-muted mb-1">Observed</p>
+            <p className="text-xs text-forge-text-muted mb-1">Covered</p>
             <p className="text-2xl font-semibold text-forge-success">{evidence.covered}</p>
           </div>
           <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-10 p-4">
-            <p className="text-xs text-forge-text-muted mb-1">Inferred</p>
+            <p className="text-xs text-forge-text-muted mb-1">Partial</p>
             <p className="text-2xl font-semibold text-forge-info">{evidence.partial}</p>
           </div>
           <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-10 p-4">

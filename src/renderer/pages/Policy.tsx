@@ -105,11 +105,11 @@ export function Policy({ snapshot, selectedTaskId, onSelectedTaskChange }: Polic
             </div>
           )}
 
-          {policy.taskSnapshot && Object.keys(policy.taskSnapshot).length > 0 && (
+          {selectedTask?.policySnapshot && Object.keys(selectedTask.policySnapshot).length > 0 && (
             <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-10 p-4">
               <h3 className="text-xs font-semibold text-forge-text-muted uppercase tracking-wider mb-3">Task Policy Snapshot</h3>
               <pre className="text-xs text-forge-text-secondary font-mono bg-forge-secondary-surface rounded-6 p-3 overflow-auto max-h-[300px]">
-                {JSON.stringify(policy.taskSnapshot, null, 2)}
+                {JSON.stringify(selectedTask.policySnapshot, null, 2)}
               </pre>
             </div>
           )}
