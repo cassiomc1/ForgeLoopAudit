@@ -11,7 +11,7 @@ xcrun stapler validate "/Applications/ForgeLoop Studio.app"
 "/Applications/ForgeLoop Studio.app/Contents/MacOS/ForgeLoop Studio"
 ```
 
-Unsigned RC1 preview builds may be rejected by Gatekeeper. This is expected for the current release policy; signing and notarization are deferred to a future distribution milestone.
+Unsigned RC2 preview builds may be rejected by Gatekeeper. This is expected for the current release policy; signing and notarization are deferred to a future distribution milestone.
 
 If macOS shows “Malware Blocked and Moved to Trash” for `Electron.app`, the local Electron runtime was quarantined or rejected before ForgeLoop Studio started. Reinstall the dependency from a trusted source and verify the signed/notarized release artifact; do not disable Gatekeeper as a project release strategy.
 
