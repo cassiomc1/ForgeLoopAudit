@@ -127,22 +127,15 @@ describe('task-reader', () => {
     it('should parse continuity from continuity.json', () => {
       const artifacts: RawTaskArtifacts = {
         'continuity.json': {
-          previousHarness: 'harness-a',
-          currentHarness: 'harness-b',
-          lastCompletedWork: 'Implemented feature X',
-          nextIntendedStep: 'Write tests',
-          knownBlockers: ['Missing dependency'],
-          reconciliationRequired: true,
+          taskId: 'task-1', phase: 'EXECUTING', updatedAt: '2026-08-20T00:00:00Z',
+          remainingWork: ['Write tests'], knownIssues: ['Missing dependency'],
         },
       };
       const result = buildTaskSummary('test-key', artifacts);
       expect(result.continuity).toBeDefined();
-      expect(result.continuity?.previousHarness).toBe('harness-a');
-      expect(result.continuity?.currentHarness).toBe('harness-b');
-      expect(result.continuity?.lastCompletedWork).toBe('Implemented feature X');
-      expect(result.continuity?.nextIntendedStep).toBe('Write tests');
-      expect(result.continuity?.knownBlockers).toEqual(['Missing dependency']);
-      expect(result.continuity?.reconciliationRequired).toBe(true);
+      expect(result.continuity?.taskId).toBe('task-1');
+      expect(result.continuity?.remainingWork).toEqual(['Write tests']);
+      expect(result.continuity?.knownIssues).toEqual(['Missing dependency']);
     });
 
     it('should build nextAction from nextResult', () => {

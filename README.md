@@ -6,7 +6,7 @@ ForgeLoop Studio is a local-first desktop companion for ForgeLoop. Open a ForgeL
 
 ## Status
 
-Design and implementation specification completed. Initial implementation is not started yet.
+Alpha — initial implementation is complete; build, protocol compatibility and release hardening remain in progress.
 
 ## Planned stack
 
@@ -35,3 +35,12 @@ See [`FORGELOOP_STUDIO_IMPLEMENTATION_SPEC.md`](./FORGELOOP_STUDIO_IMPLEMENTATIO
 ## ForgeLoop
 
 ForgeLoop Studio is a companion project for [ForgeLoop](https://github.com/cassiomc1/forgeloop).
+
+## Development
+
+```bash
+npm ci
+npm run dev
+```
+
+Use `npm run verify` for typecheck, tests and a deterministic production build. See [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for packaged macOS diagnostics and CLI/runtime limitations.

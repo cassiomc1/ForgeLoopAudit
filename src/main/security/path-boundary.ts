@@ -60,6 +60,18 @@ export class PathBoundary {
     return realRequested;
   }
 
+  validateLexicalPath(requestedPath: string): string {
+    const normalizedRequested = normalize(isAbsolute(requestedPath) ? requestedPath : resolve(this.projectRoot, requestedPath));
+    const relativePath = relative(this.projectRoot, normalizedRequested);
+    if (relativePath.startsWith('..') || relativePath === '..' || relativePath.includes(`${sep}..${sep}`)) {
+      throw ForgeLoopStudioError.pathBoundaryViolation(requestedPath, this.projectRoot);
+    }
+    if (!relativePath.startsWith(`.forgeloop${sep}`) && relativePath !== '.forgeloop') {
+      throw ForgeLoopStudioError.pathBoundaryViolation(requestedPath, this.projectRoot);
+    }
+    return normalizedRequested;
+  }
+
   validateForgeLoopPath(relativePath: string): string {
     const fullPath = resolve(this.projectRoot, FORGELOOP_DIR_NAME, relativePath);
     return this.validatePath(fullPath);

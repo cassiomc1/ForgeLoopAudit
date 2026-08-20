@@ -1,9 +1,10 @@
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, session, shell } from 'electron';
 import { join } from 'path';
 import { registerIpc } from './ipc/register-ipc';
 import { IPC_CHANNELS } from '@shared/ipc';
 
 let mainWindow: BrowserWindow | null = null;
+let ipcRegistered = false;
 const isDevelopment = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
 function createWindow(): BrowserWindow {
@@ -38,14 +39,14 @@ function createWindow(): BrowserWindow {
   });
 
   window.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
+    openAllowedExternalUrl(url);
     return { action: 'deny' };
   });
 
   window.webContents.on('will-navigate', (event, url) => {
     if (url !== window.webContents.getURL()) {
       event.preventDefault();
-      shell.openExternal(url);
+      openAllowedExternalUrl(url);
     }
   });
 
@@ -59,16 +60,25 @@ function createWindow(): BrowserWindow {
 }
 
 app.whenReady().then(() => {
+  session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false));
   mainWindow = createWindow();
-  registerIpc(mainWindow);
+  if (!ipcRegistered) {
+    registerIpc(mainWindow);
+    ipcRegistered = true;
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       mainWindow = createWindow();
-      registerIpc(mainWindow);
     }
   });
 });
+
+function openAllowedExternalUrl(raw: string): void {
+  try {
+    if (new URL(raw).protocol === 'https:') void shell.openExternal(raw);
+  } catch { /* reject malformed URLs */ }
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

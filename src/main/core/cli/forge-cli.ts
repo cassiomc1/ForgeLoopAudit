@@ -279,10 +279,15 @@ export class ForgeCli {
 
   async checkCliAvailable(): Promise<boolean> {
     try {
-      const result = await this.executeCommand(['--version']);
+      const result = await new Promise<CliResult<unknown>>((resolve) => {
+        const child = spawn(this.forgeLoopPath, ['--version'], { cwd: this.projectRoot, shell: false, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, FORGELOOP_NO_COLOR: '1' } });
+        let settled = false;
+        const finish = (value: CliResult<unknown>) => { if (!settled) { settled = true; resolve(value); } };
+        const timeout = setTimeout(() => { child.kill('SIGTERM'); finish({ success: false, error: 'Version probe timed out', exitCode: -1 }); }, CLI_TIMEOUT_MS);
+        child.on('error', (error) => { clearTimeout(timeout); finish({ success: false, error: error.message, exitCode: -1 }); });
+        child.on('close', (code) => { clearTimeout(timeout); finish({ success: code === 0, exitCode: code ?? -1 }); });
+      });
       return result.success;
-    } catch {
-      return false;
-    }
+    } catch { return false; }
   }
 }

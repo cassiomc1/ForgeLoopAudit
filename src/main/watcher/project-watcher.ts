@@ -1,4 +1,4 @@
-import { join } from 'path';
+import { join, relative, sep } from 'path';
 import chokidar, { FSWatcher } from 'chokidar';
 import { PathBoundary } from '@main/security/path-boundary';
 import { TASK_STATE_DIR, SESSIONS_DIR, POLICY_DIR } from '@shared/constants';
@@ -73,7 +73,6 @@ export class ProjectWatcher {
           this.onStatusChange(true);
         });
 
-      this.onStatusChange(true);
     } catch (error) {
       this.handleError(error instanceof Error ? error : new Error(String(error)));
     }
@@ -91,7 +90,9 @@ export class ProjectWatcher {
 
   private handleFileChange(path: string, changeType: 'add' | 'change' | 'unlink'): void {
     try {
-      const validatedPath = this.pathBoundary.validatePath(path);
+      const validatedPath = changeType === 'unlink'
+        ? this.pathBoundary.validateLexicalPath(path)
+        : this.pathBoundary.validatePath(path);
       this.coalescer.addChange({
         type: 'file',
         path: validatedPath,
@@ -105,7 +106,9 @@ export class ProjectWatcher {
 
   private handleDirChange(path: string, changeType: 'add' | 'unlink'): void {
     try {
-      const validatedPath = this.pathBoundary.validatePath(path);
+      const validatedPath = changeType === 'unlink'
+        ? this.pathBoundary.validateLexicalPath(path)
+        : this.pathBoundary.validatePath(path);
       this.coalescer.addChange({
         type: 'directory',
         path: validatedPath,
@@ -127,7 +130,7 @@ export class ProjectWatcher {
   }
 
   private classifyChange(change: CoalescedChange): WatcherEvent | null {
-    const relativePath = change.path.replace(this.forgeLoopRoot + '/', '');
+    const relativePath = relative(this.forgeLoopRoot, change.path).split(sep).join('/');
 
     if (relativePath.startsWith(TASK_STATE_DIR + '/')) {
       const parts = relativePath.split('/');
@@ -197,6 +200,9 @@ export class ProjectWatcher {
   }
 
   private handleError(error: Error): void {
+    this.isActive = false;
+    void this.watcher?.close();
+    this.watcher = null;
     this.onError(error);
 
     if (this.retryCount < WATCHER_MAX_RETRIES) {

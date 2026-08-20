@@ -1,4 +1,5 @@
 import { PathBoundary } from '@main/security/path-boundary';
+import { basename } from 'path';
 import type {
   ProjectSnapshot,
   ProjectSummary,
@@ -31,7 +32,7 @@ export class ProjectSnapshotBuilder {
     });
 
     const projectSummary: ProjectSummary = {
-      name: config.projectName || this.pathBoundary.getProjectRoot().split('/').pop() || 'Unknown Project',
+      name: config.projectName || basename(this.pathBoundary.getProjectRoot()) || 'Unknown Project',
       rootPath: this.pathBoundary.getProjectRoot(),
       branch: await this.getGitBranch(),
       head: await this.getGitHead(),
@@ -79,9 +80,7 @@ export class ProjectSnapshotBuilder {
         return {
           id,
           createdAt: String(session.createdAt || ''),
-          harness: String(session.harness || ''),
-          taskId: String(session.taskId || ''),
-          isActive: Boolean(session.isActive),
+          isActive: undefined,
         };
       } catch {
         return { id, createdAt: '', isActive: false };
@@ -112,17 +111,17 @@ export class ProjectSnapshotBuilder {
       protocol: protocol.compatible,
       state: tasks.length > 0,
       evidence: tasks.every((t) => t.evidenceCoverage.coveragePercent >= 80 || t.phase === 'COMPLETE'),
-      policy: true,
-      continuity: tasks.every((t) => !t.continuity?.reconciliationRequired),
+      policy: false,
+      continuity: tasks.every((t) => Boolean(t.continuity)),
     };
   }
 
   private buildPolicy(_tasks: TaskSummary[]): PolicySummary | undefined {
     return {
-      complianceMode: 'Strict',
+      complianceMode: 'Unknown',
       ruleCount: 0,
-      baselineStatus: 'valid',
-      lockStatus: 'valid',
+      baselineStatus: 'unknown',
+      lockStatus: 'unknown',
       driftCount: 0,
     };
   }
