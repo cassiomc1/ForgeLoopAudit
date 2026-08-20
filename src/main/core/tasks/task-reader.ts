@@ -29,11 +29,6 @@ function safeNumber(obj: Record<string, unknown> | undefined, key: string): numb
   return typeof value === 'number' ? value : undefined;
 }
 
-function safeBoolean(obj: Record<string, unknown> | undefined, key: string): boolean | undefined {
-  const value = obj?.[key];
-  return typeof value === 'boolean' ? value : undefined;
-}
-
 function parsePhase(value: unknown): ForgeLoopPhase | undefined {
   if (typeof value !== 'string') return undefined;
   return PHASE_ORDER[value as ForgeLoopPhase] !== undefined ? (value as ForgeLoopPhase) : undefined;
@@ -204,14 +199,17 @@ function buildContinuity(continuity: Record<string, unknown> | undefined): Conti
   if (!continuity) return undefined;
 
   return {
-    previousHarness: safeString(continuity, 'previousHarness'),
-    previousSession: safeString(continuity, 'previousSession'),
-    currentHarness: safeString(continuity, 'currentHarness'),
-    currentSession: safeString(continuity, 'currentSession'),
-    lastCompletedWork: safeString(continuity, 'lastCompletedWork'),
-    nextIntendedStep: safeString(continuity, 'nextIntendedStep'),
-    knownBlockers: safeStringArray(continuity, 'knownBlockers'),
-    reconciliationRequired: safeBoolean(continuity, 'reconciliationRequired'),
+    taskId: safeString(continuity, 'taskId'),
+    phase: safeString(continuity, 'phase'),
+    updatedAt: safeString(continuity, 'updatedAt'),
+    currentFocus: continuity.currentFocus,
+    remainingWork: safeStringArray(continuity, 'remainingWork'),
+    knownIssues: safeStringArray(continuity, 'knownIssues'),
+    changedAreas: safeStringArray(continuity, 'changedAreas'),
+    inspectFirst: safeStringArray(continuity, 'inspectFirst'),
+    resumeNote: safeString(continuity, 'resumeNote'),
+    repositoryFingerprint: continuity.repositoryFingerprint,
+    verificationCycle: safeNumber(continuity, 'verificationCycle'),
   };
 }
 

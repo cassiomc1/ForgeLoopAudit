@@ -125,14 +125,26 @@ export interface NextActionSummary {
 }
 
 export interface ContinuitySummary {
-  previousHarness?: string;
-  previousSession?: string;
-  currentHarness?: string;
-  currentSession?: string;
-  lastCompletedWork?: string;
-  nextIntendedStep?: string;
-  knownBlockers?: string[];
-  reconciliationRequired?: boolean;
+  taskId?: string;
+  phase?: string;
+  updatedAt?: string;
+  currentFocus?: unknown;
+  remainingWork?: string[];
+  knownIssues?: string[];
+  changedAreas?: string[];
+  inspectFirst?: string[];
+  resumeNote?: string;
+  repositoryFingerprint?: unknown;
+  verificationCycle?: number;
+  /** @deprecated Canonical continuity no longer exposes harness/session fields. */
+  previousHarness?: never;
+  previousSession?: never;
+  currentHarness?: never;
+  currentSession?: never;
+  lastCompletedWork?: never;
+  nextIntendedStep?: never;
+  knownBlockers?: never;
+  reconciliationRequired?: never;
 }
 
 export interface TaskSummary {

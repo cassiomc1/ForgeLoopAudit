@@ -3,7 +3,7 @@ import { join } from 'path';
 import { ForgeLoopStudioError } from '@shared/errors';
 import { parseJsonSafely } from '@main/security/resource-limits';
 import { PathBoundary } from '@main/security/path-boundary';
-import { FORGELOOP_DIR_NAME, CONFIG_FILE, SOURCES_FILE, TASK_STATE_DIR, SESSIONS_DIR, POLICY_DIR } from '@shared/constants';
+import { FORGELOOP_DIR_NAME, CONFIG_FILE, SOURCES_FILE, TASK_STATE_DIR, SESSIONS_DIR } from '@shared/constants';
 import type { ProjectDetectionResult } from '@shared/domain';
 import { checkProtocolCompatibility } from '@main/core/protocol/compatibility';
 
@@ -147,7 +147,7 @@ export class ProjectReader {
   }
 
   readPolicySnapshot(taskKey: string): Record<string, unknown> | null {
-    const policyDir = join(this.forgeLoopRoot, POLICY_DIR, taskKey);
+    const policyDir = join(this.forgeLoopRoot, TASK_STATE_DIR, taskKey);
     if (!existsSync(policyDir)) {
       return null;
     }
