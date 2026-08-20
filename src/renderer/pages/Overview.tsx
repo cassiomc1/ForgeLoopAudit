@@ -5,6 +5,7 @@ import { StatusBadge } from '../components/ui/StatusBadge';
 import { TaskRow } from '../components/tasks/TaskRow';
 import { NextSafeAction } from '../components/ui/NextSafeAction';
 import { cn } from '../lib/utils';
+import { formatEvidenceSummary } from '../lib/evidence-display';
 import {
   Activity,
   AlertTriangle,
@@ -143,7 +144,7 @@ export function Overview({ snapshot, watcherStatus: _watcherStatus, onTaskSelect
                   <span className="w-1.5 h-1.5 rounded-full bg-forge-text-muted" />
                   Evidence coverage
                 </span>
-                <span className="text-forge-text-primary">{snapshot.observations.evidence.covered + snapshot.observations.evidence.partial} covered</span>
+                <span className="text-forge-text-primary">{formatEvidenceSummary(snapshot.observations.evidence)}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-forge-text-secondary flex items-center gap-2">
