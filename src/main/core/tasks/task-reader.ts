@@ -12,6 +12,7 @@ export interface RawTaskArtifacts {
   'execution-receipt.json'?: Record<string, unknown>;
   'policy-snapshot.json'?: Record<string, unknown>;
   'events.ndjson'?: string;
+  artifactErrors?: string[];
 }
 
 function safeString(obj: Record<string, unknown> | undefined, key: string): string | undefined {
@@ -233,6 +234,7 @@ export function buildTaskSummary(
     continuity: continuitySummary,
     writeClaims: safeStringArray(taskJson, 'writeClaims'),
     policySnapshot: artifacts['policy-snapshot.json'],
+    artifactErrors: artifacts.artifactErrors,
   };
 }
 

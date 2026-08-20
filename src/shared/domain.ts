@@ -176,6 +176,7 @@ export interface TaskSummary {
   continuity?: ContinuitySummary;
   writeClaims?: string[];
   policySnapshot?: Record<string, unknown>;
+  artifactErrors?: string[];
 }
 
 export interface SessionSummary {
@@ -186,18 +187,34 @@ export interface SessionSummary {
   isActive?: boolean;
 }
 
+export interface PolicyDriftSummary {
+  detected: boolean;
+  classification?: string;
+  changeCount?: number;
+  snapshotDigest?: string;
+  currentDigest?: string;
+  changes?: unknown[];
+}
+
 export interface PolicySummary {
+  overallStatus: 'valid' | 'invalid' | 'unknown';
   complianceMode: string;
   ruleCount?: number;
-  baselineStatus: 'valid' | 'invalid' | 'unknown';
-  lockStatus: 'valid' | 'invalid' | 'unknown';
-  driftCount: number;
+  provenRules?: number;
+  inertRules?: number;
+  unsupportedRules?: number;
+  baselineViolations?: number;
+  newViolations?: number;
+  lockStatus: 'valid' | 'invalid' | 'not-applicable' | 'unknown';
+  drift: PolicyDriftSummary | null;
   integritySource: 'POLICY_STATUS' | 'ARTIFACTS' | 'UNKNOWN';
   integrityMessage?: string;
+  errors?: string[];
+  warnings?: string[];
 }
 
 export type ForgeLoopHealthStatus = 'VALID' | 'INCOMPLETE' | 'STALE' | 'INCONSISTENT' | 'INVALID' | 'UNKNOWN';
-export type ForgeLoopHealthSource = 'FORGELOOP_STATUS' | 'FORGELOOP_VALIDATE_STATE' | 'ARTIFACT_VALIDATION' | 'UNKNOWN';
+export type ForgeLoopHealthSource = 'FORGELOOP_STATUS_AGGREGATE' | 'FORGELOOP_VALIDATE_STATE' | 'ARTIFACT_VALIDATION' | 'UNKNOWN';
 
 export interface ProjectHealth {
   status: ForgeLoopHealthStatus;
@@ -241,6 +258,9 @@ export interface EventPage {
   validation?: {
     schema: 'VALID' | 'INVALID' | 'NOT_RUN';
     chain: 'VALID' | 'INVALID' | 'NOT_RUN';
+    scope?: 'PAGE' | 'LEDGER';
+    invalidLineCount?: number;
+    errors?: string[];
   };
 }
 
@@ -312,6 +332,7 @@ export interface ForgeLoopStudioAPI {
   getProjectSnapshot(): Promise<ProjectSnapshot>;
   getTask(taskId: string): Promise<TaskSnapshot>;
   getTaskEvents(taskId: string, cursor?: string, limit?: number): Promise<EventPage>;
+  getPolicyStatus(taskId?: string): Promise<PolicySummary | null>;
   getRawArtifact(request: RawArtifactRequest): Promise<string>;
   getRecentProjects(): Promise<RecentProject[]>;
   addRecentProject(project: RecentProject): Promise<void>;

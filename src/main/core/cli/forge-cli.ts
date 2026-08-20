@@ -278,8 +278,11 @@ export class ForgeCli {
     }
   }
 
-  async policyStatus<T = Record<string, unknown>>(): Promise<CliResult<T>> {
-    const result = await this.executeCommand(['policy-status', '--json']);
+  async policyStatus<T = Record<string, unknown>>(taskId?: string): Promise<CliResult<T>> {
+    const args = ['policy-status'];
+    if (taskId) args.push('--task', taskId);
+    args.push('--json');
+    const result = await this.executeCommand(args);
     if (!result.success) {
       return result as CliResult<T>;
     }

@@ -52,7 +52,7 @@ export function Overview({ snapshot, watcherStatus: _watcherStatus, onTaskSelect
         </div>
         <div className="flex items-center gap-3">
           <StatusBadge status={snapshot.health.status} />
-          <span className="text-xs text-forge-text-muted">Source: {snapshot.health.source}</span>
+          <span className="text-xs text-forge-text-muted">Source: {snapshot.health.source === 'FORGELOOP_STATUS_AGGREGATE' ? 'ForgeLoop task status aggregate' : snapshot.health.source}</span>
         </div>
       </div>
 
@@ -179,6 +179,13 @@ export function Overview({ snapshot, watcherStatus: _watcherStatus, onTaskSelect
           </div>
         </div>
       </div>
+
+      {snapshot.tasks.some((task) => task.artifactErrors && task.artifactErrors.length > 0) && (
+        <div className="bg-forge-warning/5 border border-forge-warning/20 rounded-10 p-4">
+          <h2 className="text-sm font-semibold text-forge-warning">Artifact validation warning</h2>
+          <p className="text-xs text-forge-text-secondary mt-1">An invalid artifact was detected. The last valid task snapshot is retained while the artifact is repaired.</p>
+        </div>
+      )}
 
       {snapshot.tasks.some((t) => t.nextAction) && (
         <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-10">

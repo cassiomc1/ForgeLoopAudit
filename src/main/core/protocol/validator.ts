@@ -1,6 +1,6 @@
-import Ajv from 'ajv';
+import Ajv2020 from 'ajv/dist/2020';
 import addFormats from 'ajv-formats';
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { ForgeLoopStudioError } from '@shared/errors';
 import { parseJsonSafely } from '@main/security/resource-limits';
@@ -11,12 +11,17 @@ export interface ValidationResult {
 }
 
 export class SchemaValidator {
-  private readonly ajv: Ajv;
+  private readonly ajv: Ajv2020;
   private readonly schemaCache: Map<string, object> = new Map();
+  private readonly validatorCache: Map<string, ReturnType<Ajv2020['compile']>> = new Map();
 
   constructor(private readonly schemasDir: string) {
-    this.ajv = new Ajv({ allErrors: true, strict: false });
+    this.ajv = new Ajv2020({ allErrors: true, strict: false });
     addFormats(this.ajv);
+  }
+
+  hasSchema(schemaName: string): boolean {
+    return existsSync(join(this.schemasDir, schemaName));
   }
 
   private loadSchema(schemaName: string): object {
@@ -38,7 +43,8 @@ export class SchemaValidator {
   validate(schemaName: string, data: unknown): ValidationResult {
     try {
       const schema = this.loadSchema(schemaName);
-      const validate = this.ajv.compile(schema);
+      const validate = this.validatorCache.get(schemaName) || this.ajv.compile(schema);
+      this.validatorCache.set(schemaName, validate);
       const valid = validate(data);
 
       if (!valid) {

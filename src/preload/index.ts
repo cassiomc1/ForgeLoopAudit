@@ -18,6 +18,8 @@ const api = {
   getTask: (taskId: string): Promise<TaskSnapshot> => ipcRenderer.invoke(IPC_CHANNELS.GET_TASK, taskId),
   getTaskEvents: (taskId: string, cursor?: string, limit?: number): Promise<EventPage> =>
     ipcRenderer.invoke(IPC_CHANNELS.GET_TASK_EVENTS, taskId, cursor, limit),
+  validateEventLedger: (taskId: string) => ipcRenderer.invoke(IPC_CHANNELS.VALIDATE_EVENT_LEDGER, taskId),
+  getPolicyStatus: (taskId?: string) => ipcRenderer.invoke(IPC_CHANNELS.GET_POLICY_STATUS, taskId),
   getRawArtifact: (request: RawArtifactRequest): Promise<string> => ipcRenderer.invoke(IPC_CHANNELS.GET_RAW_ARTIFACT, request),
   getRecentProjects: (): Promise<RecentProject[]> => ipcRenderer.invoke(IPC_CHANNELS.GET_RECENT_PROJECTS),
   addRecentProject: (project: RecentProject): Promise<void> => ipcRenderer.invoke(IPC_CHANNELS.ADD_RECENT_PROJECT, project),
