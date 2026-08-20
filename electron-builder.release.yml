@@ -1,1 +1,8 @@
 forceCodeSigning: true
+directories:
+  output: dist-electron
+files:
+  - dist/**/*
+  - '!dist/**/*.map'
+  - schemas/**/*
+  - node_modules/**/*
