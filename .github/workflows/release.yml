@@ -37,7 +37,7 @@ jobs:
             found=1
             test -f "$app/Contents/Resources/app.asar"
           done < <(
-            find dist-electron -name '*.app' -type d -print
+            find dist-electron -mindepth 2 -maxdepth 2 -name '*.app' -type d -print
           )
 
           test "$found" -eq 1
