@@ -220,17 +220,20 @@ export type ForgeLoopHealthSource = 'FORGELOOP_STATUS_AGGREGATE' | 'FORGELOOP_VA
 export interface ProjectHealth {
   status: ForgeLoopHealthStatus;
   source: ForgeLoopHealthSource;
-  protocol: boolean;
-  state: boolean;
-  evidence: boolean;
-  policy?: boolean;
-  continuity: boolean;
+}
+
+export interface ProjectObservations {
+  taskCount: number;
+  evidence: Pick<EvidenceCoverageSummary, 'covered' | 'partial' | 'notVerified' | 'blocked'>;
+  continuity: { present: number; missing: number };
+  artifactValidationErrors: number;
 }
 
 export interface ProjectSnapshot {
   project: ProjectSummary;
   protocol: ProtocolSummary;
   health: ProjectHealth;
+  observations: ProjectObservations;
   tasks: TaskSummary[];
   activeTaskId?: string;
   sessions: SessionSummary[];
@@ -339,6 +342,7 @@ export interface ForgeLoopStudioAPI {
   getRecentProjects(): Promise<RecentProject[]>;
   addRecentProject(project: RecentProject): Promise<void>;
   removeRecentProject(path: string): Promise<void>;
+  notifyRendererReady(): Promise<void>;
   subscribeProjectUpdates(listener: (update: ProjectUpdate) => void): () => void;
 }
 

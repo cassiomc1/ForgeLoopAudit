@@ -45,10 +45,6 @@ jobs:
           find dist-electron -name '*.app' -print -exec codesign --verify --deep --strict --verbose=4 {} \;
           find dist-electron -name '*.app' -print -exec spctl --assess --type execute --verbose=4 {} \;
           find dist-electron -name '*.app' -print -exec xcrun stapler validate {} \;
-      - name: Generate macOS checksums
-        run: |
-          set -euo pipefail
-          find dist-electron -maxdepth 1 -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 shasum -a 256 > dist-electron/SHA256SUMS-macos
       - run: node scripts/stage-release.mjs macos
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -71,12 +67,6 @@ jobs:
         run: node scripts/packaged-smoke.mjs
       - name: Build Windows distributables
         run: npx --no-install electron-builder --win
-      - name: Generate Windows checksums
-        shell: pwsh
-        run: |
-          Get-ChildItem -File dist-electron | Where-Object { $_.Name -ne 'SHA256SUMS-windows' } | Get-FileHash -Algorithm SHA256 |
-            ForEach-Object { "$($_.Hash.ToLower())  $([System.IO.Path]::GetFileName($_.Path))" } |
-            Set-Content -Encoding ascii dist-electron/SHA256SUMS-windows
       - run: node scripts/stage-release.mjs windows
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -99,10 +89,6 @@ jobs:
         run: node scripts/packaged-smoke.mjs
       - name: Build Linux distributables
         run: npx --no-install electron-builder --linux
-      - name: Generate Linux checksums
-        run: |
-          set -euo pipefail
-          find dist-electron -maxdepth 1 -type f ! -name SHA256SUMS-linux -print0 | sort -z | xargs -0 sha256sum > dist-electron/SHA256SUMS-linux
       - run: node scripts/stage-release.mjs linux
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:

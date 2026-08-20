@@ -22,6 +22,7 @@ export interface ForgeLoopStudioAPI {
   getRecentProjects(): Promise<RecentProject[]>;
   addRecentProject(project: RecentProject): Promise<void>;
   removeRecentProject(path: string): Promise<void>;
+  notifyRendererReady(): Promise<void>;
 
   subscribeProjectUpdates(
     listener: (update: ProjectUpdate) => void
@@ -61,6 +62,7 @@ export const IPC_CHANNELS = {
   GET_RECENT_PROJECTS: 'studio:get-recent-projects',
   ADD_RECENT_PROJECT: 'studio:add-recent-project',
   REMOVE_RECENT_PROJECT: 'studio:remove-recent-project',
+  RENDERER_READY: 'studio:renderer-ready',
   SUBSCRIBE_UPDATES: 'studio:subscribe-updates',
   UNSUBSCRIBE_UPDATES: 'studio:unsubscribe-updates',
   PROJECT_UPDATE: 'studio:project-update',

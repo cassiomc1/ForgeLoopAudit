@@ -126,38 +126,38 @@ export function Overview({ snapshot, watcherStatus: _watcherStatus, onTaskSelect
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-forge-text-secondary flex items-center gap-2">
-                  <span className={cn('w-1.5 h-1.5 rounded-full', snapshot.health.protocol ? 'bg-forge-success' : 'bg-forge-danger')} />
+                  <span className={cn('w-1.5 h-1.5 rounded-full', snapshot.protocol.compatible ? 'bg-forge-success' : 'bg-forge-danger')} />
                   Protocol
                 </span>
-                <span className="text-forge-text-primary">{snapshot.health.protocol ? '✓' : '✗'}</span>
+                <span className="text-forge-text-primary">{snapshot.protocol.compatible ? '✓' : '✗'}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-forge-text-secondary flex items-center gap-2">
-                  <span className={cn('w-1.5 h-1.5 rounded-full', snapshot.health.state ? 'bg-forge-success' : 'bg-forge-danger')} />
-                  State
+                  <span className="w-1.5 h-1.5 rounded-full bg-forge-text-muted" />
+                  Observed tasks
                 </span>
-                <span className="text-forge-text-primary">{snapshot.health.state ? '✓' : '✗'}</span>
+                <span className="text-forge-text-primary">{snapshot.observations.taskCount}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-forge-text-secondary flex items-center gap-2">
-                  <span className={cn('w-1.5 h-1.5 rounded-full', snapshot.health.evidence ? 'bg-forge-success' : 'bg-forge-warning')} />
-                  Evidence
+                  <span className="w-1.5 h-1.5 rounded-full bg-forge-text-muted" />
+                  Evidence coverage
                 </span>
-                <span className="text-forge-text-primary">{snapshot.health.evidence ? '✓' : '○'}</span>
+                <span className="text-forge-text-primary">{snapshot.observations.evidence.covered + snapshot.observations.evidence.partial} covered</span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-forge-text-secondary flex items-center gap-2">
-                  <span className={cn('w-1.5 h-1.5 rounded-full', snapshot.health.policy === true ? 'bg-forge-success' : snapshot.health.policy === false ? 'bg-forge-danger' : 'bg-forge-text-muted')} />
+                  <span className={cn('w-1.5 h-1.5 rounded-full', snapshot.policy?.overallStatus === 'valid' ? 'bg-forge-success' : snapshot.policy?.overallStatus === 'invalid' ? 'bg-forge-danger' : 'bg-forge-text-muted')} />
                   Policy
                 </span>
-                <span className="text-forge-text-primary">{snapshot.health.policy === true ? '✓' : snapshot.health.policy === false ? '✗' : '?'}</span>
+                <span className="text-forge-text-primary">{snapshot.policy?.overallStatus === 'valid' ? '✓' : snapshot.policy?.overallStatus === 'invalid' ? '✗' : '?'}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-forge-text-secondary flex items-center gap-2">
-                  <span className={cn('w-1.5 h-1.5 rounded-full', snapshot.health.continuity ? 'bg-forge-success' : 'bg-forge-warning')} />
-                  Continuity
+                  <span className="w-1.5 h-1.5 rounded-full bg-forge-text-muted" />
+                  Continuity records
                 </span>
-                <span className="text-forge-text-primary">{snapshot.health.continuity ? '✓' : '○'}</span>
+                <span className="text-forge-text-primary">{snapshot.observations.continuity.present}/{snapshot.observations.taskCount}</span>
               </div>
             </div>
           </div>

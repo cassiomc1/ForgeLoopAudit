@@ -232,4 +232,42 @@ describe('sixth review protocol hardening', () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+
+  it('does not validate a missing ledger as a valid chain', () => {
+    const root = makeProject();
+    try {
+      const reader = new EventLedgerReader(new PathBoundary(root), new SchemaValidator(schemasDir));
+      expect(reader.validateIntegrity('task-1')).toMatchObject({ schema: 'NOT_RUN', chain: 'NOT_RUN' });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects symlinked raw event previews even when the target remains in the project', () => {
+    const root = makeProject();
+    try {
+      const eventPath = join(root, '.forgeloop', 'task-state', 'task-1', 'events.ndjson');
+      const targetPath = join(root, '.forgeloop', 'task-state', 'task-1', 'events-target.ndjson');
+      writeFileSync(targetPath, 'event');
+      symlinkSync(targetPath, eventPath);
+      const reader = new ProjectReader(new PathBoundary(root), new SchemaValidator(schemasDir));
+      expect(() => reader.readEventPreview('task-1')).toThrow();
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('validates policy snapshots through the canonical artifact adapter', () => {
+    const root = makeProject();
+    const snapshotPath = join(root, '.forgeloop', 'task-state', 'task-1', 'policy-snapshot.json');
+    try {
+      writeFileSync(snapshotPath, JSON.stringify({ schemaVersion: 1, policyDigest: sha, rules: [] }));
+      const reader = new ProjectReader(new PathBoundary(root), new SchemaValidator(schemasDir));
+      expect(reader.readPolicySnapshot('task-1')).toMatchObject({ policyDigest: sha });
+      writeFileSync(snapshotPath, JSON.stringify({ schemaVersion: 1 }));
+      expect(() => reader.readPolicySnapshot('task-1')).toThrow();
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });

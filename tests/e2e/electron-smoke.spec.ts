@@ -78,7 +78,6 @@ test('fixture project flows through the functional v0.1 renderer surfaces', asyn
   const app = await electron.launch({ args: ['.'], env: { ...process.env, NODE_ENV: 'production', FORGELOOP_STUDIO_SMOKE: '1', FORGELOOP_STUDIO_FIXTURE_PROJECT: fixture } });
   try {
     const window = await app.firstWindow();
-    await window.waitForTimeout(3000);
     await expect(window.getByRole('heading', { name: 'Project Overview' })).toBeVisible();
     await expect(window.getByText('fixture-task')).toBeVisible();
     for (const page of [

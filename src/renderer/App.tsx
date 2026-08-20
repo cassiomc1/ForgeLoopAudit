@@ -89,7 +89,9 @@ export function App() {
 
   useEffect(() => {
     void loadRecentProjects();
-    return api.subscribeProjectUpdates(handleProjectUpdate);
+    const unsubscribe = api.subscribeProjectUpdates(handleProjectUpdate);
+    void api.notifyRendererReady().catch((err) => console.error('Failed to notify renderer readiness:', err));
+    return unsubscribe;
   }, [api, handleProjectUpdate, loadRecentProjects]);
 
   const handleOpenProject = async () => {

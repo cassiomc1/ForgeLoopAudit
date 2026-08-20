@@ -183,11 +183,13 @@ export class ProjectReader {
   }
 
   readTaskDescriptor(taskKey: string): Record<string, unknown> {
-    const descriptor = this.readTaskSummaryArtifacts(taskKey)['task.json'];
-    if (!descriptor || typeof descriptor !== 'object' || Array.isArray(descriptor)) {
-      throw ForgeLoopStudioError.artifactInvalid('task.json', 'Task descriptor is missing or invalid');
-    }
-    return descriptor as Record<string, unknown>;
+    const taskPath = join(this.forgeLoopRoot, TASK_STATE_DIR, taskKey, 'task.json');
+    const stat = lstatSync(taskPath);
+    if (!stat.isFile() || stat.isSymbolicLink()) throw ForgeLoopStudioError.artifactInvalid('task.json', 'Symbolic links and non-file descriptors are not allowed');
+    const parsed = parseJsonSafely(readFileSync(this.pathBoundary.validatePath(taskPath), 'utf8'));
+    const validated = this.validateArtifact('task.json', parsed);
+    if (validated.error) throw ForgeLoopStudioError.artifactInvalid('task.json', validated.error);
+    return validated.value as Record<string, unknown>;
   }
 
   private readTaskArtifactsForSummary(taskKey: string): Record<string, unknown> {
@@ -274,6 +276,7 @@ export class ProjectReader {
   readEventPreview(taskKey: string, maxBytes = 64 * 1024): string {
     const eventPath = this.pathBoundary.resolveForgeLoopPathLexically(join(TASK_STATE_DIR, taskKey, 'events.ndjson'));
     if (!existsSync(eventPath)) return '';
+    if (lstatSync(eventPath).isSymbolicLink()) throw ForgeLoopStudioError.artifactInvalid('events.ndjson', 'Symbolic links are not allowed');
     const validatedPath = this.pathBoundary.validatePath(eventPath);
     const fd = openSync(validatedPath, 'r');
     const size = fstatSync(fd).size;
@@ -303,9 +306,12 @@ export class ProjectReader {
       return null;
     }
 
+    if (lstatSync(snapshotPath).isSymbolicLink()) throw ForgeLoopStudioError.artifactInvalid('policy-snapshot.json', 'Symbolic links are not allowed');
     const validatedPath = this.pathBoundary.validatePath(snapshotPath);
-    const content = readFileSync(validatedPath, 'utf8');
-    return parseJsonSafely(content);
+    const parsed = parseJsonSafely(readFileSync(validatedPath, 'utf8'));
+    const validated = this.validateArtifact('policy-snapshot.json', parsed);
+    if (validated.error) throw ForgeLoopStudioError.artifactInvalid('policy-snapshot.json', validated.error);
+    return validated.value as Record<string, unknown>;
   }
 
   readGlobalPolicy(): Record<string, unknown> {
