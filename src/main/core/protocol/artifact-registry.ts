@@ -8,6 +8,7 @@ export const ARTIFACT_SCHEMAS = {
   'work-state.json': 'work-state.schema.json',
   'continuity.json': 'continuity.schema.json',
   'execution-receipt.json': 'execution-receipt.schema.json',
+  'session.json': 'activation.schema.json',
   'gate.json': 'gate.schema.json',
   'event': 'event.schema.json',
   'policy-snapshot.json': 'policy-snapshot.schema.json',
@@ -49,3 +50,11 @@ export function isRequiredArtifact(artifact: ArtifactName): boolean {
 export function isTaskArtifact(artifact: ArtifactName): boolean {
   return TASK_ARTIFACTS.includes(artifact) || OPTIONAL_TASK_ARTIFACTS.includes(artifact);
 }
+
+export function getMissingArtifactSchemas(schemasDir: string): string[] {
+  return [...new Set(Object.values(ARTIFACT_SCHEMAS))].filter((schema) => {
+    return !existsSync(join(schemasDir, schema));
+  });
+}
+import { existsSync } from 'fs';
+import { join } from 'path';

@@ -223,8 +223,11 @@ export function normalizePolicyStatus(value: unknown, complianceMode = 'Unknown'
     currentDigest: typeof driftRecord.currentDigest === 'string' ? driftRecord.currentDigest : undefined,
     changes: Array.isArray(driftRecord.changes) ? driftRecord.changes : undefined,
   } : null;
-  const lockStatus: PolicySummary['lockStatus'] = lock?.status === 'NOT_APPLICABLE'
+  const rawLockStatus = typeof lock?.status === 'string' ? lock.status.toUpperCase() : undefined;
+  const lockStatus: PolicySummary['lockStatus'] = rawLockStatus === 'NOT_APPLICABLE'
     ? 'not-applicable'
+    : rawLockStatus === 'INVALID'
+      ? 'invalid'
     : errors.some((error) => error.includes('POLICY_LOCK_MISMATCH'))
       ? 'invalid'
       : typeof lock?.digest === 'string' ? 'valid' : 'unknown';

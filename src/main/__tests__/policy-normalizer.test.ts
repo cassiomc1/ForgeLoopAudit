@@ -29,4 +29,13 @@ describe('normalizePolicyStatus', () => {
     expect(result.overallStatus).toBe('invalid');
     expect(result.lockStatus).toBe('valid');
   });
+
+  it('maps an explicit invalid policy lock to invalid', () => {
+    const result = normalizePolicyStatus({
+      status: 'INVALID',
+      lock: { status: 'INVALID' },
+      errors: [{ code: 'E_POLICY_INVALID' }],
+    });
+    expect(result.lockStatus).toBe('invalid');
+  });
 });

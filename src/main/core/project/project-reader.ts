@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, statSync, existsSync, openSync, readSync, closeSync, fstatSync } from 'fs';
+import { readFileSync, readdirSync, statSync, lstatSync, existsSync, openSync, readSync, closeSync, fstatSync } from 'fs';
 import { join } from 'path';
 import { ForgeLoopStudioError } from '@shared/errors';
 import { parseJsonSafely } from '@main/security/resource-limits';
@@ -44,12 +44,24 @@ const SCHEMA_BY_FILE: Record<string, string> = {
   'work-state.json': ARTIFACT_SCHEMAS['work-state.json'],
   'continuity.json': ARTIFACT_SCHEMAS['continuity.json'],
   'execution-receipt.json': ARTIFACT_SCHEMAS['execution-receipt.json'],
+  'session.json': ARTIFACT_SCHEMAS['session.json'],
   'policy-snapshot.json': ARTIFACT_SCHEMAS['policy-snapshot.json'],
   'rules.json': ARTIFACT_SCHEMAS['policy/rules.json'],
   'discovery.json': ARTIFACT_SCHEMAS['policy/discovery.json'],
   'baseline.json': ARTIFACT_SCHEMAS['policy/baseline.json'],
   'policy.lock': ARTIFACT_SCHEMAS['policy/policy.lock'],
 };
+
+const TASK_JSON_ARTIFACTS = new Set([
+  'task.json',
+  'contract.json',
+  'routing-result.json',
+  'preflight.json',
+  'work-state.json',
+  'continuity.json',
+  'execution-receipt.json',
+  'policy-snapshot.json',
+]);
 
 export class ProjectDetector {
   detect(projectRoot: string): ProjectDetectionResult {
@@ -96,13 +108,13 @@ export class ProjectDetector {
 
 export class ProjectReader {
   private readonly forgeLoopRoot: string;
-  private readonly validator?: SchemaValidator;
+  private readonly validator: SchemaValidator;
   private readonly artifactErrors = new Map<string, string[]>();
   private readonly lastValidArtifacts = new Map<string, Record<string, unknown>>();
 
   constructor(
     private readonly pathBoundary: PathBoundary,
-    validator?: SchemaValidator
+    validator: SchemaValidator
   ) {
     this.forgeLoopRoot = pathBoundary.validateForgeLoopPath('');
     this.validator = validator;
@@ -156,7 +168,7 @@ export class ProjectReader {
     return entries.filter((entry) => {
       const fullPath = join(taskStateDir, entry);
       try {
-        return statSync(fullPath).isDirectory() && this.pathBoundary.validatePath(fullPath) !== '';
+        return lstatSync(fullPath).isDirectory() && this.pathBoundary.validatePath(fullPath) !== '';
       } catch {
         return false;
       }
@@ -169,6 +181,14 @@ export class ProjectReader {
 
   readTaskSummaryArtifacts(taskKey: string): Record<string, unknown> {
     return this.readTaskArtifactsForSummary(taskKey, false);
+  }
+
+  readTaskDescriptor(taskKey: string): Record<string, unknown> {
+    const descriptor = this.readTaskSummaryArtifacts(taskKey)['task.json'];
+    if (!descriptor || typeof descriptor !== 'object' || Array.isArray(descriptor)) {
+      throw ForgeLoopStudioError.artifactInvalid('task.json', 'Task descriptor is missing or invalid');
+    }
+    return descriptor as Record<string, unknown>;
   }
 
   private readTaskArtifactsForSummary(taskKey: string, includeEvents: boolean): Record<string, unknown> {
@@ -185,20 +205,26 @@ export class ProjectReader {
 
     for (const entry of entries) {
       const filePath = join(validatedPath, entry);
-      if (statSync(filePath).isFile() && (entry.endsWith('.json') || (includeEvents && entry.endsWith('.ndjson')))) {
-        try {
-          const content = readFileSync(filePath, 'utf8');
-          if (entry.endsWith('.json')) {
-            const parsed = parseJsonSafely(content);
-            const validated = this.validateArtifact(entry, parsed);
-            if (validated.error) errors.push(validated.error);
-            else artifacts[entry] = validated.value;
-          } else {
-            artifacts[entry] = content;
-          }
-        } catch (error) {
-          artifacts[entry] = { _parseError: error instanceof Error ? error.message : String(error) };
+      if (!entry.endsWith('.json') && !(includeEvents && entry.endsWith('.ndjson'))) continue;
+      if (entry.endsWith('.json') && !TASK_JSON_ARTIFACTS.has(entry)) continue;
+      try {
+        const stat = lstatSync(filePath);
+        if (!stat.isFile() || stat.isSymbolicLink()) {
+          errors.push(`${entry}: symbolic links and non-file artifacts are not allowed`);
+          continue;
         }
+        const safePath = this.pathBoundary.validatePath(filePath);
+        const content = readFileSync(safePath, 'utf8');
+        if (entry.endsWith('.json')) {
+          const parsed = parseJsonSafely(content);
+          const validated = this.validateArtifact(entry, parsed);
+          if (validated.error) errors.push(validated.error);
+          else artifacts[entry] = validated.value;
+        } else {
+          artifacts[entry] = content;
+        }
+      } catch (error) {
+        errors.push(`${entry}: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
 
@@ -228,7 +254,10 @@ export class ProjectReader {
     return readdirSync(sessionsDir)
       .filter((entry) => {
         if (!entry.endsWith('.json')) return false;
-        try { this.pathBoundary.validatePath(join(sessionsDir, entry)); return true; } catch { return false; }
+        try {
+          const candidate = join(sessionsDir, entry);
+          return lstatSync(candidate).isFile() && !lstatSync(candidate).isSymbolicLink() && Boolean(this.pathBoundary.validatePath(candidate));
+        } catch { return false; }
       })
       .map((entry) => entry.replace('.json', ''));
   }
@@ -238,8 +267,8 @@ export class ProjectReader {
     const validatedPath = this.pathBoundary.validatePath(sessionPath);
     const content = readFileSync(validatedPath, 'utf8');
     const parsed = parseJsonSafely(content);
-    const validated = this.validateArtifact('policy-snapshot.json', parsed);
-    if (validated.error) throw ForgeLoopStudioError.artifactInvalid('policy-snapshot.json', validated.error);
+    const validated = this.validateArtifact('session.json', parsed);
+    if (validated.error) throw ForgeLoopStudioError.artifactInvalid('session.json', validated.error);
     return validated.value as Record<string, unknown>;
   }
 
@@ -288,6 +317,8 @@ export class ProjectReader {
       const candidate = join(policyRoot, name);
       if (!existsSync(candidate)) continue;
       try {
+        const stat = lstatSync(candidate);
+        if (!stat.isFile() || stat.isSymbolicLink()) throw new Error('symbolic links and non-file artifacts are not allowed');
         const parsed = parseJsonSafely(readFileSync(this.pathBoundary.validatePath(candidate), 'utf8'));
         const validated = this.validateArtifact(name, parsed);
         result[name] = validated.error ? { _invalid: true, _schemaInvalid: true, _error: validated.error } : validated.value;
@@ -301,14 +332,6 @@ export function createProjectDetector(_pathBoundary: PathBoundary): ProjectDetec
   return new ProjectDetector();
 }
 
-export function createProjectReader(pathBoundary: PathBoundary): ProjectReader {
-  const schemaCandidates = [
-    process.env.FORGELOOP_SCHEMA_DIR,
-    join(process.cwd(), '..', 'forgeloop', 'schemas'),
-    join(pathBoundary.getProjectRoot(), '.forgeloop', 'schemas'),
-    join(process.resourcesPath || '', 'schemas'),
-    typeof __dirname === 'string' ? join(__dirname, '..', '..', 'schemas') : undefined,
-  ].filter((value): value is string => Boolean(value));
-  const schemaDir = schemaCandidates.find((candidate) => existsSync(candidate));
-  return new ProjectReader(pathBoundary, schemaDir ? new SchemaValidator(schemaDir) : undefined);
+export function createProjectReader(pathBoundary: PathBoundary, validator: SchemaValidator): ProjectReader {
+  return new ProjectReader(pathBoundary, validator);
 }

@@ -1,4 +1,4 @@
-import { ipcMain, dialog, BrowserWindow } from 'electron';
+import { app, ipcMain, dialog, BrowserWindow } from 'electron';
 import { PathBoundary } from '@main/security/path-boundary';
 import { ForgeLoopStudioError } from '@shared/errors';
 import type { ProjectDetectionResult, RecentProject, StudioError } from '@shared/domain';
@@ -12,6 +12,7 @@ import { createEventLedgerReader, type EventLedgerReader } from '@main/core/even
 import Store from 'electron-store';
 import { z } from 'zod';
 import { basename } from 'path';
+import { resolveTrustedSchemaDirectory, SchemaValidator } from '@main/core/protocol/validator';
 
 const store = new Store<{ recentProjects: RecentProject[] }>({
   name: 'forgeloop-studio-settings',
@@ -203,7 +204,15 @@ async function openProject(projectRoot: string): Promise<ProjectDetectionResult>
   }
 
   currentProjectBoundary = pathBoundary;
-  currentProjectReader = createProjectReader(pathBoundary);
+  const schemaDir = resolveTrustedSchemaDirectory({
+    allowEnvironmentOverride: !app.isPackaged,
+    appPath: app.getAppPath(),
+    resourcesPath: process.resourcesPath,
+    cwd: process.cwd(),
+    moduleDir: __dirname,
+  });
+  const protocolSchemas = new SchemaValidator(schemaDir);
+  currentProjectReader = createProjectReader(pathBoundary, protocolSchemas);
   currentForgeCli = new ForgeCli(projectRoot);
   const protocolInfo = await currentForgeCli.protocolInfo<{ protocolVersion: number; schemaVersion: number; packageVersion?: string }>();
   if (protocolInfo.success && protocolInfo.data) {
@@ -216,9 +225,9 @@ async function openProject(projectRoot: string): Promise<ProjectDetectionResult>
     detectionResult.warnings = [...detectionResult.warnings, 'ForgeLoop CLI unavailable; compatibility is artifact-only.'];
   }
 
-  const taskEventReader = createEventLedgerReader(pathBoundary);
-  const gateReader = createGateReader(pathBoundary);
-  currentTaskIndexer = createTaskIndexer(pathBoundary);
+  const taskEventReader = createEventLedgerReader(pathBoundary, protocolSchemas);
+  const gateReader = createGateReader(pathBoundary, protocolSchemas);
+  currentTaskIndexer = createTaskIndexer(pathBoundary, currentProjectReader);
   currentEventReader = taskEventReader;
   currentTaskSnapshotBuilder = createTaskSnapshotBuilder(pathBoundary, taskEventReader, gateReader);
 

@@ -1,12 +1,15 @@
 name: Release
+
 on:
   workflow_dispatch:
   push:
     tags: ['v*']
+
+permissions:
+  contents: read
+
 jobs:
   macos:
-    permissions:
-      contents: write
     runs-on: macos-latest
     if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
     steps:
@@ -15,7 +18,8 @@ jobs:
         with: { node-version: 22, cache: npm }
       - run: npm ci
       - run: npm run verify
-      - run: npm run build && electron-builder --mac --config electron-builder.release.yml
+      - name: Build signed macOS unpacked app
+        run: npm run build && npx --no-install electron-builder --mac --dir --config electron-builder.release.yml
         env:
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
@@ -23,28 +27,96 @@ jobs:
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-      - name: Smoke signed packaged app
+      - name: Smoke signed macOS packaged app
         run: node scripts/packaged-smoke.mjs
+      - name: Build macOS distributables
+        run: npx --no-install electron-builder --mac --config electron-builder.release.yml
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
       - name: Verify macOS artifacts
         run: |
           set -euo pipefail
           find dist-electron -name '*.app' -print -exec codesign --verify --deep --strict --verbose=4 {} \;
           find dist-electron -name '*.app' -print -exec spctl --assess --type execute --verbose=4 {} \;
           find dist-electron -name '*.app' -print -exec xcrun stapler validate {} \;
-      - name: Generate checksums
+      - name: Generate macOS checksums
         run: |
           set -euo pipefail
-          find dist-electron -maxdepth 1 -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 shasum -a 256 > dist-electron/SHA256SUMS
-      - name: Publish GitHub release assets
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
-        with:
-          files: |
-            dist-electron/*.dmg
-            dist-electron/*.zip
-            dist-electron/SHA256SUMS
-          generate_release_notes: true
+          find dist-electron -maxdepth 1 -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 shasum -a 256 > dist-electron/SHA256SUMS-macos
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: forgeloop-studio-macos
           path: dist-electron/*
+
+  windows:
+    runs-on: windows-latest
+    if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run verify
+      - name: Build Windows unpacked app
+        run: npm run build && npx --no-install electron-builder --win --dir
+      - name: Smoke Windows packaged app
+        run: node scripts/packaged-smoke.mjs
+      - name: Build Windows distributables
+        run: npx --no-install electron-builder --win
+      - name: Generate Windows checksums
+        shell: pwsh
+        run: |
+          Get-ChildItem -File dist-electron | Where-Object { $_.Name -ne 'SHA256SUMS-windows' } | Get-FileHash -Algorithm SHA256 |
+            ForEach-Object { "$($_.Hash.ToLower())  $([System.IO.Path]::GetFileName($_.Path))" } |
+            Set-Content -Encoding ascii dist-electron/SHA256SUMS-windows
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: forgeloop-studio-windows
+          path: dist-electron/*
+
+  linux:
+    runs-on: ubuntu-latest
+    if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run verify
+      - name: Build Linux unpacked app
+        run: npm run build && npx --no-install electron-builder --linux --dir
+      - name: Smoke Linux packaged app
+        run: node scripts/packaged-smoke.mjs
+      - name: Build Linux distributables
+        run: npx --no-install electron-builder --linux
+      - name: Generate Linux checksums
+        run: |
+          set -euo pipefail
+          find dist-electron -maxdepth 1 -type f ! -name SHA256SUMS-linux -print0 | sort -z | xargs -0 sha256sum > dist-electron/SHA256SUMS-linux
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: forgeloop-studio-linux
+          path: dist-electron/*
+
+  publish:
+    needs: [macos, windows, linux]
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: forgeloop-studio-*
+          path: release-assets
+          merge-multiple: true
+      - name: Publish GitHub release assets
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          files: release-assets/*
+          generate_release_notes: true

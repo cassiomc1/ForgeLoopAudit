@@ -5,6 +5,9 @@ import { join } from 'path';
 import { createHash } from 'crypto';
 import { PathBoundary } from '@main/security/path-boundary';
 import { EventLedgerReader } from '@main/core/events/ledger-reader';
+import { SchemaValidator } from '@main/core/protocol/validator';
+
+const validator = () => new SchemaValidator('schemas');
 
 function makeLedger(count: number) {
   const root = mkdtempSync(join(tmpdir(), 'forgeloop-ledger-'));
@@ -26,7 +29,7 @@ function makeLedger(count: number) {
 
 describe('EventLedgerReader', () => {
   it('paginates ledgers larger than the old 1000-line limit', () => {
-    const reader = new EventLedgerReader(new PathBoundary(makeLedger(10000)));
+    const reader = new EventLedgerReader(new PathBoundary(makeLedger(10000)), validator());
     const page = reader.readEventsPaginated('task-1', undefined, 100);
     expect(page.events).toHaveLength(100);
     expect(page.hasMore).toBe(true);
@@ -36,7 +39,7 @@ describe('EventLedgerReader', () => {
   it('reports malformed lines instead of claiming the page is valid', () => {
     const root = makeLedger(2);
     appendFileSync(join(root, '.forgeloop', 'task-state', 'task-1', 'events.ndjson'), '{malformed}\n');
-    const reader = new EventLedgerReader(new PathBoundary(root));
+    const reader = new EventLedgerReader(new PathBoundary(root), validator());
     const page = reader.readEventsPaginated('task-1', undefined, 100);
     expect(page.validation?.schema).toBe('INVALID');
     expect(page.validation?.invalidLineCount).toBeGreaterThan(0);

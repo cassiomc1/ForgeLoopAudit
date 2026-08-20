@@ -52,7 +52,7 @@ export class PathBoundary {
       '.git/packed-refs',
     ];
 
-    const isAllowed = allowedPrefixes.some((prefix) => relativePath.startsWith(prefix));
+    const isAllowed = relativePath === '.forgeloop' || allowedPrefixes.some((prefix) => relativePath.startsWith(prefix));
 
     if (!isAllowed) {
       throw ForgeLoopStudioError.pathBoundaryViolation(requestedPath, this.projectRoot);
