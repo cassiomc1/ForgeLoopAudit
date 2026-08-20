@@ -1,6 +1,6 @@
 {
   "name": "forgeloop-studio",
-  "version": "0.1.0",
+  "version": "0.1.0-rc.1",
   "description": "A real-time visual interface for the ForgeLoop engineering protocol",
   "main": "dist/main/index.cjs",
   "type": "module",
