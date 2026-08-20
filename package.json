@@ -26,6 +26,7 @@
     "package:linux": "npm run build && electron-builder --linux",
     "verify": "npm run typecheck && npm run lint && npm test && npm run build",
     "package:dir": "npm run build && electron-builder --dir",
+    "test:packaged-smoke": "npm run package:dir && node scripts/packaged-smoke.mjs",
     "test:electron-smoke": "npm run build && playwright test tests/e2e/electron-smoke.spec.ts"
   },
   "keywords": [
@@ -115,6 +116,6 @@
   },
   "allowScripts": {
     "electron@43.4.1": true,
-    "esbuild@0.21.5": true
+    "esbuild@0.25.9": true
   }
 }

@@ -52,8 +52,7 @@ const PHASE_EDGES: [ForgeLoopPhase, ForgeLoopPhase][] = [
   ['VERIFYING', 'DIAGNOSING'],
   ['DIAGNOSING', 'CORRECTING'],
   ['CORRECTING', 'EXECUTING'],
-  ['EXECUTING', 'BLOCKED'],
-];
+  ];
 
 export function Flow({ snapshot, selectedTaskId, onSelectedTaskChange }: FlowProps) {
   const [selectedTask, setSelectedTask] = useState<TaskSummary | null>(
@@ -65,22 +64,30 @@ export function Flow({ snapshot, selectedTaskId, onSelectedTaskChange }: FlowPro
   }, [snapshot, selectedTaskId]);
 
   const getPhaseState = useCallback((phase: ForgeLoopPhase, task: TaskSummary): 'completed' | 'current' | 'pending' | 'blocked' | 'failed' => {
-    if (task.phase === 'BLOCKED') return phase === 'BLOCKED' ? 'blocked' : (phase === task.previousPhase ? 'failed' : 'pending');
+    if (task.phase === 'BLOCKED') {
+      if (phase === 'BLOCKED') return 'blocked';
+      if (phase === task.previousPhase) return 'failed';
+      if (task.completedSteps.some((step) => step === phase || step.includes(phase))) return 'completed';
+      return 'pending';
+    }
     if (task.phase === phase) return 'current';
     if (task.phase === 'COMPLETE') return 'completed';
+
+    if (task.phase === 'DIAGNOSING') {
+      if (phase === 'VERIFYING') return 'failed';
+      if (phase === 'DIAGNOSING') return 'current';
+    }
+
+    if (task.phase === 'CORRECTING') {
+      if (phase === 'VERIFYING') return 'failed';
+      if (phase === 'DIAGNOSING') return 'completed';
+      if (phase === 'CORRECTING') return 'current';
+    }
 
     const currentPhaseOrder = PHASE_ORDER[task.phase] ?? 0;
     const phaseOrder = PHASE_ORDER[phase] ?? 0;
 
     if (phaseOrder < currentPhaseOrder) return 'completed';
-
-    if (task.phase === 'DIAGNOSING' && (phase === 'VERIFYING' || phase === 'DIAGNOSING')) {
-      return phase === 'DIAGNOSING' ? 'current' : 'failed';
-    }
-
-    if (task.phase === 'CORRECTING' && (phase === 'EXECUTING' || phase === 'CORRECTING')) {
-      return phase === 'CORRECTING' ? 'current' : 'failed';
-    }
 
     if (task.phase === 'VERIFYING' && phase === 'EXECUTING') return 'completed';
 
@@ -118,7 +125,10 @@ export function Flow({ snapshot, selectedTaskId, onSelectedTaskChange }: FlowPro
   }, [selectedTask, getPhaseState]);
 
   const edges: Edge[] = useMemo(() => {
-    return PHASE_EDGES.map(([source, target]) => ({
+    const blockedEdge: [ForgeLoopPhase, ForgeLoopPhase][] = selectedTask?.phase === 'BLOCKED' && selectedTask.previousPhase
+      ? [[selectedTask.previousPhase, 'BLOCKED']]
+      : [];
+    return [...PHASE_EDGES, ...blockedEdge].map(([source, target]) => ({
       id: `${source}-${target}`,
       source,
       target,
@@ -127,7 +137,7 @@ export function Flow({ snapshot, selectedTaskId, onSelectedTaskChange }: FlowPro
       style: { stroke: '#303038', strokeWidth: 2 },
       markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16, color: '#303038' },
     }));
-  }, []);
+  }, [selectedTask]);
 
   const handleNodeClick = useCallback(() => {
     setInspectorOpen(true);

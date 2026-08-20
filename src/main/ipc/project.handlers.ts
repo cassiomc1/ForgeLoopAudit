@@ -3,7 +3,7 @@ import { PathBoundary } from '@main/security/path-boundary';
 import { ForgeLoopStudioError } from '@shared/errors';
 import type { ProjectDetectionResult, RecentProject, StudioError } from '@shared/domain';
 import { IPC_CHANNELS } from '@shared/ipc';
-import { createProjectSnapshotBuilder, type ProjectSnapshotBuilder } from '@main/core/project/project-snapshot';
+import { createProjectSnapshotBuilder, type ProjectSnapshotBuilder, type ProjectCompatibilityContext } from '@main/core/project/project-snapshot';
 import { createProjectDetector, createProjectReader, type ProjectReader } from '@main/core/project/project-reader';
 import { ForgeCli } from '@main/core/cli/forge-cli';
 import { createProjectWatcher } from '@main/watcher/project-watcher';
@@ -35,8 +35,12 @@ const RecentProjectSchema = z.object({ path: z.string().min(1).max(4096), name: 
 const RawArtifactSchema = z.object({ taskId: TaskIdSchema, artifact: z.enum(['task.json', 'contract.json', 'routing-result.json', 'preflight.json', 'work-state.json', 'continuity.json', 'execution-receipt.json', 'policy-snapshot.json', 'events.ndjson']) });
 
 function assertTrustedSender(event: Electron.IpcMainInvokeEvent): void {
+  if (!currentMainWindow || event.sender.id !== currentMainWindow.webContents.id) throw ForgeLoopStudioError.unknown('Untrusted IPC sender');
   const url = event.senderFrame?.url || '';
-  if (url && !url.startsWith('file://') && !url.startsWith('http://localhost:5173')) throw ForgeLoopStudioError.unknown('Untrusted IPC sender');
+  const expected = currentMainWindow.webContents.getURL();
+  const allowedDevelopment = url.startsWith('http://localhost:5173/');
+  const allowedPackaged = url === expected && url.startsWith('file://');
+  if (!allowedDevelopment && !allowedPackaged) throw ForgeLoopStudioError.unknown('Untrusted IPC sender');
 }
 
 export function registerProjectIpc(mainWindow: BrowserWindow): void {
@@ -132,7 +136,8 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
       throw ForgeLoopStudioError.artifactUnreadable(request.taskId, 'Task not found');
     }
 
-    const artifacts = currentProjectReader.readTaskArtifacts(task.taskKey);
+    if (safeRequest.artifact === 'events.ndjson') return currentProjectReader.readEventPreview(task.taskKey);
+    const artifacts = currentProjectReader.readTaskSummaryArtifacts(task.taskKey);
     const content = artifacts[safeRequest.artifact as keyof typeof artifacts];
     if (content === undefined) {
       throw ForgeLoopStudioError.artifactUnreadable(safeRequest.artifact, 'Artifact not found');
@@ -198,10 +203,17 @@ async function openProject(projectRoot: string): Promise<ProjectDetectionResult>
   currentEventReader = taskEventReader;
   currentTaskSnapshotBuilder = createTaskSnapshotBuilder(pathBoundary, taskEventReader, gateReader);
 
+  const compatibilityContext: ProjectCompatibilityContext = {
+    source: protocolInfo.success ? 'PROTOCOL_INFO' : 'ARTIFACT_ONLY',
+    protocolVersion: protocolInfo.data?.protocolVersion ?? detectionResult.protocolVersion,
+    schemaVersion: protocolInfo.data?.schemaVersion ?? detectionResult.schemaVersion,
+    packageVersion: protocolInfo.data?.packageVersion,
+  };
   currentSnapshotBuilder = createProjectSnapshotBuilder(
     pathBoundary,
     currentProjectReader,
-    currentForgeCli
+    currentForgeCli,
+    compatibilityContext
   );
 
   currentWatcher = createProjectWatcher(

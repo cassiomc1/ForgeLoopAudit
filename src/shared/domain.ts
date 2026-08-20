@@ -175,12 +175,13 @@ export interface TaskSummary {
   nextAction?: NextActionSummary;
   continuity?: ContinuitySummary;
   writeClaims?: string[];
+  policySnapshot?: Record<string, unknown>;
 }
 
 export interface SessionSummary {
   id: string;
   createdAt: string;
-  harness?: string;
+  activationMarker?: string;
   taskId?: string;
   isActive?: boolean;
 }
@@ -191,11 +192,16 @@ export interface PolicySummary {
   baselineStatus: 'valid' | 'invalid' | 'unknown';
   lockStatus: 'valid' | 'invalid' | 'unknown';
   driftCount: number;
-  taskSnapshot?: Record<string, unknown>;
+  integritySource: 'POLICY_STATUS' | 'ARTIFACTS' | 'UNKNOWN';
+  integrityMessage?: string;
 }
 
+export type ForgeLoopHealthStatus = 'VALID' | 'INCOMPLETE' | 'STALE' | 'INCONSISTENT' | 'INVALID' | 'UNKNOWN';
+export type ForgeLoopHealthSource = 'FORGELOOP_STATUS' | 'FORGELOOP_VALIDATE_STATE' | 'ARTIFACT_VALIDATION' | 'UNKNOWN';
+
 export interface ProjectHealth {
-  status: 'VALID' | 'INCOMPLETE' | 'STALE' | 'INCONSISTENT' | 'INVALID';
+  status: ForgeLoopHealthStatus;
+  source: ForgeLoopHealthSource;
   protocol: boolean;
   state: boolean;
   evidence: boolean;
@@ -232,6 +238,10 @@ export interface EventPage {
   cursor?: string;
   hasMore: boolean;
   totalCount?: number;
+  validation?: {
+    schema: 'VALID' | 'INVALID' | 'NOT_RUN';
+    chain: 'VALID' | 'INVALID' | 'NOT_RUN';
+  };
 }
 
 export interface TaskSnapshot {

@@ -155,7 +155,7 @@ export function App() {
 
     switch (activeNav) {
       case 'overview':
-        return <Overview snapshot={snapshot} watcherStatus={watcherStatus} />;
+        return <Overview snapshot={snapshot} watcherStatus={watcherStatus} onTaskSelect={(taskId) => { setSelectedTaskId(taskId); setActiveNav('flow'); }} onViewAllTasks={() => setActiveNav('tasks')} />;
       case 'tasks':
         return <Tasks snapshot={snapshot} onTaskSelect={(taskId) => { setSelectedTaskId(taskId); setActiveNav('flow'); }} />;
       case 'flow':

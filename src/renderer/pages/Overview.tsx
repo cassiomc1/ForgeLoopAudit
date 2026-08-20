@@ -19,9 +19,10 @@ interface OverviewProps {
   snapshot: ProjectSnapshot;
   watcherStatus?: { active: boolean };
   onTaskSelect?: (taskId: string) => void;
+  onViewAllTasks?: () => void;
 }
 
-export function Overview({ snapshot, watcherStatus: _watcherStatus, onTaskSelect }: OverviewProps) {
+export function Overview({ snapshot, watcherStatus: _watcherStatus, onTaskSelect, onViewAllTasks }: OverviewProps) {
   const [activeTask, setActiveTask] = useState<TaskSummary | null>(null);
 
   useEffect(() => {
@@ -51,6 +52,7 @@ export function Overview({ snapshot, watcherStatus: _watcherStatus, onTaskSelect
         </div>
         <div className="flex items-center gap-3">
           <StatusBadge status={snapshot.health.status} />
+          <span className="text-xs text-forge-text-muted">Source: {snapshot.health.source}</span>
         </div>
       </div>
 
@@ -75,7 +77,7 @@ export function Overview({ snapshot, watcherStatus: _watcherStatus, onTaskSelect
           color="success"
         />
         <MetricCard
-          label="Evidence Coverage"
+          label="Studio Coverage Score"
           value={`${avgCoverage}%`}
           icon={<Shield className="w-4 h-4" />}
           color="info"
@@ -107,7 +109,7 @@ export function Overview({ snapshot, watcherStatus: _watcherStatus, onTaskSelect
           </div>
           {activeTasks.length > 5 && (
             <div className="p-3 border-t border-forge-border-subtle">
-              <button className="text-xs text-forge-accent hover:text-forge-accent-hover flex items-center gap-1">
+              <button onClick={onViewAllTasks} className="text-xs text-forge-accent hover:text-forge-accent-hover flex items-center gap-1">
                 View all {activeTasks.length} active tasks <ChevronRight className="w-3 h-3" />
               </button>
             </div>
@@ -145,10 +147,10 @@ export function Overview({ snapshot, watcherStatus: _watcherStatus, onTaskSelect
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-forge-text-secondary flex items-center gap-2">
-                  <span className={cn('w-1.5 h-1.5 rounded-full', snapshot.health.policy ? 'bg-forge-success' : 'bg-forge-danger')} />
+                  <span className={cn('w-1.5 h-1.5 rounded-full', snapshot.health.policy === true ? 'bg-forge-success' : snapshot.health.policy === false ? 'bg-forge-danger' : 'bg-forge-text-muted')} />
                   Policy
                 </span>
-                <span className="text-forge-text-primary">{snapshot.health.policy ? '✓' : '✗'}</span>
+                <span className="text-forge-text-primary">{snapshot.health.policy === true ? '✓' : snapshot.health.policy === false ? '✗' : '?'}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-forge-text-secondary flex items-center gap-2">
@@ -169,7 +171,7 @@ export function Overview({ snapshot, watcherStatus: _watcherStatus, onTaskSelect
                 snapshot.sessions.slice(0, 3).map((session) => (
                   <div key={session.id} className="flex items-center justify-between text-sm">
                     <span className="font-mono text-forge-text-secondary truncate max-w-[120px]">{session.id.slice(0, 8)}</span>
-                    <span className="text-xs text-forge-text-muted">{session.harness || 'Unknown'}</span>
+                    <span className="text-xs text-forge-text-muted">{session.activationMarker || session.createdAt || 'Unknown'}</span>
                   </div>
                 ))
               )}

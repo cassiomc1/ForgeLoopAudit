@@ -53,7 +53,7 @@ export function TaskRow({ task, isActive, onClick }: TaskRowProps) {
         </span>
 
         {task.evidenceCoverage && (
-          <span className="text-xs text-forge-text-muted font-mono w-10 text-right">
+          <span title="Studio Coverage Score" aria-label="Studio Coverage Score" className="text-xs text-forge-text-muted font-mono w-10 text-right">
             {task.evidenceCoverage.coveragePercent}%
           </span>
         )}

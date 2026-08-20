@@ -49,6 +49,7 @@ export class PathBoundary {
       '.forgeloop' + sep,
       '.git/HEAD',
       '.git/refs/',
+      '.git/packed-refs',
     ];
 
     const isAllowed = allowedPrefixes.some((prefix) => relativePath.startsWith(prefix));
