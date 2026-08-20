@@ -5,7 +5,7 @@ import { IPC_CHANNELS } from '@shared/ipc';
 
 let mainWindow: BrowserWindow | null = null;
 let ipcRegistered = false;
-const isDevelopment = process.env.NODE_ENV === 'development' || !app.isPackaged;
+const isDevelopment = (process.env.NODE_ENV === 'development' || !app.isPackaged) && process.env.FORGELOOP_STUDIO_SMOKE !== '1';
 
 function createWindow(): BrowserWindow {
   const window = new BrowserWindow({
