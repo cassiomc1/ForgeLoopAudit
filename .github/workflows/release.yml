@@ -31,7 +31,8 @@ jobs:
       - name: Verify unsigned macOS artifacts
         run: |
           set -euo pipefail
-          mapfile -t apps < <(find dist-electron -name '*.app' -type d -print)
+          apps=()
+          while IFS= read -r app; do apps+=("$app"); done < <(find dist-electron -name '*.app' -type d -print)
           test "${#apps[@]}" -gt 0
           for app in "${apps[@]}"; do
             test -f "$app/Contents/Resources/app.asar"
