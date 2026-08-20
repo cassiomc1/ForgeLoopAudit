@@ -63,8 +63,8 @@
     "@vitejs/plugin-react": "^4.3.2",
     "autoprefixer": "^10.4.20",
     "concurrently": "^9.0.1",
-    "electron": "^31.7.7",
-    "electron-builder": "^25.1.7",
+    "electron": "^43.4.1",
+    "electron-builder": "^26.15.3",
     "esbuild": "^0.25.9",
     "eslint": "^9.12.0",
     "eslint-plugin-react": "^7.37.5",
@@ -94,9 +94,10 @@
       "hardenedRuntime": true,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.inherit.plist",
+      "notarize": true,
       "target": [
-        "dmg",
-        "zip"
+        { "target": "dmg", "arch": ["arm64", "x64"] },
+        { "target": "zip", "arch": ["arm64", "x64"] }
       ]
     },
     "win": {
@@ -113,7 +114,7 @@
     }
   },
   "allowScripts": {
-    "electron@31.7.7": true,
+    "electron@43.4.1": true,
     "esbuild@0.21.5": true
   }
 }

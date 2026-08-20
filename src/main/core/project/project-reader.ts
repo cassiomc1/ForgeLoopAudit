@@ -3,7 +3,7 @@ import { join } from 'path';
 import { ForgeLoopStudioError } from '@shared/errors';
 import { parseJsonSafely } from '@main/security/resource-limits';
 import { PathBoundary } from '@main/security/path-boundary';
-import { FORGELOOP_DIR_NAME, CONFIG_FILE, SOURCES_FILE, TASK_STATE_DIR, SESSIONS_DIR } from '@shared/constants';
+import { FORGELOOP_DIR_NAME, CONFIG_FILE, SOURCES_FILE, TASK_STATE_DIR, SESSIONS_DIR, POLICY_DIR } from '@shared/constants';
 import type { ProjectDetectionResult } from '@shared/domain';
 import { checkProtocolCompatibility } from '@main/core/protocol/compatibility';
 
@@ -160,6 +160,18 @@ export class ProjectReader {
     const validatedPath = this.pathBoundary.validatePath(snapshotPath);
     const content = readFileSync(validatedPath, 'utf8');
     return parseJsonSafely(content);
+  }
+
+  readGlobalPolicy(): Record<string, unknown> {
+    const policyRoot = this.pathBoundary.resolveForgeLoopPathLexically(POLICY_DIR);
+    const result: Record<string, unknown> = {};
+    if (!existsSync(policyRoot)) return result;
+    for (const name of ['rules.json', 'discovery.json', 'baseline.json', 'policy.lock']) {
+      const candidate = join(policyRoot, name);
+      if (!existsSync(candidate)) continue;
+      try { result[name] = parseJsonSafely(readFileSync(this.pathBoundary.validatePath(candidate), 'utf8')); } catch { result[name] = { _invalid: true }; }
+    }
+    return result;
   }
 }
 

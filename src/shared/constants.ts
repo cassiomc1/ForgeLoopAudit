@@ -3,7 +3,7 @@ export const CONFIG_FILE = 'config.json';
 export const SOURCES_FILE = 'sources.json';
 export const TASK_STATE_DIR = 'task-state';
 export const SESSIONS_DIR = 'sessions';
-export const POLICY_DIR = 'task-state';
+export const POLICY_DIR = 'policy';
 export const GATES_DIR = 'gates';
 export const EXECUTIONS_DIR = 'executions';
 

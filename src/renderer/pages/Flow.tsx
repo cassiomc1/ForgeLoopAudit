@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   ReactFlow,
   Background,
@@ -18,6 +18,7 @@ import { InspectorPanel } from '../components/inspectors/InspectorPanel';
 interface FlowProps {
   snapshot: ProjectSnapshot;
   selectedTaskId?: string | null;
+  onSelectedTaskChange?: (taskId: string) => void;
 }
 
 const nodeTypes = { flowNode: FlowNode as any };
@@ -54,11 +55,14 @@ const PHASE_EDGES: [ForgeLoopPhase, ForgeLoopPhase][] = [
   ['EXECUTING', 'BLOCKED'],
 ];
 
-export function Flow({ snapshot, selectedTaskId }: FlowProps) {
+export function Flow({ snapshot, selectedTaskId, onSelectedTaskChange }: FlowProps) {
   const [selectedTask, setSelectedTask] = useState<TaskSummary | null>(
     snapshot.tasks.find((t) => t.taskId === selectedTaskId) || snapshot.tasks.find((t) => t.taskId === snapshot.activeTaskId) || snapshot.tasks[0] || null
   );
   const [inspectorOpen, setInspectorOpen] = useState(false);
+  useEffect(() => {
+    setSelectedTask(snapshot.tasks.find((t) => t.taskId === selectedTaskId) || snapshot.tasks.find((t) => t.taskId === snapshot.activeTaskId) || snapshot.tasks[0] || null);
+  }, [snapshot, selectedTaskId]);
 
   const getPhaseState = useCallback((phase: ForgeLoopPhase, task: TaskSummary): 'completed' | 'current' | 'pending' | 'blocked' | 'failed' => {
     if (task.phase === 'BLOCKED') return phase === 'BLOCKED' ? 'blocked' : (phase === task.previousPhase ? 'failed' : 'pending');
@@ -152,6 +156,7 @@ export function Flow({ snapshot, selectedTaskId }: FlowProps) {
               onChange={(e) => {
                 const task = snapshot.tasks.find((t) => t.taskId === e.target.value);
                 setSelectedTask(task || null);
+                if (task) onSelectedTaskChange?.(task.taskId);
               }}
             >
               {snapshot.tasks.map((task) => (

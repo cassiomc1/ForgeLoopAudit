@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { ProjectSnapshot, TaskSummary } from '@shared/domain';
 import { EmptyState } from '../components/ui/EmptyState';
 import { cn } from '../lib/utils';
@@ -6,12 +6,15 @@ import { Shield, AlertTriangle, Lock, FileText, Activity } from 'lucide-react';
 
 interface PolicyProps {
   snapshot: ProjectSnapshot;
+  selectedTaskId?: string | null;
+  onSelectedTaskChange?: (taskId: string) => void;
 }
 
-export function Policy({ snapshot }: PolicyProps) {
+export function Policy({ snapshot, selectedTaskId, onSelectedTaskChange }: PolicyProps) {
   const [selectedTask, setSelectedTask] = useState<TaskSummary | null>(
     snapshot.tasks.find((t) => t.taskId === snapshot.activeTaskId) || snapshot.tasks[0] || null
   );
+  useEffect(() => { setSelectedTask(snapshot.tasks.find((t) => t.taskId === selectedTaskId) || snapshot.tasks.find((t) => t.taskId === snapshot.activeTaskId) || snapshot.tasks[0] || null); }, [snapshot, selectedTaskId]);
 
   if (snapshot.tasks.length === 0) {
     return <EmptyState title="No tasks available" description="Select a task to view policy information." />;
@@ -32,6 +35,7 @@ export function Policy({ snapshot }: PolicyProps) {
           onChange={(e) => {
             const task = snapshot.tasks.find((t) => t.taskId === e.target.value);
             setSelectedTask(task || null);
+            if (task) onSelectedTaskChange?.(task.taskId);
           }}
         >
           {snapshot.tasks.map((task) => (
@@ -57,7 +61,7 @@ export function Policy({ snapshot }: PolicyProps) {
                 <span className="text-xs text-forge-text-muted uppercase tracking-wider">Rules</span>
                 <FileText className="w-4 h-4 text-forge-text-muted" />
               </div>
-              <p className="text-lg font-semibold text-forge-text-primary">{policy.ruleCount}</p>
+              <p className="text-lg font-semibold text-forge-text-primary">{policy.ruleCount ?? 'Unknown'}</p>
             </div>
             <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-10 p-4">
               <div className="flex items-center justify-between mb-3">

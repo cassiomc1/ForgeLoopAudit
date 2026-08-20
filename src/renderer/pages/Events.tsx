@@ -6,12 +6,15 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 
 interface EventsProps {
   snapshot: ProjectSnapshot;
+  selectedTaskId?: string | null;
+  onSelectedTaskChange?: (taskId: string) => void;
 }
 
-export function Events({ snapshot }: EventsProps) {
+export function Events({ snapshot, selectedTaskId, onSelectedTaskChange }: EventsProps) {
   const [selectedTask, setSelectedTask] = useState<TaskSummary | null>(
     snapshot.tasks.find((t) => t.taskId === snapshot.activeTaskId) || snapshot.tasks[0] || null
   );
+  useEffect(() => { setSelectedTask(snapshot.tasks.find((t) => t.taskId === selectedTaskId) || snapshot.tasks.find((t) => t.taskId === snapshot.activeTaskId) || snapshot.tasks[0] || null); }, [snapshot, selectedTaskId]);
   const [events, setEvents] = useState<EventRecord[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<EventRecord | null>(null);
   const [loading, setLoading] = useState(false);
@@ -70,6 +73,7 @@ export function Events({ snapshot }: EventsProps) {
             onChange={(e) => {
               const task = snapshot.tasks.find((t) => t.taskId === e.target.value);
               setSelectedTask(task || null);
+              if (task) onSelectedTaskChange?.(task.taskId);
             }}
           >
             {snapshot.tasks.map((task) => (

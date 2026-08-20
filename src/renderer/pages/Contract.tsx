@@ -5,12 +5,15 @@ import { cn } from '../lib/utils';
 
 interface ContractProps {
   snapshot: ProjectSnapshot;
+  selectedTaskId?: string | null;
+  onSelectedTaskChange?: (taskId: string) => void;
 }
 
-export function Contract({ snapshot }: ContractProps) {
+export function Contract({ snapshot, selectedTaskId, onSelectedTaskChange }: ContractProps) {
   const [selectedTask, setSelectedTask] = useState<TaskSummary | null>(
     snapshot.tasks.find((t) => t.taskId === snapshot.activeTaskId) || snapshot.tasks[0] || null
   );
+  useEffect(() => { setSelectedTask(snapshot.tasks.find((t) => t.taskId === selectedTaskId) || snapshot.tasks.find((t) => t.taskId === snapshot.activeTaskId) || snapshot.tasks[0] || null); }, [snapshot, selectedTaskId]);
   const [rawJson, setRawJson] = useState<Record<string, unknown> | null>(null);
   const [showRaw, setShowRaw] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -58,6 +61,7 @@ export function Contract({ snapshot }: ContractProps) {
             onChange={(e) => {
               const task = snapshot.tasks.find((t) => t.taskId === e.target.value);
               setSelectedTask(task || null);
+              if (task) onSelectedTaskChange?.(task.taskId);
             }}
           >
             {snapshot.tasks.map((task) => (

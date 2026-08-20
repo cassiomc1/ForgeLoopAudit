@@ -1,16 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { ProjectSnapshot, TaskSummary } from '@shared/domain';
 import { NoEvidenceState } from '../components/ui/EmptyState';
 import { cn, getEvidenceKindColor, getEvidenceKindLabel } from '../lib/utils';
 
 interface EvidenceProps {
   snapshot: ProjectSnapshot;
+  selectedTaskId?: string | null;
+  onSelectedTaskChange?: (taskId: string) => void;
 }
 
-export function Evidence({ snapshot }: EvidenceProps) {
+export function Evidence({ snapshot, selectedTaskId, onSelectedTaskChange }: EvidenceProps) {
   const [selectedTask, setSelectedTask] = useState<TaskSummary | null>(
     snapshot.tasks.find((t) => t.taskId === snapshot.activeTaskId) || snapshot.tasks[0] || null
   );
+  useEffect(() => { setSelectedTask(snapshot.tasks.find((t) => t.taskId === selectedTaskId) || snapshot.tasks.find((t) => t.taskId === snapshot.activeTaskId) || snapshot.tasks[0] || null); }, [snapshot, selectedTaskId]);
 
   if (snapshot.tasks.length === 0) {
     return <NoEvidenceState />;
@@ -30,7 +33,8 @@ export function Evidence({ snapshot }: EvidenceProps) {
           value={selectedTask?.taskId || ''}
           onChange={(e) => {
             const task = snapshot.tasks.find((t) => t.taskId === e.target.value);
-            setSelectedTask(task || null);
+              setSelectedTask(task || null);
+              if (task) onSelectedTaskChange?.(task.taskId);
           }}
         >
           {snapshot.tasks.map((task) => (
