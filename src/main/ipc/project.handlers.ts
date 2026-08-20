@@ -13,6 +13,7 @@ import Store from 'electron-store';
 import { z } from 'zod';
 import { basename } from 'path';
 import { resolveTrustedSchemaDirectory, SchemaValidator } from '@main/core/protocol/validator';
+import { isFixtureProjectMode as resolveFixtureProjectMode } from './fixture-mode';
 
 const store = new Store<{ recentProjects: RecentProject[] }>({
   name: 'forgeloop-studio-settings',
@@ -275,7 +276,7 @@ async function openProject(projectRoot: string): Promise<ProjectDetectionResult>
 }
 
 function isFixtureProjectMode(): boolean {
-  return process.env.FORGELOOP_STUDIO_SMOKE === '1' && Boolean(process.env.FORGELOOP_STUDIO_FIXTURE_PROJECT);
+  return resolveFixtureProjectMode(app.isPackaged, process.env);
 }
 
 export async function openProjectForAutomation(projectRoot: string): Promise<ProjectDetectionResult> {
