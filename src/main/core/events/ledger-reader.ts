@@ -47,7 +47,7 @@ export class EventLedgerReader {
 
   readEventsPaginated(taskKey: string, cursor?: string, limit = 100): EventPage {
     const eventsPath = this.eventPath(taskKey);
-    if (!eventsPath) return { events: [], hasMore: false, validation: { schema: 'NOT_RUN', chain: 'NOT_RUN', scope: 'PAGE' } };
+    if (!eventsPath) return { events: [], hasMore: false, validation: { schema: 'NOT_RUN', chain: 'NOT_RUN', cursor: 'NOT_RUN', scope: 'PAGE' } };
     const boundedLimit = Math.min(Math.max(limit, 1), 500);
     const collected: EventRecord[] = [];
     let foundCursor = !cursor;
@@ -83,8 +83,9 @@ export class EventLedgerReader {
       if (position === 0 && pending.trim()) {
         try {
           const parsed = parseJsonSafely(pending.trim());
-          if (this.isPersistedEvent(parsed) && foundCursor && collected.length < boundedLimit) collected.push(parsed);
-          else if (pending.trim()) invalidLineCount++;
+          if (this.isPersistedEvent(parsed)) {
+            if (foundCursor && collected.length < boundedLimit) collected.push(parsed);
+          } else if (pending.trim()) invalidLineCount++;
         } catch { /* incomplete or malformed append is ignored until next write */ }
       }
     } finally { closeSync(fd); }
@@ -94,7 +95,7 @@ export class EventLedgerReader {
       events: collected,
       cursor: nextCursor,
       hasMore: hasOlder,
-      validation: { schema: invalidLineCount === 0 ? 'VALID' : 'INVALID', chain: 'NOT_RUN', scope: 'PAGE', invalidLineCount },
+      validation: { schema: invalidLineCount === 0 ? 'VALID' : 'INVALID', chain: 'NOT_RUN', cursor: cursor ? (foundCursor ? 'FOUND' : 'NOT_FOUND') : 'NOT_RUN', scope: 'PAGE', invalidLineCount },
     };
   }
 

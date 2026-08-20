@@ -16,6 +16,8 @@
     "build:electron": "node scripts/build-electron.mjs",
     "preview": "vite preview",
     "lint": "eslint src",
+    "audit:prod": "npm audit --omit=dev --audit-level=high",
+    "audit:all": "npm audit --audit-level=none",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -88,10 +90,12 @@
     },
     "files": [
       "dist/**/*",
+      "!dist/**/*.map",
       "schemas/**/*",
       "node_modules/**/*"
     ],
     "mac": {
+      "icon": "build/icon.icns",
       "category": "public.app-category.developer-tools",
       "hardenedRuntime": true,
       "entitlements": "build/entitlements.mac.plist",
@@ -103,12 +107,14 @@
       ]
     },
     "win": {
+      "icon": "build/icon.ico",
       "target": [
         "nsis",
         "portable"
       ]
     },
     "linux": {
+      "icon": "build/icon.png",
       "target": [
         "AppImage"
       ],

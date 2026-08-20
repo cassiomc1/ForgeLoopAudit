@@ -34,7 +34,7 @@ describe('SchemaValidator', () => {
     try {
       const trusted = resolveTrustedSchemaDirectory({
         allowEnvironmentOverride: false,
-        cwd: resolve(process.cwd()),
+        appPath: resolve(process.cwd()),
         moduleDir: resolve(process.cwd(), 'src/main/core/protocol'),
       });
       expect(trusted).toBe(resolve(process.cwd(), 'schemas'));

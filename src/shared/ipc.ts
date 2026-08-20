@@ -29,9 +29,10 @@ export interface ForgeLoopStudioAPI {
 }
 
 export interface ProjectUpdate {
-  type: 'task-added' | 'task-updated' | 'task-removed' | 'project-health-changed' | 'policy-changed' | 'session-changed' | 'snapshot-refreshed';
+  type: 'task-added' | 'task-updated' | 'task-removed' | 'project-health-changed' | 'policy-changed' | 'session-changed' | 'snapshot-refreshed' | 'project-opened';
   taskId?: string;
   snapshot?: ProjectSnapshot;
+  detection?: ProjectDetectionResult;
   timestamp: string;
 }
 

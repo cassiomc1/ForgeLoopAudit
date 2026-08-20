@@ -95,8 +95,8 @@ export function resolveTrustedSchemaDirectory(options: {
     options.allowEnvironmentOverride ? process.env.FORGELOOP_SCHEMA_DIR : undefined,
     options.appPath ? join(options.appPath, 'schemas') : undefined,
     options.resourcesPath ? join(options.resourcesPath, 'schemas') : undefined,
-    options.cwd ? join(options.cwd, 'schemas') : undefined,
-    options.moduleDir ? join(options.moduleDir, '..', '..', 'schemas') : undefined,
+    options.allowEnvironmentOverride && options.cwd ? join(options.cwd, 'schemas') : undefined,
+    options.allowEnvironmentOverride && options.moduleDir ? join(options.moduleDir, '..', '..', 'schemas') : undefined,
   ].filter((candidate): candidate is string => Boolean(candidate));
 
   const schemaDir = candidates.find((candidate) => existsSync(candidate));

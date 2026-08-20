@@ -27,7 +27,8 @@ export class ProjectSnapshotBuilder {
     private readonly pathBoundary: PathBoundary,
     private readonly projectReader: ProjectReader,
     private readonly forgeCli: ForgeCli,
-    private readonly compatibilityContext?: ProjectCompatibilityContext
+    private readonly compatibilityContext?: ProjectCompatibilityContext,
+    private readonly cliEnabled = true
   ) {}
 
   async build(): Promise<ProjectSnapshot> {
@@ -59,7 +60,9 @@ export class ProjectSnapshotBuilder {
         try {
           const artifacts = this.projectReader.readTaskSummaryArtifacts(taskKey);
           const taskId = String((artifacts['task.json'] as Record<string, unknown>)?.taskId || taskKey);
-          const [nextResult, statusResult] = await Promise.all([this.forgeCli.next(taskId), this.forgeCli.status(taskId)]);
+          const [nextResult, statusResult] = this.cliEnabled
+            ? await Promise.all([this.forgeCli.next(taskId), this.forgeCli.status(taskId)])
+            : [{ success: false } as const, { success: false } as const];
           const status = extractHealthStatus(statusResult.data);
           const taskSummary = buildTaskSummary(taskKey, artifacts as any, nextResult.success ? nextResult.data as Record<string, unknown> : undefined);
           return { taskSummary, status: statusResult.success ? status : undefined };
@@ -135,7 +138,9 @@ export class ProjectSnapshotBuilder {
     const rules = policy['rules.json'];
     const config = this.projectReader.readConfig();
     const ruleCount = rules && typeof rules === 'object' && Array.isArray((rules as Record<string, unknown>).rules) ? ((rules as Record<string, unknown>).rules as unknown[]).length : undefined;
-    const cliStatus = await this.forgeCli.policyStatus<Record<string, unknown>>();
+    const cliStatus = this.cliEnabled
+      ? await this.forgeCli.policyStatus<Record<string, unknown>>()
+      : { success: false as const };
     const complianceMode = typeof (config as unknown as Record<string, unknown>).complianceMode === 'string' ? String((config as unknown as Record<string, unknown>).complianceMode) : 'Unknown';
     if (cliStatus.success) return normalizePolicyStatus(cliStatus.data, complianceMode, 'POLICY_STATUS');
     return {
@@ -259,7 +264,8 @@ export function createProjectSnapshotBuilder(
   pathBoundary: PathBoundary,
   projectReader: ProjectReader,
   forgeCli: ForgeCli,
-  compatibilityContext?: ProjectCompatibilityContext
+  compatibilityContext?: ProjectCompatibilityContext,
+  cliEnabled = true
 ): ProjectSnapshotBuilder {
-  return new ProjectSnapshotBuilder(pathBoundary, projectReader, forgeCli, compatibilityContext);
+  return new ProjectSnapshotBuilder(pathBoundary, projectReader, forgeCli, compatibilityContext, cliEnabled);
 }

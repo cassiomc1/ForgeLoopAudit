@@ -1,17 +1,15 @@
 import { memo } from 'react';
-import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
+import { Handle, Position, type NodeProps } from '@xyflow/react';
 import type { ForgeLoopPhase } from '@shared/domain';
 import { cn } from '../../lib/utils';
 import { CheckCircle, AlertTriangle, Circle, XCircle } from 'lucide-react';
 
-interface FlowNodeData extends Node {
-  data: {
-    label: string;
-    phase: ForgeLoopPhase;
-    state: 'completed' | 'current' | 'pending' | 'blocked' | 'failed';
-    hasEvents?: boolean;
-    taskId: string;
-  };
+interface FlowNodeData {
+  label: string;
+  phase: ForgeLoopPhase;
+  state: 'completed' | 'current' | 'pending' | 'blocked' | 'failed';
+  hasEvents?: boolean;
+  taskId: string;
 }
 
 export const FlowNode = memo(({ data, selected }: NodeProps) => {
@@ -60,7 +58,7 @@ export const FlowNode = memo(({ data, selected }: NodeProps) => {
     }
   };
 
-  const nodeData = data.data as FlowNodeData['data'];
+  const nodeData = data as unknown as FlowNodeData;
   const config = getStateConfig(nodeData.state);
 
   return (

@@ -187,6 +187,13 @@ export function Overview({ snapshot, watcherStatus: _watcherStatus, onTaskSelect
         </div>
       )}
 
+      {snapshot.tasks.some((task) => task.gateErrors && task.gateErrors.length > 0) && (
+        <div className="bg-forge-danger/5 border border-forge-danger/20 rounded-10 p-4">
+          <h2 className="text-sm font-semibold text-forge-danger">Gate validation error</h2>
+          <p className="text-xs text-forge-text-secondary mt-1">A gate artifact is invalid and was not treated as a satisfied or absent gate.</p>
+        </div>
+      )}
+
       {snapshot.tasks.some((t) => t.nextAction) && (
         <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-10">
           <div className="px-4 py-3 border-b border-forge-border-subtle">

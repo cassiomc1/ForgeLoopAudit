@@ -1,9 +1,9 @@
-import { readFileSync, readdirSync, statSync, lstatSync, existsSync, openSync, readSync, closeSync, fstatSync } from 'fs';
+import { readFileSync, readdirSync, lstatSync, existsSync, openSync, readSync, closeSync, fstatSync } from 'fs';
 import { join } from 'path';
 import { ForgeLoopStudioError } from '@shared/errors';
 import { parseJsonSafely } from '@main/security/resource-limits';
 import { PathBoundary } from '@main/security/path-boundary';
-import { FORGELOOP_DIR_NAME, CONFIG_FILE, SOURCES_FILE, TASK_STATE_DIR, SESSIONS_DIR, POLICY_DIR } from '@shared/constants';
+import { CONFIG_FILE, SOURCES_FILE, TASK_STATE_DIR, SESSIONS_DIR, POLICY_DIR } from '@shared/constants';
 import type { ProjectDetectionResult } from '@shared/domain';
 import { checkProtocolCompatibility } from '@main/core/protocol/compatibility';
 import { SchemaValidator } from '@main/core/protocol/validator';
@@ -64,23 +64,26 @@ const TASK_JSON_ARTIFACTS = new Set([
 ]);
 
 export class ProjectDetector {
-  detect(projectRoot: string): ProjectDetectionResult {
-    const forgeLoopRoot = join(projectRoot, FORGELOOP_DIR_NAME);
+  constructor(
+    private readonly pathBoundary: PathBoundary,
+    private readonly validator: SchemaValidator
+  ) {}
 
-    if (!existsSync(forgeLoopRoot) || !statSync(forgeLoopRoot).isDirectory()) {
-      throw ForgeLoopStudioError.projectNotForgeLoop(projectRoot);
-    }
-
-    const configPath = join(forgeLoopRoot, CONFIG_FILE);
-    if (!existsSync(configPath)) {
-      throw ForgeLoopStudioError.artifactUnreadable(CONFIG_FILE, 'Config file not found');
-    }
-
+  detect(): ProjectDetectionResult {
+    const projectRoot = this.pathBoundary.getProjectRoot();
+    let forgeLoopRoot: string;
     let config: ForgeLoopConfig;
     try {
+      forgeLoopRoot = this.pathBoundary.validateForgeLoopPath('');
+      const configPath = this.pathBoundary.validateForgeLoopPath(CONFIG_FILE);
       const content = readFileSync(configPath, 'utf8');
       config = parseJsonSafely<ForgeLoopConfig>(content);
+      const validation = this.validator.validate(ARTIFACT_SCHEMAS['config.json'], config);
+      if (!validation.valid) {
+        throw ForgeLoopStudioError.artifactInvalid(CONFIG_FILE, validation.errors?.join('; ') || 'Config schema validation failed');
+      }
     } catch (error) {
+      if (error instanceof ForgeLoopStudioError) throw error;
       throw ForgeLoopStudioError.artifactInvalid(CONFIG_FILE, `Failed to parse config: ${error instanceof Error ? error.message : String(error)}`);
     }
 
@@ -175,12 +178,8 @@ export class ProjectReader {
     });
   }
 
-  readTaskArtifacts(taskKey: string): Record<string, unknown> {
-    return this.readTaskArtifactsForSummary(taskKey, true);
-  }
-
   readTaskSummaryArtifacts(taskKey: string): Record<string, unknown> {
-    return this.readTaskArtifactsForSummary(taskKey, false);
+    return this.readTaskArtifactsForSummary(taskKey);
   }
 
   readTaskDescriptor(taskKey: string): Record<string, unknown> {
@@ -191,7 +190,7 @@ export class ProjectReader {
     return descriptor as Record<string, unknown>;
   }
 
-  private readTaskArtifactsForSummary(taskKey: string, includeEvents: boolean): Record<string, unknown> {
+  private readTaskArtifactsForSummary(taskKey: string): Record<string, unknown> {
     const taskDir = join(this.forgeLoopRoot, TASK_STATE_DIR, taskKey);
     const validatedPath = this.pathBoundary.validatePath(taskDir);
 
@@ -205,7 +204,7 @@ export class ProjectReader {
 
     for (const entry of entries) {
       const filePath = join(validatedPath, entry);
-      if (!entry.endsWith('.json') && !(includeEvents && entry.endsWith('.ndjson'))) continue;
+      if (!entry.endsWith('.json')) continue;
       if (entry.endsWith('.json') && !TASK_JSON_ARTIFACTS.has(entry)) continue;
       try {
         const stat = lstatSync(filePath);
@@ -328,8 +327,8 @@ export class ProjectReader {
   }
 }
 
-export function createProjectDetector(_pathBoundary: PathBoundary): ProjectDetector {
-  return new ProjectDetector();
+export function createProjectDetector(pathBoundary: PathBoundary, validator: SchemaValidator): ProjectDetector {
+  return new ProjectDetector(pathBoundary, validator);
 }
 
 export function createProjectReader(pathBoundary: PathBoundary, validator: SchemaValidator): ProjectReader {
