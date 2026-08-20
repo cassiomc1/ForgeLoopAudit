@@ -9,4 +9,6 @@ files:
   - schemas/**/*
   - node_modules/**/*
 mac:
+  identity: null
   notarize: false
+  hardenedRuntime: false
