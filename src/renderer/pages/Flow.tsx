@@ -1,0 +1,219 @@
+import { useState, useMemo, useCallback } from 'react';
+import {
+  ReactFlow,
+  Background,
+  Controls,
+  MiniMap,
+  useNodesState,
+  useEdgesState,
+  type Node,
+  type Edge,
+  BackgroundVariant,
+  MarkerType,
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
+import type { ProjectSnapshot, TaskSummary, ForgeLoopPhase } from '@shared/domain';
+import { PHASE_ORDER } from '@shared/domain';
+import { FlowNode } from '../components/flow/FlowNode';
+import { InspectorPanel } from '../components/inspectors/InspectorPanel';
+
+interface FlowProps {
+  snapshot: ProjectSnapshot;
+}
+
+const nodeTypes = { flowNode: FlowNode as any };
+
+const PHASE_DISPLAY: Record<ForgeLoopPhase, { label: string; x: number; y: number }> = {
+  RECEIVED: { label: 'RECEIVED', x: 250, y: 0 },
+  DISCOVERING: { label: 'DISCOVERING', x: 250, y: 80 },
+  CONTRACT_READY: { label: 'CONTRACT_READY', x: 250, y: 160 },
+  ROUTED: { label: 'ROUTED', x: 250, y: 240 },
+  DESIGNING: { label: 'DESIGNING', x: 250, y: 320 },
+  PLANNED: { label: 'PLANNED', x: 250, y: 400 },
+  EXECUTING: { label: 'EXECUTING', x: 250, y: 480 },
+  VERIFYING: { label: 'VERIFYING', x: 250, y: 560 },
+  DIAGNOSING: { label: 'DIAGNOSING', x: 100, y: 640 },
+  CORRECTING: { label: 'CORRECTING', x: 100, y: 720 },
+  REVIEWING: { label: 'REVIEWING', x: 250, y: 800 },
+  COMPLETE: { label: 'COMPLETE', x: 250, y: 880 },
+  BLOCKED: { label: 'BLOCKED', x: 400, y: 560 },
+};
+
+const PHASE_EDGES: [ForgeLoopPhase, ForgeLoopPhase][] = [
+  ['RECEIVED', 'DISCOVERING'],
+  ['DISCOVERING', 'CONTRACT_READY'],
+  ['CONTRACT_READY', 'ROUTED'],
+  ['ROUTED', 'DESIGNING'],
+  ['DESIGNING', 'PLANNED'],
+  ['PLANNED', 'EXECUTING'],
+  ['EXECUTING', 'VERIFYING'],
+  ['VERIFYING', 'REVIEWING'],
+  ['REVIEWING', 'COMPLETE'],
+  ['VERIFYING', 'DIAGNOSING'],
+  ['DIAGNOSING', 'CORRECTING'],
+  ['CORRECTING', 'EXECUTING'],
+  ['EXECUTING', 'BLOCKED'],
+];
+
+export function Flow({ snapshot }: FlowProps) {
+  const [selectedTask, setSelectedTask] = useState<TaskSummary | null>(
+    snapshot.tasks.find((t) => t.taskId === snapshot.activeTaskId) || snapshot.tasks[0] || null
+  );
+  const [inspectorOpen, setInspectorOpen] = useState(false);
+
+  const getPhaseState = useCallback((phase: ForgeLoopPhase, task: TaskSummary): 'completed' | 'current' | 'pending' | 'blocked' | 'failed' => {
+    if (task.phase === phase) return 'current';
+    if (task.phase === 'BLOCKED' && phase === 'BLOCKED') return 'blocked';
+    if (task.phase === 'COMPLETE') return 'completed';
+
+    const currentPhaseOrder = PHASE_ORDER[task.phase] ?? 0;
+    const phaseOrder = PHASE_ORDER[phase] ?? 0;
+
+    if (phaseOrder < currentPhaseOrder) return 'completed';
+
+    if (task.phase === 'DIAGNOSING' && (phase === 'VERIFYING' || phase === 'DIAGNOSING')) {
+      return phase === 'DIAGNOSING' ? 'current' : 'failed';
+    }
+
+    if (task.phase === 'CORRECTING' && (phase === 'EXECUTING' || phase === 'CORRECTING')) {
+      return phase === 'CORRECTING' ? 'current' : 'failed';
+    }
+
+    if (task.phase === 'VERIFYING' && phase === 'EXECUTING') return 'completed';
+
+    return 'pending';
+  }, []);
+
+  const nodes: Node[] = useMemo(() => {
+    if (!selectedTask) return [];
+
+    return (Object.keys(PHASE_DISPLAY) as ForgeLoopPhase[]).map((phase) => {
+      const display = PHASE_DISPLAY[phase];
+      const state = getPhaseState(phase, selectedTask);
+      const hasEvents = selectedTask.checks.some((c) => {
+        const eventPhases: Record<string, ForgeLoopPhase> = {
+          'passed': 'VERIFYING',
+          'failed': 'VERIFYING',
+        };
+        return eventPhases[c.status] === phase;
+      });
+
+      return {
+        id: phase,
+        type: 'flowNode',
+        position: { x: display.x, y: display.y },
+        data: {
+          label: display.label,
+          phase,
+          state,
+          hasEvents,
+          taskId: selectedTask.taskId,
+        },
+        selectable: true,
+      };
+    });
+  }, [selectedTask, getPhaseState]);
+
+  const edges: Edge[] = useMemo(() => {
+    return PHASE_EDGES.map(([source, target]) => ({
+      id: `${source}-${target}`,
+      source,
+      target,
+      type: 'smoothstep',
+      animated: false,
+      style: { stroke: '#303038', strokeWidth: 2 },
+      markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16, color: '#303038' },
+    }));
+  }, []);
+
+  const [flowNodes, , onNodesChange] = useNodesState(nodes);
+  const [flowEdges, , onEdgesChange] = useEdgesState(edges);
+
+  const handleNodeClick = useCallback(() => {
+    setInspectorOpen(true);
+  }, []);
+
+  if (snapshot.tasks.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p className="text-sm text-forge-text-muted">No tasks to visualize</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full flex animate-fade-in">
+      <div className="flex-1 flex flex-col">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-xl font-semibold text-forge-text-primary">Lifecycle Flow</h1>
+            <p className="text-sm text-forge-text-muted mt-1">ForgeLoop protocol lifecycle visualization</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <select
+              className="input w-48"
+              value={selectedTask?.taskId || ''}
+              onChange={(e) => {
+                const task = snapshot.tasks.find((t) => t.taskId === e.target.value);
+                setSelectedTask(task || null);
+              }}
+            >
+              {snapshot.tasks.map((task) => (
+                <option key={task.taskId} value={task.taskId}>
+                  {task.taskId}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="flex-1 bg-forge-primary-surface border border-forge-border-subtle rounded-10 overflow-hidden">
+          <ReactFlow
+            nodes={flowNodes}
+            edges={flowEdges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onNodeClick={handleNodeClick}
+            nodeTypes={nodeTypes}
+            fitView
+            fitViewOptions={{ padding: 0.2 }}
+            minZoom={0.5}
+            maxZoom={1.5}
+            defaultEdgeOptions={{
+              type: 'smoothstep',
+              style: { stroke: '#303038', strokeWidth: 2 },
+            }}
+            proOptions={{ hideAttribution: true }}
+          >
+            <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#24242A" />
+            <Controls
+              showInteractive={false}
+              className="!bg-forge-secondary-surface !border-forge-border-subtle !rounded-8 !shadow-lg"
+            />
+            <MiniMap
+              nodeColor={(node) => {
+                const state = node.data.state;
+                switch (state) {
+                  case 'completed': return '#22C55E';
+                  case 'current': return '#FF7A18';
+                  case 'blocked': return '#EF4444';
+                  case 'failed': return '#F59E0B';
+                  default: return '#303038';
+                }
+              }}
+              maskColor="rgba(9, 9, 11, 0.7)"
+              className="!bg-forge-secondary-surface !border-forge-border-subtle !rounded-8"
+            />
+          </ReactFlow>
+        </div>
+      </div>
+
+      {inspectorOpen && selectedTask && (
+        <InspectorPanel
+          task={selectedTask}
+          onClose={() => setInspectorOpen(false)}
+        />
+      )}
+    </div>
+  );
+}

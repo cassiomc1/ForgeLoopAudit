@@ -1,0 +1,106 @@
+import { describe, it, expect } from 'vitest';
+import { ForgeLoopStudioError } from '@shared/errors';
+
+describe('shared/errors', () => {
+  describe('ForgeLoopStudioError', () => {
+    it('should create error with correct properties', () => {
+      const error = new ForgeLoopStudioError('CLI_FAILED', 'test message', true, 'details');
+      expect(error.code).toBe('CLI_FAILED');
+      expect(error.message).toBe('test message');
+      expect(error.recoverable).toBe(true);
+      expect(error.details).toBe('details');
+      expect(error.name).toBe('ForgeLoopStudioError');
+      expect(error).toBeInstanceOf(Error);
+    });
+
+    it('should serialize to JSON', () => {
+      const error = new ForgeLoopStudioError('CLI_FAILED', 'msg', true, 'det');
+      const json = error.toJSON();
+      expect(json).toEqual({
+        code: 'CLI_FAILED',
+        message: 'msg',
+        recoverable: true,
+        details: 'det',
+      });
+    });
+
+    describe('static factory methods', () => {
+      it('projectNotForgeLoop', () => {
+        const error = ForgeLoopStudioError.projectNotForgeLoop('/path');
+        expect(error.code).toBe('PROJECT_NOT_FORGELOOP');
+        expect(error.recoverable).toBe(true);
+        expect(error.details).toContain('/path');
+      });
+
+      it('protocolUnsupported', () => {
+        const error = ForgeLoopStudioError.protocolUnsupported(99, '/path');
+        expect(error.code).toBe('PROTOCOL_UNSUPPORTED');
+        expect(error.recoverable).toBe(false);
+        expect(error.message).toContain('99');
+      });
+
+      it('artifactInvalid', () => {
+        const error = ForgeLoopStudioError.artifactInvalid('task.json', 'bad format');
+        expect(error.code).toBe('ARTIFACT_INVALID');
+        expect(error.recoverable).toBe(true);
+      });
+
+      it('artifactUnreadable', () => {
+        const error = ForgeLoopStudioError.artifactUnreadable('config.json', 'not found');
+        expect(error.code).toBe('ARTIFACT_UNREADABLE');
+        expect(error.recoverable).toBe(true);
+      });
+
+      it('cliNotFound', () => {
+        const error = ForgeLoopStudioError.cliNotFound('forgeloop');
+        expect(error.code).toBe('CLI_NOT_FOUND');
+        expect(error.recoverable).toBe(false);
+      });
+
+      it('cliFailed', () => {
+        const error = ForgeLoopStudioError.cliFailed('task-list', 1, 'error output');
+        expect(error.code).toBe('CLI_FAILED');
+        expect(error.recoverable).toBe(true);
+        expect(error.details).toContain('task-list');
+        expect(error.details).toContain('error output');
+      });
+
+      it('pathBoundaryViolation', () => {
+        const error = ForgeLoopStudioError.pathBoundaryViolation('/evil/path', '/project');
+        expect(error.code).toBe('PATH_BOUNDARY_VIOLATION');
+        expect(error.recoverable).toBe(false);
+      });
+
+      it('ledgerInvalid', () => {
+        const error = ForgeLoopStudioError.ledgerInvalid(42, 'malformed line');
+        expect(error.code).toBe('LEDGER_INVALID');
+        expect(error.recoverable).toBe(true);
+      });
+
+      it('watcherFailed', () => {
+        const error = ForgeLoopStudioError.watcherFailed('permission denied');
+        expect(error.code).toBe('WATCHER_FAILED');
+        expect(error.recoverable).toBe(true);
+      });
+
+      it('projectRemoved', () => {
+        const error = ForgeLoopStudioError.projectRemoved('/path');
+        expect(error.code).toBe('PROJECT_REMOVED');
+        expect(error.recoverable).toBe(true);
+      });
+
+      it('permissionDenied', () => {
+        const error = ForgeLoopStudioError.permissionDenied('/path');
+        expect(error.code).toBe('PERMISSION_DENIED');
+        expect(error.recoverable).toBe(false);
+      });
+
+      it('unknown', () => {
+        const error = ForgeLoopStudioError.unknown('something broke', 'stack trace');
+        expect(error.code).toBe('UNKNOWN_ERROR');
+        expect(error.recoverable).toBe(true);
+        expect(error.details).toBe('stack trace');
+      });
+    });
+  });
+});

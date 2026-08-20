@@ -1,0 +1,33 @@
+import { SUPPORTED_PROTOCOL_VERSIONS } from '@shared/constants';
+import { ForgeLoopStudioError } from '@shared/errors';
+import type { ProtocolSummary } from '@shared/domain';
+
+export interface ProtocolInfoResult {
+  protocolVersion: number;
+  schemaVersion: number;
+  packageVersion?: string;
+  compatible: boolean;
+}
+
+export function checkProtocolCompatibility(protocolInfo: ProtocolInfoResult): ProtocolSummary {
+  const isSupported = SUPPORTED_PROTOCOL_VERSIONS.includes(protocolInfo.protocolVersion as typeof SUPPORTED_PROTOCOL_VERSIONS[number]);
+
+  if (!isSupported) {
+    throw ForgeLoopStudioError.protocolUnsupported(protocolInfo.protocolVersion, 'unknown');
+  }
+
+  return {
+    protocolVersion: protocolInfo.protocolVersion,
+    schemaVersion: protocolInfo.schemaVersion,
+    packageVersion: protocolInfo.packageVersion,
+    compatible: protocolInfo.compatible && isSupported,
+  };
+}
+
+export function getSupportedVersions(): number[] {
+  return [...SUPPORTED_PROTOCOL_VERSIONS];
+}
+
+export function isVersionSupported(version: number): boolean {
+  return SUPPORTED_PROTOCOL_VERSIONS.includes(version as typeof SUPPORTED_PROTOCOL_VERSIONS[number]);
+}
