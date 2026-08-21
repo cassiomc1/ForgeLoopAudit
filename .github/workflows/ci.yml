@@ -24,6 +24,8 @@ jobs:
       - run: npm ci
       - name: Run shared verification contract
         run: npm run verify:full
+        env:
+          FORGELOOP_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       - run: if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then xvfb-run -a npm run test:electron-smoke; else npm run test:electron-smoke; fi
         shell: bash
       - run: if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then xvfb-run -a npm run test:e2e -- --grep-invert "deterministic primary shell"; else npm run test:e2e -- --grep-invert "deterministic primary shell"; fi
