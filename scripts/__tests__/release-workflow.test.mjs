@@ -42,3 +42,14 @@ test('tag-only publish consumes the verified assembled bundle', () => {
   assert.doesNotMatch(publish, /pattern: forgeloop-studio-\*/);
   assert.match(publish, /softprops\/action-gh-release@/);
 });
+
+test('assemble binds the generated SBOM application identity to the package name before verification', () => {
+  const assemble = jobBlock('assemble');
+  const generateIndex = assemble.indexOf('npm sbom');
+  const normalizeIndex = assemble.indexOf('node scripts/normalize-release-sbom.mjs');
+  const verifyIndex = assemble.indexOf('node scripts/verify-release-assets.mjs');
+  assert.ok(generateIndex >= 0, 'assemble job must generate the CycloneDX lockfile SBOM');
+  assert.ok(normalizeIndex > generateIndex, 'SBOM normalization must happen right after generation');
+  assert.match(assemble, /normalize-release-sbom\.mjs release-assets\/SBOM-cyclonedx\.json/);
+  assert.ok(verifyIndex > normalizeIndex, 'SBOM normalization must happen before bundle verification');
+});
