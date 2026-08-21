@@ -7,13 +7,21 @@ on:
       tag:
         description: 'Release tag to verify'
         required: true
-        default: 'v0.1.0-rc.4'
 permissions:
   contents: read
 jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
+      - name: Validate requested release tag
+        run: |
+          TAG="${{ inputs.tag || github.event.release.tag_name }}"
+          case "$TAG" in
+            v[0-9]*) ;;
+            *) echo "::error::tag must start with 'v' followed by a version (got: $TAG)"; exit 1 ;;
+          esac
+          git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null \
+            || { echo "::error::tag $TAG does not exist in this repository"; exit 1; }
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ inputs.tag || github.event.release.tag_name }}
