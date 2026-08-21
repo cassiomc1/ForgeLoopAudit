@@ -21,6 +21,18 @@ test('manual rehearsal assembles and verifies the combined release bundle', () =
   assert.match(assemble, /name: forgeloop-studio-assembled/);
 });
 
+test('assemble drops staging-only release metadata before verification and upload', () => {
+  const assemble = jobBlock('assemble');
+  const dropIndex = assemble.indexOf('RELEASE-METADATA');
+  assert.ok(dropIndex >= 0, 'assemble job must remove staging-only RELEASE-METADATA files from the public bundle');
+  const sbomIndex = assemble.indexOf('npm sbom');
+  const verifyIndex = assemble.indexOf('node scripts/verify-release-assets.mjs');
+  const uploadIndex = assemble.indexOf('forgeloop-studio-assembled');
+  assert.ok(dropIndex < sbomIndex, 'metadata removal must happen before SBOM generation');
+  assert.ok(dropIndex < verifyIndex, 'metadata removal must happen before bundle verification');
+  assert.ok(dropIndex < uploadIndex, 'metadata removal must happen before artifact upload');
+});
+
 test('tag-only publish consumes the verified assembled bundle', () => {
   const publish = jobBlock('publish');
   assert.match(publish, /needs: \[assemble\]/);
