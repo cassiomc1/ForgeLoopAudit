@@ -21,6 +21,11 @@ function extensionFor(platform) {
   return platform === 'macos' ? ['.dmg', '.zip'] : platform === 'windows' ? ['.exe'] : ['.AppImage'];
 }
 
+export function evidenceBelongsToPlatform(platform, evidenceName) {
+  const distributableName = evidenceName.replace(/^RELEASE-EVIDENCE-/, '').replace(/\.json$/, '').toLowerCase();
+  return extensionFor(platform).some((extension) => distributableName.endsWith(extension.toLowerCase()));
+}
+
 export function discoverPublicDistributables(assetDir, platform) {
   const extensions = extensionFor(platform);
   return readdirSync(assetDir, { withFileTypes: true })

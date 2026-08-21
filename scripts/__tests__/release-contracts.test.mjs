@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { artifactIsExpected, discoverPublicDistributables, matchesMatrixEntry, parseChecksumManifest, assertReleaseCompleteness } from '../release-contracts.mjs';
+import { artifactIsExpected, discoverPublicDistributables, evidenceBelongsToPlatform, matchesMatrixEntry, parseChecksumManifest, assertReleaseCompleteness } from '../release-contracts.mjs';
 import { assertEvidenceCommitMatchesTag } from '../release-identity.mjs';
 
 test('rejects a checksum manifest that omits an actual distributable', async () => {
@@ -63,4 +63,11 @@ test('classifies Windows Setup as NSIS and the plain executable as portable', ()
   assert.equal(matchesMatrixEntry('windows', 'ForgeLoop Studio 0.1.0-rc.3.exe', { type: 'portable', arch: 'x64' }), true);
   assert.equal(artifactIsExpected('windows', 'ForgeLoop Studio Setup 0.1.0-rc.3.exe'), true);
   assert.equal(artifactIsExpected('windows', 'ForgeLoop Studio 0.1.0-rc.3.exe'), true);
+});
+
+test('classifies flat release evidence by its distributable platform', () => {
+  assert.equal(evidenceBelongsToPlatform('macos', 'RELEASE-EVIDENCE-ForgeLoop Studio-0.1.0-rc.3-arm64.dmg.json'), true);
+  assert.equal(evidenceBelongsToPlatform('windows', 'RELEASE-EVIDENCE-ForgeLoop Studio Setup 0.1.0-rc.3.exe.json'), true);
+  assert.equal(evidenceBelongsToPlatform('linux', 'RELEASE-EVIDENCE-ForgeLoop Studio-0.1.0-rc.3.AppImage.json'), true);
+  assert.equal(evidenceBelongsToPlatform('macos', 'RELEASE-EVIDENCE-ForgeLoop Studio Setup 0.1.0-rc.3.exe.json'), false);
 });
