@@ -20,6 +20,16 @@ if (process.platform === 'darwin') {
 const executablePath = candidates.find(existsSync);
 if (!executablePath) throw new Error(`Packaged Electron executable not found. Checked: ${candidates.join(', ')}`);
 
+const resourcesDir = process.platform === 'darwin'
+  ? join(executablePath, '..', '..', 'Resources')
+  : join(executablePath, '..', 'resources');
+const bundledDemoConfig = join(resourcesDir, 'demo', '.forgeloop', 'config.json');
+if (!existsSync(bundledDemoConfig)) {
+  throw new Error(`Bundled demo project missing from packaged resources: ${bundledDemoConfig}`);
+}
+JSON.parse(readFileSync(bundledDemoConfig, 'utf8'));
+console.log(`Bundled demo project present at ${join(resourcesDir, 'demo')}`);
+
 const startedAt = performance.now();
 const smokeFile = join(tmpdir(), `forgeloop-studio-smoke-${process.pid}.json`);
 let child;

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FolderOpen, Clock, X } from 'lucide-react';
+import { FolderOpen, FlaskConical, Clock, X } from 'lucide-react';
 import type { RecentProject } from '@shared/domain';
 import { ErrorState } from '../components/ui/EmptyState';
 import { LoadingState } from '../components/ui/LoadingState';
@@ -7,13 +7,14 @@ import { cn } from '../lib/utils';
 
 interface ProjectPickerProps {
   onOpenProject: () => void;
+  onOpenDemoProject: () => void;
   onOpenRecentProject: (path: string) => void;
   recentProjects: RecentProject[];
   isLoading: boolean;
   error?: { message: string; details?: string; code: string } | null;
 }
 
-export function ProjectPicker({ onOpenProject, onOpenRecentProject, recentProjects, isLoading, error }: ProjectPickerProps) {
+export function ProjectPicker({ onOpenProject, onOpenDemoProject, onOpenRecentProject, recentProjects, isLoading, error }: ProjectPickerProps) {
   const [hoveredRecent, setHoveredRecent] = useState<string | null>(null);
 
   const formatDate = (dateString: string) => {
@@ -58,6 +59,14 @@ export function ProjectPicker({ onOpenProject, onOpenRecentProject, recentProjec
               <FolderOpen className="w-5 h-5" />
               <span>Open ForgeLoop Project</span>
               {isLoading && <LoadingState message="Opening..." />}
+            </button>
+            <button
+              className="button-secondary w-full justify-center py-3 gap-2 mt-3"
+              onClick={onOpenDemoProject}
+              disabled={isLoading}
+            >
+              <FlaskConical className="w-5 h-5" />
+              <span>Open Demo Project</span>
             </button>
             <p className="text-center text-xs text-forge-text-muted mt-3">
               Select a directory containing a <code className="font-mono text-forge-text-secondary">.forgeloop</code> folder

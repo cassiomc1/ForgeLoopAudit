@@ -4,6 +4,8 @@ const gates = [
   ['dependency-policy', 'node', ['scripts/dependency-policy.mjs']],
   ['audit-production', 'npm', ['run', 'audit:prod']],
   ['schema-provenance', 'npm', ['run', 'protocol:schemas:verify']],
+  ['demo-drift-check', 'node', ['scripts/generate-demo-project.mjs', '--check']],
+  ['demo-verification', 'npm', ['run', 'demo:verify']],
   ['docs-conformance', 'npm', ['run', 'docs:check']],
   ['typecheck', 'npm', ['run', 'typecheck']],
   ['lint', 'npm', ['run', 'lint']],

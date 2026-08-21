@@ -9,6 +9,9 @@ files:
   - '!dist/**/*.map'
   - schemas/**/*
   - node_modules/**/*
+extraResources:
+  - from: demo
+    to: demo
 mac:
   icon: build/icon.icns
   artifactName: "${productName}-${version}-${arch}.${ext}"

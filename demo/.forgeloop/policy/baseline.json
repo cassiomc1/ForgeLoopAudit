@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-08-01T09:00:00.000Z",
+  "entries": [
+    {
+      "ruleId": "performance-lcp-budget",
+      "fingerprints": [
+        "c030d32497fcec0542f2d1e42237ff4b70e1992936759bf4a68535de5556a7ed"
+      ],
+      "details": [
+        {
+          "note": "Baseline captured before optimization work started."
+        }
+      ]
+    }
+  ]
+}

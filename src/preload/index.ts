@@ -13,6 +13,7 @@ import { IPC_CHANNELS } from '@shared/ipc';
 const api = {
   selectProject: (): Promise<ProjectDetectionResult | null> => ipcRenderer.invoke(IPC_CHANNELS.SELECT_PROJECT),
   openRecentProject: (path: string): Promise<ProjectDetectionResult> => ipcRenderer.invoke(IPC_CHANNELS.OPEN_RECENT_PROJECT, path),
+  openDemoProject: (): Promise<ProjectDetectionResult> => ipcRenderer.invoke(IPC_CHANNELS.OPEN_DEMO_PROJECT),
   closeProject: (): Promise<void> => ipcRenderer.invoke(IPC_CHANNELS.CLOSE_PROJECT),
   getProjectSnapshot: (): Promise<ProjectSnapshot> => ipcRenderer.invoke(IPC_CHANNELS.GET_PROJECT_SNAPSHOT),
   getTask: (taskId: string): Promise<TaskSnapshot> => ipcRenderer.invoke(IPC_CHANNELS.GET_TASK, taskId),

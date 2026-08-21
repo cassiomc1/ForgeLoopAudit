@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 1,
+  "taskId": "TASK-003",
+  "contractFingerprint": "098fb3054eba667240f0b0b4e29f918f5d27f3b96af374c5a5c0b4ad7444ae45",
+  "routeFingerprint": "14d0f41c14f4e57427a9426284fad918c0ccf0cb205541fafdf9782519330720",
+  "repositoryFingerprint": {
+    "branch": "main",
+    "head": "3f9c1d2e77a4b5089c6e12ab34f5d6e7890abcde"
+  },
+  "phase": "EXECUTING",
+  "selectedGuides": [
+    "security",
+    "testing"
+  ],
+  "requiredGates": [
+    "integration-tests",
+    "security-review"
+  ],
+  "satisfiedGates": [
+    "integration-tests"
+  ],
+  "complianceMode": "standard",
+  "completedSteps": [
+    "API client skeleton",
+    "Error mapping"
+  ],
+  "pendingSteps": [
+    "Retry policy",
+    "Security review"
+  ],
+  "checks": [
+    {
+      "id": "checkout-integration-tests",
+      "requirement": "Checkout integration tests pass",
+      "status": "passed",
+      "evidenceKind": "OBSERVED",
+      "timestamp": "2026-08-05T09:10:00.000Z"
+    },
+    {
+      "id": "retry-policy-tests",
+      "requirement": "Retry policy handles transient failures",
+      "status": "not-run",
+      "evidenceKind": "NOT_VERIFIED",
+      "timestamp": "2026-08-05T09:12:00.000Z"
+    }
+  ],
+  "failures": [],
+  "blockers": [],
+  "evidenceCoverage": [
+    {
+      "status": "COVERED"
+    },
+    {
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "status": "PARTIAL"
+    }
+  ],
+  "lastUpdated": "2026-08-05T09:15:00.000Z"
+}

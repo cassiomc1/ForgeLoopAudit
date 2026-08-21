@@ -14,6 +14,7 @@ import { z } from 'zod';
 import { basename } from 'path';
 import { resolveTrustedSchemaDirectory, SchemaValidator } from '@main/core/protocol/validator';
 import { isFixtureProjectMode as resolveFixtureProjectMode } from './fixture-mode';
+import { resolveBundledDemoPath } from '@main/demo/demo-path';
 import { buildStudioDiagnostics } from '@main/core/diagnostics/diagnostics';
 import { assertTrustedSender as assertSenderUrl } from '@main/security/sender-policy';
 
@@ -67,6 +68,13 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
   ipcMain.handle(IPC_CHANNELS.OPEN_RECENT_PROJECT, async (event, path: string): Promise<ProjectDetectionResult> => {
     assertTrustedSender(event); ProjectPathSchema.parse(path);
     return openProject(path);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.OPEN_DEMO_PROJECT, async (event): Promise<ProjectDetectionResult> => {
+    assertTrustedSender(event);
+    const demoRoot = resolveBundledDemoPath({ isPackaged: app.isPackaged, appPath: app.getAppPath(), resourcesPath: process.resourcesPath });
+    if (!demoRoot) throw ForgeLoopStudioError.projectNotForgeLoop('bundled demo');
+    return openProject(demoRoot);
   });
 
   ipcMain.handle(IPC_CHANNELS.CLOSE_PROJECT, async (event): Promise<void> => {

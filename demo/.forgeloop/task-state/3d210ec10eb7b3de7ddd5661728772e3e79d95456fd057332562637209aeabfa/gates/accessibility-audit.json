@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 1,
+  "taskId": "TASK-004",
+  "gate": "accessibility-audit",
+  "status": "blocked",
+  "requiredBy": [
+    "policy:accessibility-audit"
+  ],
+  "artifacts": [
+    {
+      "path": "src/catalog.ts",
+      "sha256": "bbb67118c7a17d35ca8641885432a4ca07b2a062680b412e04db5963df550f25"
+    }
+  ],
+  "decisions": [
+    "Correction required before the audit can be re-run"
+  ],
+  "unknowns": [],
+  "approvedAssumptions": [],
+  "evidence": [
+    {
+      "kind": "BLOCKED",
+      "source": "audit:keyboard-navigation",
+      "result": "2 keyboard navigation findings in grid pagination"
+    }
+  ]
+}

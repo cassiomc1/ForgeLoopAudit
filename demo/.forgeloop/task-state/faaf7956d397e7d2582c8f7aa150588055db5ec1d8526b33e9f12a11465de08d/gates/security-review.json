@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 1,
+  "taskId": "TASK-006",
+  "gate": "security-review",
+  "status": "satisfied",
+  "requiredBy": [
+    "policy:security-review"
+  ],
+  "artifacts": [
+    {
+      "path": "src/checkout.ts",
+      "sha256": "63029a52a22b8cbdd41e81b0896b2937ec77d1f0c23fe76025ba54e3ecc82423"
+    }
+  ],
+  "decisions": [],
+  "unknowns": [],
+  "approvedAssumptions": [],
+  "evidence": [
+    {
+      "kind": "OBSERVED",
+      "source": "audit:security-scan",
+      "result": "no critical findings"
+    }
+  ]
+}

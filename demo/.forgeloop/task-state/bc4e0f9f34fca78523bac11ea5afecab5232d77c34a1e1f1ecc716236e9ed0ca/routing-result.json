@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 1,
+  "contractFingerprint": "baaaccf8fc0764f13556375fa643ced68e1ffe7a6939180dfd8167177fc58720",
+  "input": {
+    "taskId": "TASK-005",
+    "project": "forgehop"
+  },
+  "primary": "planning",
+  "guides": [
+    "performance",
+    "design"
+  ],
+  "reasons": {
+    "planning": [
+      "Baseline measurement before optimization"
+    ]
+  },
+  "excluded": {}
+}

@@ -20,8 +20,10 @@
     "audit:all": "npm audit --audit-level=none",
     "dependency:policy": "node scripts/dependency-policy.mjs",
     "docs:check": "node scripts/check-doc-conformance.mjs",
+    "demo:generate": "node scripts/generate-demo-project.mjs",
+    "demo:verify": "node scripts/verify-demo-project.mjs",
     "test:coverage": "vitest run --coverage",
-    "test:release-contracts": "node --test scripts/__tests__/release-contracts.test.mjs scripts/__tests__/verify-release-assets.test.mjs scripts/__tests__/large-ledger-fixture.test.mjs scripts/__tests__/release-workflow.test.mjs scripts/__tests__/public-release-workflow.test.mjs scripts/__tests__/version-lineage.test.mjs scripts/__tests__/sbom-normalize.test.mjs",
+    "test:release-contracts": "node --test scripts/__tests__/release-contracts.test.mjs scripts/__tests__/verify-release-assets.test.mjs scripts/__tests__/large-ledger-fixture.test.mjs scripts/__tests__/release-workflow.test.mjs scripts/__tests__/public-release-workflow.test.mjs scripts/__tests__/version-lineage.test.mjs scripts/__tests__/sbom-normalize.test.mjs scripts/__tests__/demo-project.test.mjs",
     "verify:critical-coverage": "node scripts/verify-critical-coverage.mjs",
     "verify:full": "node scripts/verify-full.mjs",
     "benchmark:large-project": "node scripts/benchmark-large-project.mjs",
@@ -108,6 +110,12 @@
       "!dist/**/*.map",
       "schemas/**/*",
       "node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "demo",
+        "to": "demo"
+      }
     ],
     "mac": {
       "icon": "build/icon.icns",

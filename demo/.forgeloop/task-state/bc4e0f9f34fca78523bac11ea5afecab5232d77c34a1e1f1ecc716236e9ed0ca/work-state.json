@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 1,
+  "taskId": "TASK-005",
+  "contractFingerprint": "baaaccf8fc0764f13556375fa643ced68e1ffe7a6939180dfd8167177fc58720",
+  "routeFingerprint": "d104b7defe7f58e17ccbc5840431661a3697fe1831329d8d5edc6457b21914c5",
+  "repositoryFingerprint": {
+    "branch": "main",
+    "head": "3f9c1d2e77a4b5089c6e12ab34f5d6e7890abcde"
+  },
+  "phase": "PLANNED",
+  "selectedGuides": [
+    "performance",
+    "design"
+  ],
+  "requiredGates": [
+    "performance-budget"
+  ],
+  "satisfiedGates": [],
+  "complianceMode": "standard",
+  "completedSteps": [
+    "Baseline measurement"
+  ],
+  "pendingSteps": [
+    "Lazy loading",
+    "Responsive sizes",
+    "Budget verification"
+  ],
+  "checks": [],
+  "failures": [],
+  "blockers": [],
+  "evidenceCoverage": [
+    {
+      "status": "NOT_VERIFIED"
+    }
+  ],
+  "lastUpdated": "2026-08-07T11:50:00.000Z"
+}

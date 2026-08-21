@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 1,
+  "contractFingerprint": "7390be2f2c749cd6ba360f34ce172322b3286585cfb981ed694bce20c252d3e4",
+  "input": {
+    "taskId": "TASK-006",
+    "project": "forgehop"
+  },
+  "primary": "review",
+  "guides": [
+    "security"
+  ],
+  "reasons": {
+    "review": [
+      "Read-only audit with scan evidence"
+    ]
+  },
+  "excluded": {}
+}
