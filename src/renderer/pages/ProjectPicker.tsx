@@ -79,6 +79,13 @@ export function ProjectPicker({ onOpenProject, onOpenDemoProject, onOpenRecentPr
               <span>Open Demo Project</span>
             </button>
             <p className="text-center text-xs text-forge-text-muted mt-3">
+              Scenario-rich ForgeShop fixture with intentional complete, active, blocked, and planned tasks.
+              Includes intentional COMPLETE, VERIFYING, EXECUTING, BLOCKED, and PLANNED scenarios.
+            </p>
+            <p className="text-center text-xs text-forge-text-muted mt-1">
+              Use it to explore verification, recovery, continuity, evidence, and policy behavior.
+            </p>
+            <p className="text-center text-xs text-forge-text-muted mt-3">
               Select a directory containing a <code className="font-mono text-forge-text-secondary">.forgeloop</code> folder
             </p>
           </div>

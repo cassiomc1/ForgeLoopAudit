@@ -18,6 +18,7 @@ test('Open Demo Project action opens the bundled ForgeShop project end-to-end', 
 
     await expect(window.getByRole('heading', { name: 'ForgeLoop Studio' })).toBeVisible();
     await expect(window.getByRole('button', { name: 'Open Demo Project' })).toBeVisible();
+    await expect(window.getByText(/Includes intentional COMPLETE, VERIFYING, EXECUTING, BLOCKED, and PLANNED scenarios/)).toBeVisible();
     await window.getByRole('button', { name: 'Open Demo Project' }).click();
 
     await expect(window.getByRole('heading', { name: 'Project Overview' })).toBeVisible({ timeout: 15_000 });
