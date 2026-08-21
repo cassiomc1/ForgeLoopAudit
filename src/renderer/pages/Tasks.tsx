@@ -7,12 +7,13 @@ import { Search, X } from 'lucide-react';
 
 interface TasksProps {
   snapshot: ProjectSnapshot;
+  isDemoProject?: boolean;
   onTaskSelect?: (taskId: string) => void;
 }
 
 type FilterType = 'all' | 'active' | 'blocked' | 'complete';
 
-export function Tasks({ snapshot, onTaskSelect }: TasksProps) {
+export function Tasks({ snapshot, isDemoProject, onTaskSelect }: TasksProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
 
@@ -127,6 +128,7 @@ export function Tasks({ snapshot, onTaskSelect }: TasksProps) {
                 key={task.taskId}
                 task={task}
                 isActive={task.taskId === snapshot.activeTaskId}
+                isDemoProject={isDemoProject}
                 onClick={() => onTaskSelect?.(task.taskId)}
               />
             ))
