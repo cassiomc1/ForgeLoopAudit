@@ -47,6 +47,8 @@ export const PHASE_ORDER: Record<ForgeLoopPhase, number> = {
 
 export type PhaseState = 'completed' | 'current' | 'pending' | 'blocked' | 'failed';
 
+export type ProjectKind = 'PROJECT' | 'DEMO';
+
 export interface ProjectDetectionResult {
   projectRoot: string;
   forgeLoopRoot: string;
@@ -55,6 +57,7 @@ export interface ProjectDetectionResult {
   forgeLoopVersion?: string;
   compatible: boolean;
   warnings: string[];
+  projectKind: ProjectKind;
 }
 
 export interface ProjectSummary {
@@ -307,6 +310,7 @@ export interface RecentProject {
   path: string;
   name: string;
   lastOpenedAt: string;
+  kind?: ProjectKind;
 }
 
 export type AllowedArtifact =

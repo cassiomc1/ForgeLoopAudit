@@ -4,9 +4,11 @@ import { FolderOpen, ChevronLeft, ChevronRight, X, GitBranch } from 'lucide-reac
 import { clsx } from 'clsx';
 import { NAV_ITEMS } from '@renderer/App';
 import { TitleBar } from './TitleBar';
+import { DemoProjectBanner } from '@renderer/components/demo/DemoProjectBanner';
 
 interface AppShellProps {
   projectName: string;
+  isDemoProject?: boolean;
   branch?: string;
   head?: string;
   protocolVersion: number;
@@ -74,6 +76,7 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
 
 export function AppShell({
   projectName,
+  isDemoProject,
   branch,
   head,
   protocolVersion,
@@ -212,6 +215,8 @@ export function AppShell({
             )}
           </div>
         </header>
+
+        {isDemoProject && <DemoProjectBanner />}
 
         <main className="flex-1 overflow-auto p-4 md:p-6">
           {error && (

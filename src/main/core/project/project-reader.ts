@@ -105,6 +105,7 @@ export class ProjectDetector {
       schemaVersion: config.schemaVersion,
       compatible: protocolResult.compatible,
       warnings,
+      projectKind: 'PROJECT',
     };
   }
 }

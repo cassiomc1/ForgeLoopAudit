@@ -174,6 +174,8 @@ export function App() {
     );
   }
 
+  const isDemoProject = detectionResult.projectKind === 'DEMO';
+
   const renderPage = () => {
     if (!snapshot) {
       return <LoadingState />;
@@ -183,7 +185,7 @@ export function App() {
       case 'overview':
         return <Overview snapshot={snapshot} watcherStatus={watcherStatus} onTaskSelect={(taskId) => { setSelectedTaskId(taskId); setActiveNav('flow'); }} onViewAllTasks={() => setActiveNav('tasks')} />;
       case 'tasks':
-        return <Tasks snapshot={snapshot} onTaskSelect={(taskId) => { setSelectedTaskId(taskId); setActiveNav('flow'); }} />;
+        return <Tasks snapshot={snapshot} isDemoProject={isDemoProject} onTaskSelect={(taskId) => { setSelectedTaskId(taskId); setActiveNav('flow'); }} />;
       case 'flow':
         return <Flow snapshot={snapshot} selectedTaskId={selectedTaskId} onSelectedTaskChange={setSelectedTaskId} />;
       case 'contract':
@@ -206,6 +208,7 @@ export function App() {
   return (
     <AppShell
       projectName={snapshot?.project.name || 'Project'}
+      isDemoProject={isDemoProject}
       branch={snapshot?.project.branch}
       head={snapshot?.project.head}
       protocolVersion={detectionResult.protocolVersion}
