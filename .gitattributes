@@ -1,0 +1,3 @@
+schemas/**/*.json text eol=lf
+tests/fixtures/**/*.json text eol=lf
+*.ndjson text eol=lf
