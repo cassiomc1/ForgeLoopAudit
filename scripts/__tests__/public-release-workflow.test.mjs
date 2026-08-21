@@ -10,22 +10,24 @@ function stepBlock(pattern, description) {
   return match[0];
 }
 
-test('verifies only published releases', () => {
+test('verifies only published releases and explicit manual dispatches', () => {
   const trigger = stepBlock(/on:\s*\n\s+release:\s*\n\s+types:\s*\[published\]/, 'a release published trigger');
   assert.match(trigger, /release:/);
-  assert.doesNotMatch(workflow, /workflow_dispatch|pull_request|^\s+push:/m);
+  assert.match(workflow, /workflow_dispatch:/);
+  assert.doesNotMatch(workflow, /pull_request|^\s+push:/m);
 });
 
 test('checks out exactly the released tag snapshot as the trust boundary', () => {
-  const checkout = stepBlock(/uses: actions\/checkout@[^\n]+\n\s+with:\s*\n\s+ref: \$\{\{ github\.event\.release\.tag_name \}\}/, 'an explicit checkout of github.event.release.tag_name');
-  assert.match(checkout, /ref: \$\{\{ github\.event\.release\.tag_name \}\}/);
+  const checkout = stepBlock(/uses: actions\/checkout@[^\n]+\n\s+with:\s*\n\s+ref:/, 'an explicit checkout of the released tag');
+  assert.doesNotMatch(checkout, /github\.sha/);
+  assert.match(workflow, /ref: \$\{\{ inputs\.tag \|\| github\.event\.release\.tag_name \}\}/);
 });
 
 test('verification consumes the release tag name from the event context', () => {
   const verify = stepBlock(/run: node scripts\/verify-public-release\.mjs[^\n]*/, 'the public verifier invocation');
   assert.match(verify, /"\$\{\{ github\.repository_owner \}\}"/);
   assert.match(verify, /"\$\{\{ github\.event\.repository\.name \}\}"/);
-  assert.match(verify, /"\$\{\{ github\.event\.release\.tag_name \}\}"/);
+  assert.match(verify, /"\$\{\{ inputs\.tag \|\| github\.event\.release\.tag_name \}\}"/);
 });
 
 test('GITHUB_TOKEN is passed only to the verification step', () => {
