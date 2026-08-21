@@ -13,7 +13,7 @@ function packagedApps(dir) {
       if (existsSync(join(path, 'Contents', 'MacOS', 'ForgeLoop Studio'))) results.push({ path, platform: 'macOS' });
       continue;
     }
-    if (entry.isFile() && entry.name === 'ForgeLoop Studio.exe') results.push({ path: dir, platform: 'Windows' });
+    if (entry.isFile() && entry.name === 'ForgeLoop Studio.exe') results.push({ path, platform: 'Windows' });
     if (entry.isFile() && entry.name === 'forgeloop-studio' && dir.endsWith('linux-unpacked')) results.push({ path, platform: 'Linux' });
     if (entry.isDirectory()) results.push(...packagedApps(path));
   }
