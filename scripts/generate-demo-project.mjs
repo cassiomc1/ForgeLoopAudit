@@ -37,7 +37,8 @@ export function demoHasDrift() {
       };
     }
     for (const [path, content] of generated) {
-      if (!content.equals(committed.get(path))) {
+      const normalize = (buffer) => buffer.toString('utf8').replaceAll('\r\n', '\n');
+      if (normalize(content) !== normalize(committed.get(path))) {
         return { drift: true, reason: `content drift at ${path}` };
       }
     }
