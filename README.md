@@ -45,6 +45,8 @@ The demo is a real ForgeLoop project fixture: every `.forgeloop/` artifact valid
 | TASK-005 | Planned performance work |
 | TASK-006 | Security policy and successful completion |
 
+Studio labels these known states as intentional demo scenarios: the start screen explains them before opening, a persistent **Demo scenario project** banner is shown while ForgeShop is open, and each known task exposes an explanatory badge. A known task drifting to an unexpected phase is surfaced as **Demo drift**. The scenario label never suppresses real errors — schema, artifact, gate, integrity, policy, IPC and Studio failures are always reported normally (see [`demo/README.md`](./demo/README.md)).
+
 Regenerate it with `npm run demo:generate` (deterministic; CI fails on drift via `demo:generate --check`) and validate it with `npm run demo:verify`.
 
 ## Implementation specification
