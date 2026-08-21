@@ -1,0 +1,76 @@
+{
+  "forgeLoopPackageVersion": "1.3.0",
+  "forgeLoopGitCommit": "19355e701e191d830c56d64e535835e925843bae",
+  "protocolVersion": 1,
+  "generatedAt": "2026-08-21T01:09:07.202Z",
+  "schemas": {
+    "activation.schema.json": {
+      "sha256": "19c60c9b8dd99467d7b639031179f1df00971bc5a276bcb00a6b74e7f60f0f6f",
+      "upstreamPath": "schemas/activation.schema.json"
+    },
+    "config.schema.json": {
+      "sha256": "d2029befbf2faba46425c24465b7394a4f9b55ba0e395544787cae1fb087bfba",
+      "upstreamPath": "schemas/config.schema.json"
+    },
+    "continuity.schema.json": {
+      "sha256": "3c761dabec38e795e8a84e9a517c83dbcb971fe88682379a2bceec345fe52285",
+      "upstreamPath": "schemas/continuity.schema.json"
+    },
+    "current-contract.schema.json": {
+      "sha256": "9b9e8e2a17701b4aa0561f1e50b54c71588e0d0a304124e23b1fa5be49a791e7",
+      "upstreamPath": "schemas/current-contract.schema.json"
+    },
+    "event.schema.json": {
+      "sha256": "5e16cfd7700ebc70b6b439717b3b2256087ce9fb3b8eeaef730ea2fcb6556b71",
+      "upstreamPath": "schemas/event.schema.json"
+    },
+    "execution-receipt.schema.json": {
+      "sha256": "29b14cc96492e5d7d7b0cb423e05246957c624ca3d58a1785632ac564b763183",
+      "upstreamPath": "schemas/execution-receipt.schema.json"
+    },
+    "gate.schema.json": {
+      "sha256": "7e7e1350838586c0b0385c19f5fb4520abf8f290ea60c9d36bdba2d3682b9690",
+      "upstreamPath": "schemas/gate.schema.json"
+    },
+    "policy-baseline.schema.json": {
+      "sha256": "a08c49d13f67c660727c08602c25162bfc1ba7f5aa3b938896ea81d4841fd1f0",
+      "upstreamPath": "schemas/policy-baseline.schema.json"
+    },
+    "policy-discovery.schema.json": {
+      "sha256": "5f4d86d9592daf527cd294e9b18429be96b5d176ac8409e7d580358672b14e6b",
+      "upstreamPath": "schemas/policy-discovery.schema.json"
+    },
+    "policy-lock.schema.json": {
+      "sha256": "8c4384290413f6f80263008aa3b58eedf3e9057e2395da9ba1c31a54f90e3fd1",
+      "upstreamPath": "schemas/policy-lock.schema.json"
+    },
+    "policy-rules.schema.json": {
+      "sha256": "9a3a67c5223313297fbd3660f5da83c16b22f77582a6877bc27541b6e495a41f",
+      "upstreamPath": "schemas/policy-rules.schema.json"
+    },
+    "policy-snapshot.schema.json": {
+      "sha256": "3abcffa3937ce52ac8882c5bbf2753d7501bfc5063940564b4acd22965cdeb03",
+      "upstreamPath": "schemas/policy-snapshot.schema.json"
+    },
+    "preflight.schema.json": {
+      "sha256": "bf5873352b9cdbf685a9ad8eb58fadbd90693e5c32cd270b1d17f724849eacb3",
+      "upstreamPath": "schemas/preflight.schema.json"
+    },
+    "routing-result.schema.json": {
+      "sha256": "48292b50a01bf6904037833576f27e8fa82090ba2e856b5307bebf93791ac03b",
+      "upstreamPath": "schemas/routing-result.schema.json"
+    },
+    "source-registry.schema.json": {
+      "sha256": "8e5e31df83cfa083f135260cc10ffaa6f971c825a285758ba549181401426239",
+      "upstreamPath": "schemas/source-registry.schema.json"
+    },
+    "task-descriptor.schema.json": {
+      "sha256": "b6ab6835c2512d050da3cb6a47a1c9ee3827b21e9a23a020e801db29994e959e",
+      "upstreamPath": "schemas/task-descriptor.schema.json"
+    },
+    "work-state.schema.json": {
+      "sha256": "5f227628f07aa926327022396bb8cb3619aca313aaa28300700874b0e3f678b4",
+      "upstreamPath": "schemas/work-state.schema.json"
+    }
+  }
+}
