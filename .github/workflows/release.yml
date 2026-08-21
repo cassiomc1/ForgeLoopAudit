@@ -46,7 +46,10 @@ jobs:
       - name: Verify unsigned macOS artifacts
         run: |
           set -euo pipefail
-          test -n "$(find dist-electron -type f \( -name '*.dmg' -o -name '*.zip' \) -print -quit)"
+          dmg_count="$(find dist-electron -maxdepth 1 -type f -name '*.dmg' | wc -l | tr -d ' ')"
+          zip_count="$(find dist-electron -maxdepth 1 -type f -name '*.zip' | wc -l | tr -d ' ')"
+          test "$dmg_count" -eq 2
+          test "$zip_count" -eq 2
       - run: node scripts/stage-release.mjs macos
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -67,11 +70,18 @@ jobs:
       - run: npm run audit:prod
       - run: npm run verify
       - name: Build Windows unpacked app
-        run: npm run build && npx --no-install electron-builder --win --dir --publish never
+        run: npm run build && npx --no-install electron-builder --win --dir --config electron-builder.release.yml --publish never
       - name: Smoke Windows packaged app
         run: node scripts/packaged-smoke.mjs
       - name: Build Windows distributables
-        run: npx --no-install electron-builder --win --publish never
+        run: npx --no-install electron-builder --win --config electron-builder.release.yml --publish never
+      - name: Verify Windows release matrix
+        shell: pwsh
+        run: |
+          $executables = @(Get-ChildItem -Path dist-electron -File -Filter *.exe)
+          if ($executables.Count -ne 2) {
+            throw "Expected exactly 2 Windows executables, found $($executables.Count)"
+          }
       - run: node scripts/stage-release.mjs windows
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -92,11 +102,16 @@ jobs:
       - run: npm run audit:prod
       - run: npm run verify
       - name: Build Linux unpacked app
-        run: npm run build && npx --no-install electron-builder --linux --dir --publish never
+        run: npm run build && npx --no-install electron-builder --linux --dir --config electron-builder.release.yml --publish never
       - name: Smoke Linux packaged app
         run: xvfb-run -a node scripts/packaged-smoke.mjs
       - name: Build Linux distributables
-        run: npx --no-install electron-builder --linux --publish never
+        run: npx --no-install electron-builder --linux --config electron-builder.release.yml --publish never
+      - name: Verify Linux release matrix
+        run: |
+          set -euo pipefail
+          appimage_count="$(find dist-electron -maxdepth 1 -type f -name '*.AppImage' | wc -l | tr -d ' ')"
+          test "$appimage_count" -eq 1
       - run: node scripts/stage-release.mjs linux
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
