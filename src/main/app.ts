@@ -1,5 +1,6 @@
 import { app, BrowserWindow, session, shell } from 'electron';
 import { join } from 'path';
+import { writeFileSync } from 'node:fs';
 import { registerIpc, updateProjectIpcWindow } from './ipc/register-ipc';
 import { shutdownProject } from './ipc/project.handlers';
 import { IPC_CHANNELS } from '@shared/ipc';
@@ -31,6 +32,12 @@ function createWindow(): BrowserWindow {
 
   window.on('ready-to-show', () => {
     window.show();
+    const smokeFile = process.env.FORGELOOP_STUDIO_SMOKE_FILE;
+    if (smokeFile) {
+      void window.webContents.executeJavaScript('typeof window.forgeLoopStudio').then((bridgeType) => {
+        writeFileSync(smokeFile, JSON.stringify({ title: window.getTitle(), bridgeType }));
+      });
+    }
     if (isDevelopment) {
       window.webContents.openDevTools({ mode: 'detach' });
     }
