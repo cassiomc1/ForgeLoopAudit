@@ -128,6 +128,8 @@ jobs:
         run: find release-assets -name 'RELEASE-METADATA-*.json' -type f -delete
       - name: Generate lockfile SBOM
         run: npm sbom --sbom-format cyclonedx --sbom-type application > release-assets/SBOM-cyclonedx.json
+      - name: Bind SBOM application identity to the package name
+        run: node scripts/normalize-release-sbom.mjs release-assets/SBOM-cyclonedx.json
       - name: Verify staged checksums
         run: node scripts/verify-release-assets.mjs release-assets
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

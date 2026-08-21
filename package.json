@@ -21,7 +21,7 @@
     "dependency:policy": "node scripts/dependency-policy.mjs",
     "docs:check": "node scripts/check-doc-conformance.mjs",
     "test:coverage": "vitest run --coverage",
-    "test:release-contracts": "node --test scripts/__tests__/release-contracts.test.mjs scripts/__tests__/verify-release-assets.test.mjs scripts/__tests__/large-ledger-fixture.test.mjs scripts/__tests__/release-workflow.test.mjs scripts/__tests__/public-release-workflow.test.mjs scripts/__tests__/version-lineage.test.mjs",
+    "test:release-contracts": "node --test scripts/__tests__/release-contracts.test.mjs scripts/__tests__/verify-release-assets.test.mjs scripts/__tests__/large-ledger-fixture.test.mjs scripts/__tests__/release-workflow.test.mjs scripts/__tests__/public-release-workflow.test.mjs scripts/__tests__/version-lineage.test.mjs scripts/__tests__/sbom-normalize.test.mjs",
     "verify:critical-coverage": "node scripts/verify-critical-coverage.mjs",
     "verify:full": "node scripts/verify-full.mjs",
     "benchmark:large-project": "node scripts/benchmark-large-project.mjs",
