@@ -16,8 +16,12 @@ function createWindow(): BrowserWindow {
     height: 900,
     minWidth: 1000,
     minHeight: 700,
-    titleBarStyle: 'hidden',
-    trafficLightPosition: { x: 16, y: 16 },
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
+    trafficLightPosition: { x: 14, y: 17 },
+    titleBarOverlay:
+      process.platform === 'darwin'
+        ? false
+        : { color: '#0D0D10', symbolColor: '#A1A1AA', height: 48 },
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,

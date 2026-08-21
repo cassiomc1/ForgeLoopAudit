@@ -27,6 +27,8 @@ export interface ForgeLoopStudioAPI {
   notifyRendererReady(): Promise<void>;
   getAppVersion(): Promise<string>;
   getDiagnostics(): Promise<StudioDiagnostics>;
+  minimizeWindow(): Promise<void>;
+  toggleMaximizeWindow(): Promise<boolean>;
 
   subscribeProjectUpdates(
     listener: (update: ProjectUpdate) => void
@@ -70,6 +72,8 @@ export const IPC_CHANNELS = {
   RENDERER_READY: 'studio:renderer-ready',
   GET_APP_VERSION: 'studio:get-app-version',
   GET_DIAGNOSTICS: 'studio:get-diagnostics',
+  MINIMIZE_WINDOW: 'studio:minimize-window',
+  TOGGLE_MAXIMIZE_WINDOW: 'studio:toggle-maximize-window',
   SUBSCRIBE_UPDATES: 'studio:subscribe-updates',
   UNSUBSCRIBE_UPDATES: 'studio:unsubscribe-updates',
   PROJECT_UPDATE: 'studio:project-update',

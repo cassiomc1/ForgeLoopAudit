@@ -37,7 +37,11 @@ export function ProjectPicker({ onOpenProject, onOpenDemoProject, onOpenRecentPr
   };
 
   return (
-    <div className="flex h-screen w-full forge-background">
+    <div className="flex h-screen w-full flex-col forge-background">
+      <div
+        className="app-drag-region h-12 shrink-0 border-b forge-border-subtle forge-primary-surface"
+        onDoubleClick={() => void window.forgeLoopStudio?.toggleMaximizeWindow?.().catch(() => undefined)}
+      />
       <div className="flex-1 flex flex-col items-center justify-center px-8">
         <div className="w-full max-w-2xl animate-fade-in">
           <div className="text-center mb-12">
