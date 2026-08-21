@@ -65,7 +65,7 @@ export function matchesMatrixEntry(platform, artifactName, item) {
   if (artifactArchitecture(platform, artifactName) !== item.arch) return false;
   if (platform === 'macos') return lower.endsWith(`.${item.type.toLowerCase()}`);
   if (platform === 'linux') return lower.endsWith('.appimage');
-  return item.type === 'portable' ? lower.includes('portable') : !lower.includes('portable');
+  return item.type === 'portable' ? !lower.includes('setup') : lower.includes('setup');
 }
 
 export function artifactArchitecture(platform, artifactName) {
@@ -79,7 +79,5 @@ export function artifactArchitecture(platform, artifactName) {
 }
 
 export function artifactIsExpected(platform, artifactName, matrix = loadReleaseMatrix()) {
-  const arch = artifactArchitecture(platform, artifactName);
-  const type = artifactName.slice(artifactName.lastIndexOf('.') + 1);
-  return matrix[platform].some((item) => item.arch === arch && item.type.toLowerCase() === type.toLowerCase());
+  return matrix[platform].some((item) => matchesMatrixEntry(platform, artifactName, item));
 }
