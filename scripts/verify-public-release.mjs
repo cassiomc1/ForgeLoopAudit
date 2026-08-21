@@ -1,7 +1,6 @@
-import Ajv from 'ajv';
-import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { artifactArchitecture, loadReleaseMatrix, matchesMatrixEntry, parseChecksumManifest, SBOM_NAME } from './release-contracts.mjs';
+import { artifactArchitecture, loadReleaseMatrix, matchesMatrixEntry, parseChecksumManifest, PLATFORMS, SBOM_NAME } from './release-contracts.mjs';
+import { assertCycloneDxSbom, compileEvidenceValidator, parseEvidenceJson, sha256Bytes, validateReleaseEvidence } from './release-evidence-validator.mjs';
 import { assertEvidenceCommitMatchesTag } from './release-identity.mjs';
 
 const [owner, repo, tag] = process.argv.slice(2);
@@ -19,17 +18,27 @@ const tagCommit = tagCommitResponse.sha?.toLowerCase();
 if (!/^[a-f0-9]{40}$/.test(tagCommit ?? '')) throw new Error(`GitHub did not resolve ${tag} to a commit SHA`);
 const assets = new Map(release.assets.map((asset) => [asset.name, asset.browser_download_url]));
 const matrix = loadReleaseMatrix();
+const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
+const expectedVersion = tag.replace(/^v/, '');
 const distributables = [...assets.keys()].filter((name) => /\.(dmg|zip|exe|AppImage)$/i.test(name));
 const evidence = [...assets.keys()].filter((name) => name.startsWith('RELEASE-EVIDENCE-') && name.endsWith('.json'));
-if (assets.size === 0 || !assets.has(SBOM_NAME)) throw new Error(`Release ${tag} is missing assets or ${SBOM_NAME}`);
-const expectedEvidence = new Set(distributables.map((name) => `RELEASE-EVIDENCE-${name}.json`));
-if (evidence.length !== distributables.length || evidence.some((name) => !expectedEvidence.has(name))) throw new Error('Public release evidence does not exactly match distributables');
+if (evidence.length !== distributables.length || evidence.some((name) => !distributables.includes(name.replace(/^RELEASE-EVIDENCE-/, '').replace(/\.json$/, '')))) throw new Error('Public release evidence does not exactly match distributables');
+const expectedAssets = new Set([SBOM_NAME, ...PLATFORMS.map((platform) => `SHA256SUMS-${platform}`)]);
+for (const name of distributables) {
+  expectedAssets.add(name);
+  expectedAssets.add(`RELEASE-EVIDENCE-${name}.json`);
+}
+if (assets.size !== expectedAssets.size) {
+  const missing = [...expectedAssets].filter((name) => !assets.has(name));
+  const extra = [...assets.keys()].filter((name) => !expectedAssets.has(name));
+  throw new Error(`Public release ${tag} does not match the exact asset set; missing: ${missing.join(', ') || 'none'}; unexpected: ${extra.join(', ') || 'none'}`);
+}
 
 const downloaded = new Map();
 for (const [name, url] of assets) downloaded.set(name, Buffer.from(await (await fetch(url)).arrayBuffer()));
 const commitSet = new Set();
-const validator = new Ajv({ allErrors: true }).compile(JSON.parse(readFileSync('docs/releases/release-evidence.schema.json', 'utf8')));
-for (const platform of ['macos', 'windows', 'linux']) {
+const validate = compileEvidenceValidator();
+for (const platform of PLATFORMS) {
   const manifestName = `SHA256SUMS-${platform}`;
   if (!assets.has(manifestName)) throw new Error(`Release ${tag} is missing ${manifestName}`);
   const declared = parseChecksumManifest(downloaded.get(manifestName).toString('utf8'));
@@ -40,19 +49,26 @@ for (const platform of ['macos', 'windows', 'linux']) {
   for (const entry of declared) {
     const body = downloaded.get(entry.name);
     if (!body) throw new Error(`${platform}: missing public asset ${entry.name}`);
-    const actualHash = createHash('sha256').update(body).digest('hex');
+    const actualHash = sha256Bytes(body);
     if (actualHash !== entry.hash) throw new Error(`Public checksum mismatch for ${entry.name}`);
     const evidenceName = `RELEASE-EVIDENCE-${entry.name}.json`;
-    const item = JSON.parse(downloaded.get(evidenceName).toString('utf8'));
-    if (!validator(item)) throw new Error(`${evidenceName}: invalid evidence`);
-    if (item.artifact !== entry.name || item.sha256 !== actualHash || item.platform !== platform || item.architecture !== artifactArchitecture(platform, entry.name)) throw new Error(`${evidenceName}: evidence is not bound to downloaded artifact`);
-    if (item.studioVersion !== tag.replace(/^v/, '') || item.signing !== 'unsigned-preview') throw new Error(`${evidenceName}: version/signing mismatch`);
-    commitSet.add(item.gitCommit);
+    validateReleaseEvidence({
+      evidenceName,
+      evidence: parseEvidenceJson(evidenceName, downloaded.get(evidenceName).toString('utf8')),
+      validate,
+      artifactName: entry.name,
+      actualSha256: actualHash,
+      platform,
+      architecture: artifactArchitecture(platform, entry.name),
+      expectedVersion,
+      expectedCommit: tagCommit,
+    });
+    commitSet.add(tagCommit);
   }
 }
 assertEvidenceCommitMatchesTag(commitSet, tagCommit);
-JSON.parse(downloaded.get(SBOM_NAME).toString('utf8'));
-console.log(`Public release verification passed for ${owner}/${repo}@${tag}: ${distributables.length} distributables, ${evidence.length} evidence files, SBOM present`);
+assertCycloneDxSbom(parseEvidenceJson(SBOM_NAME, downloaded.get(SBOM_NAME).toString('utf8')), { name: pkg.name, version: expectedVersion });
+console.log(`Public release verification passed for ${owner}/${repo}@${tag}: ${distributables.length} distributables, ${evidence.length} evidence files, exact asset set (${assets.size} assets), SBOM semantics verified`);
 
 function platformFor(name) {
   if (/\.(dmg|zip)$/i.test(name)) return 'macos';

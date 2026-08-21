@@ -124,6 +124,8 @@ jobs:
           pattern: forgeloop-studio-*
           path: release-assets
           merge-multiple: true
+      - name: Remove staging-only release metadata from the public bundle
+        run: find release-assets -name 'RELEASE-METADATA-*.json' -type f -delete
       - name: Generate lockfile SBOM
         run: npm sbom --sbom-format cyclonedx --sbom-type application > release-assets/SBOM-cyclonedx.json
       - name: Verify staged checksums
