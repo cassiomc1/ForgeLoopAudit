@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "policyDigest": "3de644b06f11564efd24214ea458a3f51c5416c86a857f41553756f8e0da5e2e",
+  "policyDigest": "a353cfef07efb14b9da47eb3c6b1e5f230b5332a303c9ed78a82efce02ffcd27",
   "rules": [
     "accessibility-keyboard-navigation",
     "testing-required-checks"

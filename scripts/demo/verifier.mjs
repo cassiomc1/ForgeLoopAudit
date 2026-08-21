@@ -1,7 +1,9 @@
 import { createHash } from 'node:crypto';
 import { existsSync, lstatSync, readFileSync, readdirSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
-import { assertSchemaValid } from './fixtures.mjs';
+import { SCHEMA_FILES, assertSchemaValid } from './fixtures.mjs';
+
+const REGISTERED_ARTIFACT_TYPES = Object.keys(SCHEMA_FILES);
 
 const REQUIRED_FILES = [
   '.forgeloop/config.json',
@@ -98,7 +100,9 @@ export function verifyDemoProject(root) {
   if (config.protocolVersion !== 1) warn(`unsupported protocolVersion: ${config.protocolVersion}`);
 
   // Every JSON artifact parses and validates against the trusted schemas.
+  const represented = new Set(['config.json', 'sources.json']);
   const sessionFiles = readdirSync(join(forgeLoopRoot, 'sessions')).filter((name) => name.endsWith('.json'));
+  if (sessionFiles.length > 0) represented.add('session.json');
   for (const name of sessionFiles) {
     const value = JSON.parse(readFileSync(join(forgeLoopRoot, 'sessions', name), 'utf8'));
     assertSchemaValid('session.json', value);
@@ -106,6 +110,7 @@ export function verifyDemoProject(root) {
   for (const [name, artifact] of [['rules.json', 'policy/rules.json'], ['discovery.json', 'policy/discovery.json'], ['baseline.json', 'policy/baseline.json'], ['policy.lock', 'policy/policy.lock']]) {
     const value = JSON.parse(readFileSync(join(forgeLoopRoot, 'policy', name), 'utf8'));
     assertSchemaValid(artifact, value);
+    represented.add(artifact);
   }
 
   // Task state.
@@ -124,6 +129,7 @@ export function verifyDemoProject(root) {
           for (const gateFile of readdirSync(join(taskDir, 'gates')).filter((name) => name.endsWith('.json'))) {
             const value = JSON.parse(readFileSync(join(taskDir, 'gates', gateFile), 'utf8'));
             assertSchemaValid('gate.json', value);
+            represented.add('gate.json');
             for (const artifactRef of value.artifacts ?? []) pathReferences.push({ taskId: value.taskId, path: artifactRef.path });
           }
         }
@@ -132,7 +138,10 @@ export function verifyDemoProject(root) {
       if (!entry.name.endsWith('.json')) continue;
       const value = JSON.parse(readFileSync(join(taskDir, entry.name), 'utf8'));
       const schemaName = SCHEMA_BY_FILE[entry.name];
-      if (schemaName) assertSchemaValid(schemaName, value);
+      if (schemaName) {
+        assertSchemaValid(schemaName, value);
+        represented.add(schemaName);
+      }
       artifacts[entry.name] = value;
     }
 
@@ -173,6 +182,7 @@ export function verifyDemoProject(root) {
       warn(`task ${descriptor.taskId} has no events.ndjson`);
       continue;
     }
+    represented.add('event');
     const lines = readFileSync(ledgerPath, 'utf8').split('\n').filter((line) => line.trim());
     if (lines.length === 0) warn(`task ${descriptor.taskId}: empty event ledger`);
     let previous;
@@ -205,6 +215,12 @@ export function verifyDemoProject(root) {
     if (!phases.has(phase)) warn(`expected lifecycle phase not represented: ${phase}`);
   }
 
+  // Demo must represent every registered ForgeLoop artifact category.
+  const missingArtifactTypes = REGISTERED_ARTIFACT_TYPES.filter((artifact) => !represented.has(artifact));
+  for (const artifact of missingArtifactTypes) {
+    warn(`demo does not represent registered artifact category: ${artifact}`);
+  }
+
   // Policy lock digests recompute from the locked artifacts.
   const rulesText = readFileSync(join(forgeLoopRoot, 'policy', 'rules.json'), 'utf8');
   const baselineText = readFileSync(join(forgeLoopRoot, 'policy', 'baseline.json'), 'utf8');
@@ -234,6 +250,11 @@ export function verifyDemoProject(root) {
       phases: [...phases].sort(),
       sessions: sessionFiles.length,
       checkedReferences: pathReferences.length,
+      artifactCoverage: {
+        represented: REGISTERED_ARTIFACT_TYPES.length - missingArtifactTypes.length,
+        total: REGISTERED_ARTIFACT_TYPES.length,
+        missing: missingArtifactTypes,
+      },
     },
   };
 }

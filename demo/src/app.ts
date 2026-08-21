@@ -9,5 +9,5 @@ export const configuration: AppConfiguration = {
 };
 
 export function startApp(config: AppConfiguration): string[] {
-  return config.features.map((feature) => `forgehop:${feature}`);
+  return config.features.map((feature) => `forgeshop:${feature}`);
 }

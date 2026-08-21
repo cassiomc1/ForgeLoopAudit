@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
+import { readFileSync } from 'node:fs';
 import { demoHasDrift } from '../generate-demo-project.mjs';
 import { generateDemoFiles } from '../demo/write-demo-project.mjs';
 import { verifyDemoProject } from '../demo/verifier.mjs';
@@ -38,4 +39,20 @@ test('canonical demo contains no INVALID artifacts', () => {
   for (const error of result.errors) {
     assert.doesNotMatch(error, /INVALID|invalid JSON|schema/, error);
   }
+});
+
+test('demo represents every registered artifact category (17/17)', () => {
+  const result = verifyDemoProject(DEMO_ROOT);
+  const coverage = result.stats.artifactCoverage;
+  assert.ok(coverage, 'verifier did not report artifact coverage');
+  assert.deepEqual(coverage.missing, [], `demo is missing registered artifact categories: ${coverage.missing.join(', ')}`);
+  assert.equal(coverage.represented, coverage.total, `expected ${coverage.total}/${coverage.total} artifact categories represented`);
+});
+
+test('runtime artifact registry and demo schema mapping share one source of truth', async () => {
+  const { SCHEMA_FILES } = await import('../demo/fixtures.mjs');
+  const registry = JSON.parse(
+    readFileSync(join(process.cwd(), 'src', 'main', 'core', 'protocol', 'artifact-registry.json'), 'utf8'),
+  );
+  assert.deepEqual(SCHEMA_FILES, registry);
 });

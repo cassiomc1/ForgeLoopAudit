@@ -1,24 +1,27 @@
-export const ARTIFACT_SCHEMAS = {
-  'config.json': 'config.schema.json',
-  'sources.json': 'source-registry.schema.json',
-  'task.json': 'task-descriptor.schema.json',
-  'contract.json': 'current-contract.schema.json',
-  'routing-result.json': 'routing-result.schema.json',
-  'preflight.json': 'preflight.schema.json',
-  'work-state.json': 'work-state.schema.json',
-  'continuity.json': 'continuity.schema.json',
-  'execution-receipt.json': 'execution-receipt.schema.json',
-  'session.json': 'activation.schema.json',
-  'gate.json': 'gate.schema.json',
-  'event': 'event.schema.json',
-  'policy-snapshot.json': 'policy-snapshot.schema.json',
-  'policy/rules.json': 'policy-rules.schema.json',
-  'policy/discovery.json': 'policy-discovery.schema.json',
-  'policy/baseline.json': 'policy-baseline.schema.json',
-  'policy/policy.lock': 'policy-lock.schema.json',
-} as const;
+import { existsSync } from 'fs';
+import { join } from 'path';
+import registry from './artifact-registry.json';
 
-export type ArtifactName = keyof typeof ARTIFACT_SCHEMAS;
+export const ARTIFACT_SCHEMAS = registry as Record<ArtifactName, string>;
+
+export type ArtifactName =
+  | 'config.json'
+  | 'sources.json'
+  | 'task.json'
+  | 'contract.json'
+  | 'routing-result.json'
+  | 'preflight.json'
+  | 'work-state.json'
+  | 'continuity.json'
+  | 'execution-receipt.json'
+  | 'session.json'
+  | 'gate.json'
+  | 'event'
+  | 'policy-snapshot.json'
+  | 'policy/rules.json'
+  | 'policy/discovery.json'
+  | 'policy/baseline.json'
+  | 'policy/policy.lock';
 
 export const REQUIRED_ARTIFACTS: ArtifactName[] = [
   'config.json',
@@ -56,5 +59,3 @@ export function getMissingArtifactSchemas(schemasDir: string): string[] {
     return !existsSync(join(schemasDir, schema));
   });
 }
-import { existsSync } from 'fs';
-import { join } from 'path';

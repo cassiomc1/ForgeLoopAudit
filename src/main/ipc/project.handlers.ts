@@ -202,9 +202,14 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
     }
   });
 
+  ipcMain.handle(IPC_CHANNELS.GET_APP_VERSION, async (event): Promise<string> => {
+    assertTrustedSender(event);
+    return app.getVersion();
+  });
+
   ipcMain.handle(IPC_CHANNELS.GET_DIAGNOSTICS, async (event) => {
     assertTrustedSender(event);
-    return buildStudioDiagnostics({ forgeLoopCompatibilityMode: currentForgeCli ? 'CLI_ENHANCED' : 'ARTIFACT_ONLY' });
+    return buildStudioDiagnostics({ studioVersion: app.getVersion(), forgeLoopCompatibilityMode: currentForgeCli ? 'CLI_ENHANCED' : 'ARTIFACT_ONLY' });
   });
 
 }

@@ -23,7 +23,7 @@
     "demo:generate": "node scripts/generate-demo-project.mjs",
     "demo:verify": "node scripts/verify-demo-project.mjs",
     "test:coverage": "vitest run --coverage",
-    "test:release-contracts": "node --test scripts/__tests__/release-contracts.test.mjs scripts/__tests__/verify-release-assets.test.mjs scripts/__tests__/large-ledger-fixture.test.mjs scripts/__tests__/release-workflow.test.mjs scripts/__tests__/public-release-workflow.test.mjs scripts/__tests__/version-lineage.test.mjs scripts/__tests__/sbom-normalize.test.mjs scripts/__tests__/demo-project.test.mjs",
+    "test:release-contracts": "node --test scripts/__tests__/release-contracts.test.mjs scripts/__tests__/verify-release-assets.test.mjs scripts/__tests__/large-ledger-fixture.test.mjs scripts/__tests__/release-workflow.test.mjs scripts/__tests__/public-release-workflow.test.mjs scripts/__tests__/ui-version.test.mjs scripts/__tests__/version-lineage.test.mjs scripts/__tests__/sbom-normalize.test.mjs scripts/__tests__/demo-project.test.mjs",
     "verify:critical-coverage": "node scripts/verify-critical-coverage.mjs",
     "verify:full": "node scripts/verify-full.mjs",
     "benchmark:large-project": "node scripts/benchmark-large-project.mjs",
@@ -42,6 +42,7 @@
     "verify": "npm run typecheck && npm run lint && npm test && npm run build",
     "package:dir": "npm run build && electron-builder --dir",
     "test:packaged-smoke": "npm run package:dir && node scripts/packaged-smoke.mjs",
+    "test:packaged-open-demo": "node scripts/packaged-open-demo.mjs",
     "test:electron-smoke": "npm run build && playwright test tests/e2e/electron-smoke.spec.ts"
   },
   "keywords": [

@@ -7,8 +7,12 @@ export function resolveArgument(args, name, fallback) {
   return index >= 0 ? args[index + 1] || fallback : fallback;
 }
 
-export function resolveLedgerOutput(args, fallback = 'tests/fixtures/large-project/events.ndjson') {
-  return resolveArgument(args, '--output', fallback);
+export function resolveLedgerOutput(args) {
+  const output = resolveArgument(args, '--output', undefined);
+  if (!output) {
+    throw new Error('Missing required --output <path>. Benchmark fixtures must be generated outside the repository (e.g. os.tmpdir()).');
+  }
+  return output;
 }
 
 export function generateLedgerFixture({ count = 100000, output }) {

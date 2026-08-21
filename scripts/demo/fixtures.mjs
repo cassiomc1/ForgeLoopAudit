@@ -6,25 +6,13 @@ import addFormats from 'ajv-formats';
 
 const SCHEMA_DIR = join(process.cwd(), 'schemas');
 
-export const SCHEMA_FILES = {
-  'config.json': 'config.schema.json',
-  'sources.json': 'source-registry.schema.json',
-  'task.json': 'task-descriptor.schema.json',
-  'contract.json': 'current-contract.schema.json',
-  'routing-result.json': 'routing-result.schema.json',
-  'preflight.json': 'preflight.schema.json',
-  'work-state.json': 'work-state.schema.json',
-  'continuity.json': 'continuity.schema.json',
-  'execution-receipt.json': 'execution-receipt.schema.json',
-  'session.json': 'activation.schema.json',
-  'gate.json': 'gate.schema.json',
-  'event': 'event.schema.json',
-  'policy-snapshot.json': 'policy-snapshot.schema.json',
-  'policy/rules.json': 'policy-rules.schema.json',
-  'policy/discovery.json': 'policy-discovery.schema.json',
-  'policy/baseline.json': 'policy-baseline.schema.json',
-  'policy/policy.lock': 'policy-lock.schema.json',
-};
+export const DEMO_PROJECT_ID = 'forgeshop';
+export const DEMO_PROJECT_NAME = 'ForgeShop';
+
+// Single source of truth for artifact → schema mapping (shared with runtime).
+const REGISTRY_PATH = join(process.cwd(), 'src', 'main', 'core', 'protocol', 'artifact-registry.json');
+
+export const SCHEMA_FILES = JSON.parse(readFileSync(REGISTRY_PATH, 'utf8'));
 
 let ajvInstance;
 function getAjv() {
@@ -43,7 +31,7 @@ export function taskKeyFor(taskId) {
 }
 
 export function fingerprint(label) {
-  return createHash('sha256').update(`forgehop:${label}`).digest('hex');
+  return createHash('sha256').update(`${DEMO_PROJECT_ID}:${label}`).digest('hex');
 }
 
 export function sha256FileBytes(text) {

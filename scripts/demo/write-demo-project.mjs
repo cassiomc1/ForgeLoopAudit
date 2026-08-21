@@ -5,7 +5,7 @@ import { buildForgeShopProject } from './project-builder.mjs';
 const DEMO_SOURCES = {
   'package.json': `${JSON.stringify(
     {
-      name: 'forgehop-demo',
+      name: 'forgeshop-demo',
       version: '0.1.0',
       private: true,
       description: 'ForgeShop — the ForgeLoop Studio demo project (a small premium e-commerce application built through ForgeLoop).',
@@ -24,7 +24,7 @@ export const configuration: AppConfiguration = {
 };
 
 export function startApp(config: AppConfiguration): string[] {
-  return config.features.map((feature) => \`forgehop:\${feature}\`);
+  return config.features.map((feature) => \`forgeshop:\${feature}\`);
 }
 `,
   'src/catalog.ts': `export interface Product {

@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "protocolVersion": 1,
-  "contractFingerprint": "66233ff941edf23d8942a135994db0c1e76841370d4abfdfdb89cc65220f343e",
+  "contractFingerprint": "74b4d7bb8fc7c112b45b5166e6e427022df7203c364e48478580b9cad61ff7ed",
   "input": {
     "taskId": "TASK-001",
-    "project": "forgehop"
+    "project": "forgeshop"
   },
   "primary": "implementation",
   "guides": [

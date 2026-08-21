@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "protocolVersion": 1,
   "taskId": "TASK-006",
-  "contractFingerprint": "7390be2f2c749cd6ba360f34ce172322b3286585cfb981ed694bce20c252d3e4",
-  "routeFingerprint": "a98a8476516e1212bbded7f830c0d00cc11d97ba2f45d3093fd8d3bb4815356b",
-  "stateFingerprint": "55345f6d1bac741a1cfe4f74bdcb454d013fdd5cafbf4a2eef9357973516f356",
+  "contractFingerprint": "2715311427a1ebd52271d85d407a99bba2893dd4fa40215f815847c7eb24739a",
+  "routeFingerprint": "77992d3eb88ae9f11eef11435267255ded9cfdec7ce46b3e7758a70b4d149c41",
+  "stateFingerprint": "075927c2f0d9b1ccea7c1682ea54cea7fa068510138cac5b86d8ab1edaae6a62",
   "selectedGuides": [
     "security"
   ],

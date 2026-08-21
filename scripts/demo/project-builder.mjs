@@ -1,4 +1,4 @@
-import { assertSchemaValid, fingerprint, serializeJson, sha256FileBytes, taskKeyFor } from './fixtures.mjs';
+import { DEMO_PROJECT_ID, assertSchemaValid, fingerprint, serializeJson, sha256FileBytes, taskKeyFor } from './fixtures.mjs';
 import { EventLedgerBuilder } from './event-builder.mjs';
 
 const BRANCH = 'main';
@@ -36,7 +36,7 @@ function routingResult(taskId, primary, guides, reasons) {
     schemaVersion: 1,
     protocolVersion: 1,
     contractFingerprint: fingerprint(`contract:${taskId}`),
-    input: { taskId, project: 'forgehop' },
+    input: { taskId, project: DEMO_PROJECT_ID },
     primary,
     guides,
     reasons,
@@ -451,7 +451,7 @@ function buildA11yTask() {
   });
   artifacts['policy-snapshot.json'] = {
     schemaVersion: 1,
-    policyDigest: fingerprint('policy:forgehop'),
+    policyDigest: fingerprint('policy:' + DEMO_PROJECT_ID),
     rules: ['accessibility-keyboard-navigation', 'testing-required-checks'],
     capturedAt: '2026-08-06T10:05:00.000Z',
   };
@@ -575,7 +575,7 @@ function buildSecurityTask() {
   });
   artifacts['policy-snapshot.json'] = {
     schemaVersion: 1,
-    policyDigest: fingerprint('policy:forgehop'),
+    policyDigest: fingerprint('policy:' + DEMO_PROJECT_ID),
     rules: ['security-no-critical-findings', 'security-no-secrets'],
     capturedAt: '2026-08-07T14:05:00.000Z',
   };
@@ -721,7 +721,7 @@ export function buildForgeShopProject() {
     schemaVersion: 1,
     protocolVersion: 1,
     sources: {
-      'user-request-forgehop': { kind: 'user-request', summary: 'Build ForgeShop, a small premium e-commerce web application, through ForgeLoop.' },
+      [`user-request-${DEMO_PROJECT_ID}`]: { kind: 'user-request', summary: 'Build ForgeShop, a small premium e-commerce web application, through ForgeLoop.' },
       'repository-fact-stack': { kind: 'repository-fact', summary: 'TypeScript sources under src/ with vitest tests under tests/.', path: 'package.json' },
       'observation-catalog-lcp': { kind: 'observation', summary: 'Seeded catalog page measured LCP 3.1s before optimization.' },
       'agent-decision-task-order': { kind: 'agent-decision', summary: 'Security review of checkout runs before checkout integration completes.' },
@@ -732,14 +732,14 @@ export function buildForgeShopProject() {
     schemaVersion: 1,
     protocolVersion: 1,
     sessionId: 'session-harness-a',
-    activationMarker: 'forgehop:harness-a:2026-08-06',
+    activationMarker: `${DEMO_PROJECT_ID}:harness-a:2026-08-06`,
     createdAt: '2026-08-06T10:05:00.000Z',
   }, 'session.json');
   put('.forgeloop/sessions/session-harness-b.json', {
     schemaVersion: 1,
     protocolVersion: 1,
     sessionId: 'session-harness-b',
-    activationMarker: 'forgehop:harness-b:2026-08-06',
+    activationMarker: `${DEMO_PROJECT_ID}:harness-b:2026-08-06`,
     createdAt: '2026-08-06T11:22:00.000Z',
   }, 'session.json');
 
