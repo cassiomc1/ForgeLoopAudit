@@ -36,8 +36,8 @@ describe('stage-release', () => {
   });
 
   it.each([
-    ['macos', ['ForgeLoop Studio.dmg', 'ForgeLoop Studio.zip'], ['ForgeLoop Studio.exe']],
-    ['linux', ['ForgeLoop Studio.AppImage'], ['ForgeLoop Studio.tar.gz']],
+    ['macos', ['ForgeLoop Studio-arm64.dmg', 'ForgeLoop Studio-x64.dmg', 'ForgeLoop Studio-arm64.zip', 'ForgeLoop Studio-x64.zip'], ['ForgeLoop Studio.exe']],
+    ['linux', ['ForgeLoop Studio-x64.AppImage'], ['ForgeLoop Studio.tar.gz']],
   ])('stages only the public %s distributables', (platform, publicFiles, privateFiles) => {
     const root = mkdtempSync(join(tmpdir(), 'forgeloop-stage-release-'));
     try {

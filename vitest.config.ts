@@ -20,7 +20,8 @@ export default defineConfig({
         '**/src/main/ipc/task.handlers.ts',
         '**/src/renderer/**',
         '**/src/preload/**',
-        // Electron/process/filesystem adapters are exercised by packaged E2E gates.
+        // Process/filesystem adapters are covered by native smoke/E2E gates; their
+        // entry points are intentionally excluded from the global unit threshold.
         '**/src/main/core/cli/forge-cli.ts',
         '**/src/main/core/diagnostics/diagnostics.ts',
         '**/src/main/core/events/ledger-reader.ts',

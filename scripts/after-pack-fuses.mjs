@@ -1,5 +1,9 @@
 import { flipFuses, FuseV1Options, FuseVersion } from '@electron/fuses';
 export default async function afterPack(context) {
+  if (process.env.FORGELOOP_SMOKE_NO_FUSES === '1') {
+    console.warn('Skipping Electron fuse mutation only for explicit local smoke diagnosis');
+    return;
+  }
   const packagedExecutable = context.electronPlatformName === 'darwin'
     ? `${context.appOutDir}/ForgeLoop Studio.app/Contents/MacOS/ForgeLoop Studio`
     : context.electronPlatformName === 'win32'

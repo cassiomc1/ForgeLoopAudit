@@ -10,28 +10,20 @@ concurrency:
 jobs:
   verify:
     strategy:
+      fail-fast: false
       matrix: { os: [ubuntu-latest, macos-latest, windows-latest] }
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with: { node-version: 22, cache: npm }
       - name: Restore macOS system PATH
         if: runner.os == 'macOS'
         shell: bash
         run: echo "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin" >> "$GITHUB_PATH"
       - run: npm ci
-      - run: npm run audit:prod
-      - run: npm run dependency:policy
-      - run: npm run typecheck
-      - run: npm run lint
-      - run: npm test
-      - run: npm run test:coverage
-      - run: npm run verify:critical-coverage
-      - run: npm run verify:performance
-      - run: npm run protocol:schemas:verify
-      - run: npm run docs:check
-      - run: npm run build
+      - name: Run shared verification contract
+        run: npm run verify:full
       - run: if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then xvfb-run -a npm run test:electron-smoke; else npm run test:electron-smoke; fi
         shell: bash
       - run: if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then xvfb-run -a npm run test:e2e -- --grep-invert "deterministic primary shell"; else npm run test:e2e -- --grep-invert "deterministic primary shell"; fi

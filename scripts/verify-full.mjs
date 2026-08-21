@@ -7,6 +7,7 @@ const gates = [
   ['typecheck', 'npm', ['run', 'typecheck']],
   ['lint', 'npm', ['run', 'lint']],
   ['tests', 'npm', ['test']],
+  ['release-contract-tests', 'npm', ['run', 'test:release-contracts']],
   ['coverage', 'npm', ['run', 'test:coverage']],
   ['critical-coverage', 'npm', ['run', 'verify:critical-coverage']],
   ['performance-budget', 'npm', ['run', 'verify:performance']],
