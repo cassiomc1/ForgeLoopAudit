@@ -332,7 +332,7 @@ function resolveInvocation(executable: string | null, args: string[]): SpawnInvo
   if (process.platform === 'win32' && executable.toLowerCase().endsWith('.cmd')) {
     try {
       const shim = readFileSync(executable, 'utf8');
-      const match = shim.match(/(?:%dp0%|%~dp0%)[\\/]+([^"\r\n]+?\.js)/i);
+      const match = shim.match(/(?:%~dp0|%dp0%)[\\/]+([^"\r\n]+?\.js)/i);
       if (!match) return null;
       const script = realpathSync(join(dirname(executable), match[1].replaceAll('\\', sep)));
       return { executable: process.execPath, args: [script, ...args] };
