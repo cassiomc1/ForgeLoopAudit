@@ -28,6 +28,8 @@ jobs:
         run: npm run build && npx --no-install electron-builder --mac --dir --config electron-builder.release.yml --publish never
       - name: Smoke macOS packaged app
         run: node scripts/packaged-smoke.mjs
+      - name: Open bundled demo in packaged macOS app
+        run: node scripts/packaged-open-demo.mjs
       - name: Apply and verify macOS Electron fuses
         run: npm run verify:electron-fuses -- dist-electron
       - name: Verify unsigned macOS packaged app
@@ -70,6 +72,8 @@ jobs:
         run: npm run build && npx --no-install electron-builder --win --dir --config electron-builder.release.yml --publish never
       - name: Smoke Windows packaged app
         run: node scripts/packaged-smoke.mjs
+      - name: Open bundled demo in packaged Windows app
+        run: node scripts/packaged-open-demo.mjs
       - name: Verify Windows Electron fuses
         run: npm run verify:electron-fuses -- dist-electron
       - name: Build Windows distributables
@@ -99,6 +103,8 @@ jobs:
         run: npm run build && npx --no-install electron-builder --linux --dir --config electron-builder.release.yml --publish never
       - name: Smoke Linux packaged app
         run: xvfb-run -a node scripts/packaged-smoke.mjs
+      - name: Open bundled demo in packaged Linux app
+        run: xvfb-run -a node scripts/packaged-open-demo.mjs
       - name: Verify Linux Electron fuses
         run: npm run verify:electron-fuses -- dist-electron
       - name: Build Linux distributables

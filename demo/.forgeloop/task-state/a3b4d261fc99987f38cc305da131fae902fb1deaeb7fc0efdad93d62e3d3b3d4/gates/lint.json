@@ -10,7 +10,7 @@
   "artifacts": [
     {
       "path": "src/catalog.ts",
-      "sha256": "9b065922f894eaebe1da5f879287cb9bfe1e0f4ca85990ff4d1d724339ea42f7"
+      "sha256": "41aae0ba77a12b151e6abf0b4e71d8ad61ea48620c15a6dcc09fc7bf15a17f18"
     }
   ],
   "decisions": [],

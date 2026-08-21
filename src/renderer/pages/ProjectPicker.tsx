@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FolderOpen, FlaskConical, Clock, X } from 'lucide-react';
 import type { RecentProject } from '@shared/domain';
 import { ErrorState } from '../components/ui/EmptyState';
@@ -16,6 +16,12 @@ interface ProjectPickerProps {
 
 export function ProjectPicker({ onOpenProject, onOpenDemoProject, onOpenRecentProject, recentProjects, isLoading, error }: ProjectPickerProps) {
   const [hoveredRecent, setHoveredRecent] = useState<string | null>(null);
+  const [appVersion, setAppVersion] = useState<string | null>(null);
+
+  useEffect(() => {
+    const api = (window as any).forgeLoopStudio;
+    api?.getAppVersion?.().then(setAppVersion).catch(() => setAppVersion(null));
+  }, []);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -121,7 +127,7 @@ export function ProjectPicker({ onOpenProject, onOpenDemoProject, onOpenRecentPr
           )}
 
           <div className="mt-8 text-center text-xs text-forge-text-muted">
-            <p>ForgeLoop Studio v0.1.0 — Read-only observer for the ForgeLoop engineering protocol</p>
+            <p>ForgeLoop Studio {appVersion ? `v${appVersion}` : ''} — Read-only observer for the ForgeLoop engineering protocol</p>
           </div>
         </div>
       </div>

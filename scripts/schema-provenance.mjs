@@ -2,8 +2,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 export function getTrustedSchemaNames(repoRoot = process.cwd()) {
-  const registry = readFileSync(join(repoRoot, 'src/main/core/protocol/artifact-registry.ts'), 'utf8');
-  return [...new Set([...registry.matchAll(/'([^']+\.schema\.json)'/g)].map((match) => match[1]))].sort();
+  const registry = JSON.parse(readFileSync(join(repoRoot, 'src/main/core/protocol/artifact-registry.json'), 'utf8'));
+  return [...new Set(Object.values(registry))].sort();
 }
 
 export function assertManifestShape(manifest) {

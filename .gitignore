@@ -13,3 +13,5 @@ dist-electron/
 npm-audit.json
 release-staging/
 test-results/
+
+/tests/fixtures/large-project/events.ndjson

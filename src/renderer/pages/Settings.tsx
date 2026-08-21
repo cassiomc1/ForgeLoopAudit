@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Settings as SettingsIcon, Monitor, Moon, Sun, Code, Palette } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -16,6 +16,11 @@ export function Settings({}: SettingsProps) {
     showRawArtifacts: false,
   });
   const [diagnosticsMessage, setDiagnosticsMessage] = useState('');
+  const [appVersion, setAppVersion] = useState<string | null>(null);
+
+  useEffect(() => {
+    api?.getAppVersion?.().then(setAppVersion).catch(() => setAppVersion(null));
+  }, [api]);
 
   async function copyDiagnostics() {
     const diagnostics = await api.getDiagnostics();
@@ -205,7 +210,7 @@ export function Settings({}: SettingsProps) {
         <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-10 p-4">
           <h3 className="text-sm font-semibold text-forge-text-primary mb-4">About</h3>
           <div className="space-y-2 text-sm text-forge-text-secondary">
-            <p>ForgeLoop Studio v0.1.0</p>
+            <p>ForgeLoop Studio {appVersion ? `v${appVersion}` : ''}</p>
             <p className="text-xs text-forge-text-muted">
               A real-time visual interface for the ForgeLoop engineering protocol.
             </p>

@@ -10,7 +10,7 @@
   "artifacts": [
     {
       "path": "src/checkout.ts",
-      "sha256": "63029a52a22b8cbdd41e81b0896b2937ec77d1f0c23fe76025ba54e3ecc82423"
+      "sha256": "aeab67130af20aa7c562d37527b6ef53f2112b7ad51ca0757ad77f19fdaf707a"
     }
   ],
   "decisions": [],

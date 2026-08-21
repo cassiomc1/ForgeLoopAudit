@@ -11,7 +11,7 @@
     "packageManager": "npm"
   },
   "contract": {
-    "fingerprint": "7390be2f2c749cd6ba360f34ce172322b3286585cfb981ed694bce20c252d3e4",
+    "fingerprint": "2715311427a1ebd52271d85d407a99bba2893dd4fa40215f815847c7eb24739a",
     "objectivePresent": true
   },
   "routing": {
