@@ -1,7 +1,8 @@
 import { app, ipcMain, dialog, BrowserWindow } from 'electron';
 import { PathBoundary } from '@main/security/path-boundary';
 import { ForgeLoopStudioError } from '@shared/errors';
-import type { ProjectDetectionResult, RecentProject, StudioError } from '@shared/domain';
+import type { ProjectDetectionResult, ProjectKind, RecentProject, StudioError } from '@shared/domain';
+import { resolveRecentProjectKind } from './project-kind';
 import { IPC_CHANNELS } from '@shared/ipc';
 import { createProjectSnapshotBuilder, normalizePolicyStatus, type ProjectSnapshotBuilder, type ProjectCompatibilityContext } from '@main/core/project/project-snapshot';
 import { createProjectDetector, createProjectReader, type ProjectReader } from '@main/core/project/project-reader';
@@ -37,7 +38,7 @@ let snapshotGeneration = 0;
 const TaskIdSchema = z.string().min(1).max(200);
 const ProjectPathSchema = z.string().min(1).max(4096);
 const EventQuerySchema = z.object({ taskId: TaskIdSchema, cursor: z.string().max(256).optional(), limit: z.number().int().min(1).max(500).optional() });
-const RecentProjectSchema = z.object({ path: z.string().min(1).max(4096), name: z.string().max(300), lastOpenedAt: z.string().max(100) });
+const RecentProjectSchema = z.object({ path: z.string().min(1).max(4096), name: z.string().max(300), lastOpenedAt: z.string().max(100), kind: z.enum(['PROJECT', 'DEMO']).optional() });
 const RawArtifactSchema = z.object({ taskId: TaskIdSchema, artifact: z.enum(['task.json', 'contract.json', 'routing-result.json', 'preflight.json', 'work-state.json', 'continuity.json', 'execution-receipt.json', 'policy-snapshot.json', 'events.ndjson']) });
 
 function assertTrustedSender(event: Electron.IpcMainInvokeEvent): void {
@@ -62,19 +63,20 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
     }
 
     const projectRoot = result.filePaths[0];
-    return openProject(projectRoot);
+    return openProject(projectRoot, 'PROJECT');
   });
 
   ipcMain.handle(IPC_CHANNELS.OPEN_RECENT_PROJECT, async (event, path: string): Promise<ProjectDetectionResult> => {
     assertTrustedSender(event); ProjectPathSchema.parse(path);
-    return openProject(path);
+    const kind = resolveRecentProjectKind(store.get('recentProjects'), path);
+    return openProject(path, kind);
   });
 
   ipcMain.handle(IPC_CHANNELS.OPEN_DEMO_PROJECT, async (event): Promise<ProjectDetectionResult> => {
     assertTrustedSender(event);
     const demoRoot = resolveBundledDemoPath({ isPackaged: app.isPackaged, appPath: app.getAppPath(), resourcesPath: process.resourcesPath });
     if (!demoRoot) throw ForgeLoopStudioError.projectNotForgeLoop('bundled demo');
-    return openProject(demoRoot);
+    return openProject(demoRoot, 'DEMO');
   });
 
   ipcMain.handle(IPC_CHANNELS.CLOSE_PROJECT, async (event): Promise<void> => {
@@ -218,7 +220,7 @@ export function updateProjectIpcWindow(mainWindow: BrowserWindow): void {
   currentMainWindow = mainWindow;
 }
 
-async function openProject(projectRoot: string): Promise<ProjectDetectionResult> {
+async function openProject(projectRoot: string, projectKind: ProjectKind = 'PROJECT'): Promise<ProjectDetectionResult> {
   closeProject();
 
   const pathBoundary = new PathBoundary(projectRoot);
@@ -285,12 +287,19 @@ async function openProject(projectRoot: string): Promise<ProjectDetectionResult>
     path: projectRoot,
     name: basename(projectRoot) || 'Unknown',
     lastOpenedAt: new Date().toISOString(),
+    kind: projectKind,
   };
   store.set('recentProjects', [recentProject, ...(store.get('recentProjects') || []).filter((p) => p.path !== projectRoot)].slice(0, 10));
 
-  notifyUpdate({ type: 'project-opened', detection: detectionResult, snapshot: await currentSnapshotBuilder.build(), timestamp: new Date().toISOString() });
+  const classifiedDetection = classifyDetection(detectionResult, projectKind);
 
-  return detectionResult;
+  notifyUpdate({ type: 'project-opened', detection: classifiedDetection, snapshot: await currentSnapshotBuilder.build(), timestamp: new Date().toISOString() });
+
+  return classifiedDetection;
+}
+
+function classifyDetection(detectionResult: ProjectDetectionResult, projectKind: ProjectKind): ProjectDetectionResult {
+  return { ...detectionResult, projectKind };
 }
 
 function isFixtureProjectMode(): boolean {
