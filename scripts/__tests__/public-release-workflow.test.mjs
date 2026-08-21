@@ -20,7 +20,8 @@ test('verifies only published releases and explicit manual dispatches', () => {
 test('checks out exactly the released tag snapshot as the trust boundary', () => {
   const checkout = stepBlock(/uses: actions\/checkout@[^\n]+\n\s+with:\s*\n\s+ref:/, 'an explicit checkout of the released tag');
   assert.doesNotMatch(checkout, /github\.sha/);
-  assert.match(workflow, /ref: \$\{\{ inputs\.tag \|\| github\.event\.release\.tag_name \}\}/);
+  assert.match(workflow, /ref: \$\{\{ format\('refs\/tags\/\{0\}', inputs\.tag \|\| github\.event\.release\.tag_name\) \}\}/);
+  assert.match(workflow, /persist-credentials:\s*false/);
 });
 
 test('verification consumes the release tag name from the event context', () => {
@@ -36,12 +37,20 @@ test('manual dispatch requires an explicit tag with no stale default', () => {
   assert.doesNotMatch(dispatch, /default:/);
 });
 
-test('validates the requested tag shape and existence before installing dependencies', () => {
-  const guard = stepBlock(/- name: Validate requested release tag[\s\S]*?(?=- uses:)/, 'an early tag validation step');
-  const checkoutPos = workflow.indexOf('uses: actions/checkout@');
-  assert.ok(workflow.indexOf('Validate requested release tag') < checkoutPos, 'tag validation must run before checkout');
+test('validates the requested tag shape before checkout and dependencies', () => {
+  const guard = stepBlock(/- name: Validate requested release tag shape[\s\S]*?(?=- name:|- uses:)/, 'an early tag shape validation step');
   assert.match(guard, /v\[0-9\]\*/);
-  assert.match(guard, /git ls-remote --exit-code --tags/);
+  const checkoutPos = workflow.indexOf('uses: actions/checkout@');
+  const npmCiPos = workflow.indexOf('npm ci');
+  assert.ok(workflow.indexOf('Validate requested release tag shape') < checkoutPos, 'tag validation must run before checkout');
+});
+
+test('pre-checkout validation does not require local git repository state', () => {
+  const checkoutPos = workflow.indexOf('uses: actions/checkout@');
+  const beforeCheckout = workflow.slice(0, checkoutPos);
+  assert.doesNotMatch(beforeCheckout, /\bgit\s+ls-remote\b/);
+  assert.doesNotMatch(beforeCheckout, /\bgit\s+rev-parse\b/);
+  assert.doesNotMatch(beforeCheckout, /\bgit\s+remote\b/);
 });
 
 test('GITHUB_TOKEN is passed only to the verification step', () => {

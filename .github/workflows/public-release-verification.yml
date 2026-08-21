@@ -13,18 +13,19 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - name: Validate requested release tag
+      - name: Validate requested release tag shape
+        shell: bash
         run: |
           TAG="${{ inputs.tag || github.event.release.tag_name }}"
           case "$TAG" in
             v[0-9]*) ;;
             *) echo "::error::tag must start with 'v' followed by a version (got: $TAG)"; exit 1 ;;
           esac
-          git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null \
-            || { echo "::error::tag $TAG does not exist in this repository"; exit 1; }
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Checkout exact release tag
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
-          ref: ${{ inputs.tag || github.event.release.tag_name }}
+          ref: ${{ format('refs/tags/{0}', inputs.tag || github.event.release.tag_name) }}
+          persist-credentials: false
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with: { node-version: 22, cache: npm }
       - run: npm ci
