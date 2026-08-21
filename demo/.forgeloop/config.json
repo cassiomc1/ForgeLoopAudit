@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 1,
+  "complianceMode": "standard",
+  "requiredGates": [
+    "unit-tests",
+    "typecheck",
+    "lint"
+  ],
+  "requiredEvidence": [
+    "OBSERVED"
+  ]
+}

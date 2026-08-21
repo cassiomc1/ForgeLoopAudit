@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 1,
+  "taskId": "TASK-001",
+  "gate": "typecheck",
+  "status": "satisfied",
+  "requiredBy": [
+    "policy:typecheck"
+  ],
+  "artifacts": [
+    {
+      "path": "src/catalog.ts",
+      "sha256": "70b3de5e4dbaf2228234eece6c70320b9f0abad6495fe5e771282c20213cbd13"
+    }
+  ],
+  "decisions": [],
+  "unknowns": [],
+  "approvedAssumptions": [],
+  "evidence": [
+    {
+      "kind": "OBSERVED",
+      "source": "tsc --noEmit",
+      "result": "clean"
+    }
+  ]
+}

@@ -30,6 +30,23 @@ ForgeLoop Studio is designed as a **read-only observer by default**. ForgeLoop r
 
 The visual direction is a premium, modern, minimal dark developer interface focused on clarity rather than decorative effects.
 
+## Demo project
+
+ForgeLoop Studio includes a complete, schema-valid ForgeLoop demo project under [`demo/`](./demo) — **ForgeShop**, a fictional premium e-commerce application built through ForgeLoop. Open it directly from Studio (choose **Open Demo Project** on the start screen) or select the `demo/` directory manually to explore tasks, execution flow, contracts, evidence, continuity, policy, recovery and verification without configuring another repository.
+
+The demo is a real ForgeLoop project fixture: every `.forgeloop/` artifact validates against the same trusted protocol schemas Studio enforces for any other project, and it passes through the normal ProjectDetector → PathBoundary → SchemaValidator pipeline. No external service, network access or build step is required. The bundled demo also ships inside release builds and doubles as an end-to-end regression fixture.
+
+| Task | Demonstrates |
+|---|---|
+| TASK-001 | Complete successful lifecycle |
+| TASK-002 | Verification/review in progress |
+| TASK-003 | Active execution |
+| TASK-004 | Failure, recovery and cross-harness continuity |
+| TASK-005 | Planned performance work |
+| TASK-006 | Security policy and successful completion |
+
+Regenerate it with `npm run demo:generate` (deterministic; CI fails on drift via `demo:generate --check`) and validate it with `npm run demo:verify`.
+
 ## Implementation specification
 
 See [`FORGELOOP_STUDIO_IMPLEMENTATION_SPEC.md`](./FORGELOOP_STUDIO_IMPLEMENTATION_SPEC.md) for the complete architecture, security model, UI system, data model, feature scope, testing strategy, implementation order and MVP definition of done.

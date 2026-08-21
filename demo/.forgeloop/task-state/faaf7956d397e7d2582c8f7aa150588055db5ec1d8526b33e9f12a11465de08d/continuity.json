@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 1,
+  "taskId": "TASK-006",
+  "workStateFingerprint": "55345f6d1bac741a1cfe4f74bdcb454d013fdd5cafbf4a2eef9357973516f356",
+  "contractFingerprint": "7390be2f2c749cd6ba360f34ce172322b3286585cfb981ed694bce20c252d3e4",
+  "phase": "COMPLETE",
+  "repositoryFingerprint": {
+    "branch": "main",
+    "head": "3f9c1d2e77a4b5089c6e12ab34f5d6e7890abcde"
+  },
+  "updatedAt": "2026-08-07T15:01:00.000Z",
+  "remainingWork": [
+    {
+      "id": "recheck-after-retry",
+      "summary": "Re-run the security review once TASK-003 adds its retry policy"
+    }
+  ],
+  "knownIssues": [],
+  "changedAreas": [],
+  "inspectFirst": [],
+  "resumeNote": "Review complete; revisit after checkout retry policy lands."
+}

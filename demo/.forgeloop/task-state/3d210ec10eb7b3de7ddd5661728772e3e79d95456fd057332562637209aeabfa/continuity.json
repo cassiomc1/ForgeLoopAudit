@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 1,
+  "taskId": "TASK-004",
+  "workStateFingerprint": "1c1a24713889e27559152f9bfcb1948bf3a39a4775c374096f28dd599e6202f2",
+  "contractFingerprint": "ebba90be1cb602b109d523fbbf8f6c1fb3f0e91ef8f4ded206f4111cf3d454f8",
+  "phase": "BLOCKED",
+  "repositoryFingerprint": {
+    "branch": "main",
+    "head": "3f9c1d2e77a4b5089c6e12ab34f5d6e7890abcde"
+  },
+  "updatedAt": "2026-08-06T11:25:00.000Z",
+  "remainingWork": [
+    {
+      "id": "fix-focus-trap",
+      "summary": "Replace pagination div with a real button and restore filter focus flow"
+    },
+    {
+      "id": "rerun-audit",
+      "summary": "Re-run keyboard walkthrough and axe scan"
+    }
+  ],
+  "knownIssues": [
+    {
+      "id": "keyboard-navigation-finding",
+      "summary": "2 keyboard navigation findings in grid pagination"
+    }
+  ],
+  "changedAreas": [
+    "src/catalog.ts"
+  ],
+  "inspectFirst": [
+    "src/catalog.ts",
+    "src/catalog.ts"
+  ],
+  "currentFocus": {
+    "id": "fix-focus-trap",
+    "summary": "Replace pagination div with a real button and restore filter focus flow"
+  },
+  "resumeNote": "Blocked by accessibility gate. harness-a recorded findings; harness-b resumes in CORRECTING after the focus-trap fix."
+}

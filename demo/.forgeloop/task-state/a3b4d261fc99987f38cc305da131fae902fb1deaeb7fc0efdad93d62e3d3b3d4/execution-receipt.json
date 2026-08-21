@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 1,
+  "taskId": "TASK-001",
+  "contractFingerprint": "66233ff941edf23d8942a135994db0c1e76841370d4abfdfdb89cc65220f343e",
+  "routeFingerprint": "b4495337cd29fbd5ce833209d3eafc10e4c429bcd99d26ba6628ac2a66db02d0",
+  "stateFingerprint": "d600aef2f1b4d8f339c4d1fc45ff228f46a6e1e05e5b159585d1187d389224c2",
+  "selectedGuides": [
+    "testing",
+    "clean-code"
+  ],
+  "changedPaths": [
+    "src/catalog.ts",
+    "tests/catalog.test.ts"
+  ],
+  "checks": [
+    {
+      "id": "catalog-unit-tests",
+      "requirement": "Catalog unit tests pass",
+      "status": "passed",
+      "evidenceKind": "OBSERVED",
+      "timestamp": "2026-08-03T09:35:00.000Z"
+    },
+    {
+      "id": "typecheck",
+      "requirement": "TypeScript compiles without errors",
+      "status": "passed",
+      "evidenceKind": "OBSERVED",
+      "timestamp": "2026-08-03T09:40:00.000Z"
+    },
+    {
+      "id": "lint",
+      "requirement": "Lint passes on changed files",
+      "status": "passed",
+      "evidenceKind": "OBSERVED",
+      "timestamp": "2026-08-03T09:42:00.000Z"
+    }
+  ],
+  "review": {
+    "reviewer": "harness-a",
+    "outcome": "approved",
+    "notes": "Grid keyboard focus order verified manually."
+  },
+  "limitations": [
+    "Demo fixture only; no real storefront is built."
+  ],
+  "publication": {
+    "committed": true,
+    "pushed": true,
+    "pullRequest": null,
+    "deployed": false
+  },
+  "status": "complete",
+  "taskStatus": "complete",
+  "verificationStatus": "valid",
+  "publicationStatus": "pushed",
+  "productionReadiness": "not-verified",
+  "evidence": [
+    {
+      "kind": "OBSERVED",
+      "source": "vitest run",
+      "result": "catalog unit tests: 14 passed"
+    },
+    {
+      "kind": "OBSERVED",
+      "source": "tsc --noEmit",
+      "result": "no type errors"
+    }
+  ],
+  "evidenceCoverage": [
+    {
+      "status": "COVERED"
+    },
+    {
+      "status": "COVERED"
+    },
+    {
+      "status": "COVERED"
+    },
+    {
+      "status": "COVERED"
+    }
+  ]
+}

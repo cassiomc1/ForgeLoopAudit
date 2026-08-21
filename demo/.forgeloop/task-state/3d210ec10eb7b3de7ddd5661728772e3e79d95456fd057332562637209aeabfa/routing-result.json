@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 1,
+  "contractFingerprint": "ebba90be1cb602b109d523fbbf8f6c1fb3f0e91ef8f4ded206f4111cf3d454f8",
+  "input": {
+    "taskId": "TASK-004",
+    "project": "forgehop"
+  },
+  "primary": "diagnosis",
+  "guides": [
+    "accessibility",
+    "testing"
+  ],
+  "reasons": {
+    "diagnosis": [
+      "Failed audit requires correction before resuming"
+    ]
+  },
+  "excluded": {}
+}

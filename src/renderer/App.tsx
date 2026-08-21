@@ -132,6 +132,24 @@ export function App() {
     }
   };
 
+  const handleOpenDemoProject = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const result = await api.openDemoProject();
+      setDetectionResult(result);
+      setActiveNav('overview');
+      setSnapshot(await api.getProjectSnapshot());
+    } catch (err) {
+      const studioError: StudioError = err instanceof Error
+        ? { code: 'UNKNOWN_ERROR', message: err.message, recoverable: true }
+        : { code: 'UNKNOWN_ERROR', message: 'Failed to open the demo project', recoverable: true };
+      setError(studioError);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleCloseProject = async () => {
     try {
       await api.closeProject();
@@ -147,6 +165,7 @@ export function App() {
     return (
       <ProjectPicker
         onOpenProject={handleOpenProject}
+        onOpenDemoProject={handleOpenDemoProject}
         onOpenRecentProject={handleOpenRecentProject}
         recentProjects={recentProjects}
         isLoading={isLoading}

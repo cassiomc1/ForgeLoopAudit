@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 1,
+  "taskId": "TASK-006",
+  "contractFingerprint": "7390be2f2c749cd6ba360f34ce172322b3286585cfb981ed694bce20c252d3e4",
+  "routeFingerprint": "a98a8476516e1212bbded7f830c0d00cc11d97ba2f45d3093fd8d3bb4815356b",
+  "repositoryFingerprint": {
+    "branch": "main",
+    "head": "3f9c1d2e77a4b5089c6e12ab34f5d6e7890abcde"
+  },
+  "phase": "COMPLETE",
+  "selectedGuides": [
+    "security"
+  ],
+  "requiredGates": [
+    "security-review"
+  ],
+  "satisfiedGates": [
+    "security-review"
+  ],
+  "complianceMode": "standard",
+  "completedSteps": [
+    "Threat model",
+    "Dependency scan",
+    "Flow review",
+    "Sign-off"
+  ],
+  "pendingSteps": [],
+  "checks": [
+    {
+      "id": "security-scan",
+      "requirement": "Dependency and flow scan reports no critical findings",
+      "status": "passed",
+      "evidenceKind": "OBSERVED",
+      "timestamp": "2026-08-07T14:40:00.000Z"
+    },
+    {
+      "id": "secret-scan",
+      "requirement": "No secrets committed in checkout flow",
+      "status": "passed",
+      "evidenceKind": "OBSERVED",
+      "timestamp": "2026-08-07T14:45:00.000Z"
+    }
+  ],
+  "failures": [],
+  "blockers": [],
+  "evidenceCoverage": [
+    {
+      "status": "COVERED"
+    },
+    {
+      "status": "COVERED"
+    },
+    {
+      "status": "COVERED"
+    }
+  ],
+  "lastUpdated": "2026-08-07T15:00:00.000Z",
+  "publicationStatus": "committed",
+  "revision": 2
+}

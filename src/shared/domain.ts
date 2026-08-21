@@ -334,6 +334,7 @@ export interface WatcherStatus {
 export interface ForgeLoopStudioAPI {
   selectProject(): Promise<ProjectDetectionResult | null>;
   openRecentProject(path: string): Promise<ProjectDetectionResult>;
+  openDemoProject(): Promise<ProjectDetectionResult>;
   closeProject(): Promise<void>;
   getProjectSnapshot(): Promise<ProjectSnapshot>;
   getTask(taskId: string): Promise<TaskSnapshot>;

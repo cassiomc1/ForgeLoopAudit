@@ -13,6 +13,7 @@ import type { StudioDiagnostics } from './diagnostics';
 export interface ForgeLoopStudioAPI {
   selectProject(): Promise<ProjectDetectionResult | null>;
   openRecentProject(path: string): Promise<ProjectDetectionResult>;
+  openDemoProject(): Promise<ProjectDetectionResult>;
   closeProject(): Promise<void>;
   getProjectSnapshot(): Promise<ProjectSnapshot>;
   getTask(taskId: string): Promise<TaskSnapshot>;
@@ -54,6 +55,7 @@ export interface WatcherStatus {
 export const IPC_CHANNELS = {
   SELECT_PROJECT: 'studio:select-project',
   OPEN_RECENT_PROJECT: 'studio:open-recent-project',
+  OPEN_DEMO_PROJECT: 'studio:open-demo-project',
   CLOSE_PROJECT: 'studio:close-project',
   GET_PROJECT_SNAPSHOT: 'studio:get-project-snapshot',
   GET_TASK: 'studio:get-task',

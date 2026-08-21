@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "policyDigest": "3de644b06f11564efd24214ea458a3f51c5416c86a857f41553756f8e0da5e2e",
+  "rules": [
+    "security-no-critical-findings",
+    "security-no-secrets"
+  ],
+  "capturedAt": "2026-08-07T14:05:00.000Z"
+}

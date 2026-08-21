@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 1,
+  "taskId": "TASK-006",
+  "contractFingerprint": "7390be2f2c749cd6ba360f34ce172322b3286585cfb981ed694bce20c252d3e4",
+  "routeFingerprint": "a98a8476516e1212bbded7f830c0d00cc11d97ba2f45d3093fd8d3bb4815356b",
+  "stateFingerprint": "55345f6d1bac741a1cfe4f74bdcb454d013fdd5cafbf4a2eef9357973516f356",
+  "selectedGuides": [
+    "security"
+  ],
+  "changedPaths": [],
+  "checks": [
+    {
+      "id": "security-scan",
+      "requirement": "Dependency and flow scan reports no critical findings",
+      "status": "passed",
+      "evidenceKind": "OBSERVED",
+      "timestamp": "2026-08-07T14:40:00.000Z"
+    },
+    {
+      "id": "secret-scan",
+      "requirement": "No secrets committed in checkout flow",
+      "status": "passed",
+      "evidenceKind": "OBSERVED",
+      "timestamp": "2026-08-07T14:45:00.000Z"
+    }
+  ],
+  "review": {
+    "reviewer": "harness-b",
+    "outcome": "approved",
+    "notes": "Checkout flow cleared for integration continuation."
+  },
+  "limitations": [
+    "Static review only; no live payment traffic is exercised in the demo."
+  ],
+  "publication": {
+    "committed": true,
+    "pushed": true,
+    "pullRequest": null,
+    "deployed": false
+  },
+  "status": "complete",
+  "taskStatus": "complete",
+  "verificationStatus": "valid",
+  "publicationStatus": "pushed",
+  "productionReadiness": "not-verified",
+  "evidence": [
+    {
+      "kind": "OBSERVED",
+      "source": "audit:security-scan",
+      "result": "no critical findings"
+    },
+    {
+      "kind": "OBSERVED",
+      "source": "audit:secret-scan",
+      "result": "no secrets detected"
+    }
+  ],
+  "evidenceCoverage": [
+    {
+      "status": "COVERED"
+    },
+    {
+      "status": "COVERED"
+    },
+    {
+      "status": "COVERED"
+    }
+  ]
+}
