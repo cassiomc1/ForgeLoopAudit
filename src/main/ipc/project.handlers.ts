@@ -14,6 +14,8 @@ import { z } from 'zod';
 import { basename } from 'path';
 import { resolveTrustedSchemaDirectory, SchemaValidator } from '@main/core/protocol/validator';
 import { isFixtureProjectMode as resolveFixtureProjectMode } from './fixture-mode';
+import { buildStudioDiagnostics } from '@main/core/diagnostics/diagnostics';
+import { assertTrustedSender as assertSenderUrl } from '@main/security/sender-policy';
 
 const store = new Store<{ recentProjects: RecentProject[] }>({
   name: 'forgeloop-studio-settings',
@@ -30,6 +32,7 @@ let currentWatcher: ReturnType<typeof createProjectWatcher> | null = null;
 let currentSnapshotBuilder: ProjectSnapshotBuilder | null = null;
 let currentMainWindow: BrowserWindow | null = null;
 let snapshotRefreshScheduled = false;
+let snapshotGeneration = 0;
 const TaskIdSchema = z.string().min(1).max(200);
 const ProjectPathSchema = z.string().min(1).max(4096);
 const EventQuerySchema = z.object({ taskId: TaskIdSchema, cursor: z.string().max(256).optional(), limit: z.number().int().min(1).max(500).optional() });
@@ -39,10 +42,7 @@ const RawArtifactSchema = z.object({ taskId: TaskIdSchema, artifact: z.enum(['ta
 function assertTrustedSender(event: Electron.IpcMainInvokeEvent): void {
   if (!currentMainWindow || event.sender.id !== currentMainWindow.webContents.id) throw ForgeLoopStudioError.unknown('Untrusted IPC sender');
   const url = event.senderFrame?.url || '';
-  const expected = currentMainWindow.webContents.getURL();
-  const allowedDevelopment = url.startsWith('http://localhost:5173/');
-  const allowedPackaged = url === expected && url.startsWith('file://');
-  if (!allowedDevelopment && !allowedPackaged) throw ForgeLoopStudioError.unknown('Untrusted IPC sender');
+  assertSenderUrl(url, app.isPackaged, currentMainWindow.webContents.getURL());
 }
 
 export function registerProjectIpc(mainWindow: BrowserWindow): void {
@@ -194,6 +194,11 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
     }
   });
 
+  ipcMain.handle(IPC_CHANNELS.GET_DIAGNOSTICS, async (event) => {
+    assertTrustedSender(event);
+    return buildStudioDiagnostics({ forgeLoopCompatibilityMode: currentForgeCli ? 'CLI_ENHANCED' : 'ARTIFACT_ONLY' });
+  });
+
 }
 
 export function updateProjectIpcWindow(mainWindow: BrowserWindow): void {
@@ -312,7 +317,7 @@ function handleWatcherEvent(event: any): void {
   if (currentSnapshotBuilder && !snapshotRefreshScheduled) {
     snapshotRefreshScheduled = true;
     setTimeout(() => { snapshotRefreshScheduled = false; if (!currentSnapshotBuilder) return; currentSnapshotBuilder.build().then((snapshot) => {
-      notifyUpdate({ type: 'snapshot-refreshed', snapshot, timestamp: new Date().toISOString() });
+      notifyUpdate({ type: 'snapshot-refreshed', snapshot, generation: ++snapshotGeneration, timestamp: new Date().toISOString() });
     }).catch(console.error); }, 100);
   }
 }

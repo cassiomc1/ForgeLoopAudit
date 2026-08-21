@@ -6,6 +6,7 @@ export function useForgeLoopStudio() {
   const [watcherStatus, setWatcherStatus] = useState<WatcherStatus>({ active: false });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<{ message: string; code: string } | null>(null);
+  const [lastGeneration, setLastGeneration] = useState(0);
 
   const api = (window as any).forgeLoopStudio;
 
@@ -32,8 +33,9 @@ export function useForgeLoopStudio() {
     const unsubscribe = api.subscribeProjectUpdates((update: ProjectUpdate) => {
       switch (update.type) {
         case 'snapshot-refreshed':
-          if (update.snapshot) {
+          if (update.snapshot && (update.generation === undefined || update.generation > lastGeneration)) {
             setSnapshot(update.snapshot);
+            if (update.generation !== undefined) setLastGeneration(update.generation);
           }
           break;
         case 'watcher-status':
@@ -51,7 +53,7 @@ export function useForgeLoopStudio() {
     });
 
     return unsubscribe;
-  }, [api]);
+  }, [api, lastGeneration]);
 
   return {
     snapshot,

@@ -3,6 +3,7 @@ import { join } from 'path';
 import { registerIpc, updateProjectIpcWindow } from './ipc/register-ipc';
 import { shutdownProject } from './ipc/project.handlers';
 import { IPC_CHANNELS } from '@shared/ipc';
+import { openExternalIfAllowed } from './security/external-navigation';
 
 let mainWindow: BrowserWindow | null = null;
 let ipcRegistered = false;
@@ -47,7 +48,7 @@ function createWindow(): BrowserWindow {
   window.webContents.on('will-navigate', (event, url) => {
     if (url !== window.webContents.getURL()) {
       event.preventDefault();
-      openAllowedExternalUrl(url);
+      openExternalIfAllowed(url, (allowedUrl) => void shell.openExternal(allowedUrl));
     }
   });
 
@@ -62,6 +63,7 @@ function createWindow(): BrowserWindow {
 
 app.whenReady().then(() => {
   session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false));
+  session.defaultSession.setPermissionCheckHandler(() => false);
   mainWindow = createWindow();
   if (!ipcRegistered) {
     registerIpc(mainWindow);
@@ -76,9 +78,7 @@ app.whenReady().then(() => {
 });
 
 function openAllowedExternalUrl(raw: string): void {
-  try {
-    if (new URL(raw).protocol === 'https:') void shell.openExternal(raw);
-  } catch { /* reject malformed URLs */ }
+  openExternalIfAllowed(raw, (url) => void shell.openExternal(url));
 }
 
 app.on('window-all-closed', () => {

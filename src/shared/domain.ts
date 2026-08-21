@@ -354,4 +354,5 @@ export interface ProjectUpdate {
   detection?: ProjectDetectionResult;
   data?: unknown;
   timestamp: string;
+  generation?: number;
 }
