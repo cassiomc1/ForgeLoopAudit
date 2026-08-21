@@ -8,6 +8,13 @@ async function fakeCli(body: string): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), 'forgeloop-cli-'));
   const bin = join(root, 'bin');
   await mkdir(bin);
+  const script = join(bin, 'forgeloop-cli.js');
+  await writeFile(script, body);
+  if (process.platform === 'win32') {
+    const file = join(bin, 'forgeloop.cmd');
+    await writeFile(file, `@echo off\r\nnode "%~dp0\\forgeloop-cli.js" %*\r\n`);
+    return file;
+  }
   const file = join(bin, 'forgeloop');
   await writeFile(file, `#!/usr/bin/env node\n${body}\n`);
   await chmod(file, 0o755);
