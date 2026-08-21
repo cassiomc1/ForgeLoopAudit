@@ -11,6 +11,7 @@ files:
   - node_modules/**/*
 mac:
   icon: build/icon.icns
+  artifactName: "${productName}-${version}-${arch}.${ext}"
   category: public.app-category.developer-tools
   identity: null
   notarize: false

@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { discoverPublicDistributables, parseChecksumManifest, assertReleaseCompleteness } from '../release-contracts.mjs';
+import { artifactIsExpected, discoverPublicDistributables, matchesMatrixEntry, parseChecksumManifest, assertReleaseCompleteness } from '../release-contracts.mjs';
 import { assertEvidenceCommitMatchesTag } from '../release-identity.mjs';
 
 test('rejects a checksum manifest that omits an actual distributable', async () => {
@@ -50,4 +50,17 @@ test('rejects evidence with inconsistent commit identities', () => {
     () => assertEvidenceCommitMatchesTag(new Set(['e'.repeat(40), 'f'.repeat(40)]), 'e'.repeat(40)),
     /inconsistent commit identities/
   );
+});
+
+test('classifies macOS artifacts by explicit architecture and target type', () => {
+  assert.equal(matchesMatrixEntry('macos', 'ForgeLoop Studio-0.1.0-rc.3-arm64.dmg', { type: 'dmg', arch: 'arm64' }), true);
+  assert.equal(matchesMatrixEntry('macos', 'ForgeLoop Studio-0.1.0-rc.3-x64.zip', { type: 'zip', arch: 'x64' }), true);
+  assert.equal(artifactIsExpected('macos', 'ForgeLoop Studio-0.1.0-rc.3-x64.zip'), true);
+});
+
+test('classifies Windows Setup as NSIS and the plain executable as portable', () => {
+  assert.equal(matchesMatrixEntry('windows', 'ForgeLoop Studio Setup 0.1.0-rc.3.exe', { type: 'nsis', arch: 'x64' }), true);
+  assert.equal(matchesMatrixEntry('windows', 'ForgeLoop Studio 0.1.0-rc.3.exe', { type: 'portable', arch: 'x64' }), true);
+  assert.equal(artifactIsExpected('windows', 'ForgeLoop Studio Setup 0.1.0-rc.3.exe'), true);
+  assert.equal(artifactIsExpected('windows', 'ForgeLoop Studio 0.1.0-rc.3.exe'), true);
 });
