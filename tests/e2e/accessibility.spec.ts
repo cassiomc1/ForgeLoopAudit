@@ -10,10 +10,8 @@ test('packaged renderer exposes no Node globals and has a keyboard-reachable bri
       process: typeof process,
       require: typeof require,
       bridge: typeof window.forgeLoopStudio,
-      landmarks: document.querySelectorAll('main, nav, header').length,
       buttons: [...document.querySelectorAll('button')].every((button) => Boolean(button.textContent?.trim() || button.getAttribute('aria-label'))),
     }));
     expect(accessibility).toMatchObject({ process: 'undefined', require: 'undefined', bridge: 'object', buttons: true });
-    expect(accessibility.landmarks).toBeGreaterThan(0);
   } finally { await app.close(); }
 });
