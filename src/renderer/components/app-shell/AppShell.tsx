@@ -3,6 +3,7 @@ import type { NavItemId } from '@renderer/App';
 import { FolderOpen, ChevronLeft, ChevronRight, X, GitBranch } from 'lucide-react';
 import { clsx } from 'clsx';
 import { NAV_ITEMS } from '@renderer/App';
+import { TitleBar } from './TitleBar';
 
 interface AppShellProps {
   projectName: string;
@@ -113,24 +114,17 @@ export function AppShell({
   };
 
   return (
-    <div className="flex h-screen w-full forge-background overflow-hidden">
+    <div className="flex h-screen w-full flex-col forge-background overflow-hidden">
+      <TitleBar projectName={projectName} />
+
+      <div className="flex flex-1 overflow-hidden">
       <aside
         className={clsx(
           'flex flex-col forge-primary-surface border-r forge-border-subtle transition-all duration-200',
           sidebarCollapsed ? 'w-16' : 'w-64'
         )}
       >
-        <div className="flex h-14 items-center justify-between px-3 border-b forge-border-subtle">
-          {!sidebarCollapsed && (
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-8 bg-forge-accent flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                </svg>
-              </div>
-              <span className="font-semibold text-forge-text-primary">ForgeLoop Studio</span>
-            </div>
-          )}
+        <div className="flex h-10 items-center justify-end px-3">
           <button
             className="p-1.5 rounded-6 text-forge-text-muted hover:bg-forge-hover-surface hover:text-forge-text-primary transition-colors"
             onClick={onSidebarToggle}
@@ -179,7 +173,6 @@ export function AppShell({
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="h-12 flex items-center justify-between px-4 border-b forge-border-subtle forge-primary-surface">
           <div className="flex items-center gap-4 flex-1 min-w-0">
-            <h1 className="text-sm font-semibold text-forge-text-primary truncate">{projectName}</h1>
             {branch && (
               <span className="flex items-center gap-1.5 px-2 py-1 text-xs font-mono text-forge-text-muted bg-forge-secondary-surface rounded-6">
                 <GitBranch className="w-3.5 h-3.5" />
@@ -234,6 +227,7 @@ export function AppShell({
           )}
           {children}
         </main>
+      </div>
       </div>
     </div>
   );

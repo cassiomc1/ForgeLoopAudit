@@ -28,6 +28,8 @@ const api = {
   notifyRendererReady: (): Promise<void> => ipcRenderer.invoke(IPC_CHANNELS.RENDERER_READY),
   getAppVersion: (): Promise<string> => ipcRenderer.invoke(IPC_CHANNELS.GET_APP_VERSION),
   getDiagnostics: () => ipcRenderer.invoke(IPC_CHANNELS.GET_DIAGNOSTICS),
+  minimizeWindow: (): Promise<void> => ipcRenderer.invoke(IPC_CHANNELS.MINIMIZE_WINDOW),
+  toggleMaximizeWindow: (): Promise<boolean> => ipcRenderer.invoke(IPC_CHANNELS.TOGGLE_MAXIMIZE_WINDOW),
 
   subscribeProjectUpdates: (listener: (update: ProjectUpdate) => void): (() => void) => {
     const handler = (_event: IpcRendererEvent, update: ProjectUpdate) => listener(update);
