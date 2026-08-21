@@ -29,7 +29,7 @@ jobs:
       - name: Smoke macOS packaged app
         run: node scripts/packaged-smoke.mjs
       - name: Apply and verify macOS Electron fuses
-        run: node scripts/apply-electron-fuses.mjs dist-electron && npm run verify:electron-fuses -- dist-electron
+        run: npm run verify:electron-fuses -- dist-electron
       - name: Verify unsigned macOS packaged app
         run: |
           set -euo pipefail

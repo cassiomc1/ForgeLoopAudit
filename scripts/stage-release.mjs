@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync, statSync, readFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const platform = process.argv[2];
 const allowedPlatforms = new Set(['macos', 'windows', 'linux']);
@@ -39,11 +40,12 @@ const checksums = distributables.map((name) => {
 }).join('\n') + '\n';
 writeFileSync(join(stageDir, checksumName), checksums);
 
+for (const name of distributables) {
+  execFileSync(process.execPath, [fileURLToPath(new URL('./generate-release-evidence.mjs', import.meta.url)), platform, join(stageDir, stagedNames.get(name)), stageDir], { stdio: 'inherit' });
+}
+
 writeFileSync(join(stageDir, `RELEASE-METADATA-${platform}.json`), `${JSON.stringify({
   platform,
   windowsSigning: platform === 'windows' ? 'unsigned-preview' : 'not-applicable',
-  publicAssets: [...stagedNames.values(), checksumName],
+  publicAssets: [...stagedNames.values(), checksumName, ...distributables.map((name) => `RELEASE-EVIDENCE-${stagedNames.get(name)}.json`)],
 }, null, 2)}\n`);
-if (existsSync('package.json')) {
-  execFileSync(process.execPath, [join(dirname(new URL(import.meta.url).pathname), 'generate-release-evidence.mjs'), platform, join(stageDir, stagedNames.get(distributables[0])), stageDir], { stdio: 'inherit' });
-}

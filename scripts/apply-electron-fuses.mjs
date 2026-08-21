@@ -1,21 +1,33 @@
 import { flipFuses, FuseV1Options, FuseVersion } from '@electron/fuses';
-import { readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, readdirSync } from 'node:fs';
+import { join, normalize } from 'node:path';
 
-const root = process.argv[2] || 'dist-electron';
-const apps = [];
-function findApps(dir) {
+const root = normalize(process.argv[2] || 'dist-electron');
+if (!existsSync(root)) throw new Error(`Packaged output not found: ${root}`);
+
+function packagedExecutables(dir) {
+  const results = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const appPath = join(dir, entry.name);
-    if (entry.isDirectory() && entry.name.endsWith('.app')) apps.push(appPath);
-    else if (entry.isDirectory()) findApps(appPath);
+    const path = join(dir, entry.name);
+    if (entry.isDirectory() && entry.name.endsWith('.app')) {
+      const executable = join(path, 'Contents', 'MacOS', 'ForgeLoop Studio');
+      if (existsSync(executable)) results.push({ executable, platform: 'macOS' });
+      continue;
+    }
+    if (entry.isFile() && entry.name === 'ForgeLoop Studio.exe') results.push({ executable: path, platform: 'Windows' });
+    if (entry.isFile() && entry.name === 'forgeloop-studio' && dir.endsWith('linux-unpacked')) results.push({ executable: path, platform: 'Linux' });
+    if (entry.isDirectory()) results.push(...packagedExecutables(path));
   }
+  return results;
 }
-findApps(root);
-for (const appPath of apps) {
-  await flipFuses(appPath, {
+
+const candidates = packagedExecutables(root);
+if (candidates.length === 0) throw new Error(`No supported packaged Electron executable found under ${root}`);
+for (const candidate of candidates) {
+  await flipFuses(candidate.executable, {
     version: FuseVersion.V1,
-    resetAdHocDarwinSignature: true,
+    strictlyRequireAllFuses: false,
+    resetAdHocDarwinSignature: candidate.platform === 'macOS',
     [FuseV1Options.RunAsNode]: false,
     [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
     [FuseV1Options.EnableNodeCliInspectArguments]: false,
@@ -23,4 +35,4 @@ for (const appPath of apps) {
     [FuseV1Options.OnlyLoadAppFromAsar]: true,
   });
 }
-console.log(`Electron fuses applied under ${root}`);
+console.log(`Electron fuses applied to ${candidates.length} packaged executable(s): ${candidates.map(({ platform }) => platform).join(', ')}`);

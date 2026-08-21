@@ -21,8 +21,10 @@
     "dependency:policy": "node scripts/dependency-policy.mjs",
     "docs:check": "node scripts/check-doc-conformance.mjs",
     "test:coverage": "vitest run --coverage",
+    "verify:critical-coverage": "node scripts/verify-critical-coverage.mjs",
     "verify:full": "node scripts/verify-full.mjs",
     "benchmark:large-project": "node scripts/benchmark-large-project.mjs",
+    "verify:performance": "node scripts/verify-performance-budget.mjs",
     "protocol:schemas:verify": "node scripts/verify-schema-provenance.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -35,7 +37,7 @@
     "package:linux": "npm run build && electron-builder --linux",
     "verify": "npm run typecheck && npm run lint && npm test && npm run build",
     "package:dir": "npm run build && electron-builder --dir",
-    "test:packaged-smoke": "npm run package:dir && node scripts/packaged-smoke.mjs && node scripts/apply-electron-fuses.mjs dist-electron",
+    "test:packaged-smoke": "npm run package:dir && node scripts/packaged-smoke.mjs",
     "test:electron-smoke": "npm run build && playwright test tests/e2e/electron-smoke.spec.ts"
   },
   "keywords": [
@@ -93,6 +95,7 @@
     "wait-on": "^8.0.1"
   },
   "build": {
+    "afterPack": "scripts/after-pack-fuses.mjs",
     "appId": "com.forgeloop.studio",
     "productName": "ForgeLoop Studio",
     "directories": {
