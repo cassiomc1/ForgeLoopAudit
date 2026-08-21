@@ -5,6 +5,7 @@ import { cn } from '../lib/utils';
 interface SettingsProps {}
 
 export function Settings({}: SettingsProps) {
+  const api = (window as any).forgeLoopStudio;
   const [settings, setSettings] = useState({
     theme: 'dark',
     uiDensity: 'comfortable',
@@ -14,6 +15,13 @@ export function Settings({}: SettingsProps) {
     eventTimeFormat: 'relative',
     showRawArtifacts: false,
   });
+  const [diagnosticsMessage, setDiagnosticsMessage] = useState('');
+
+  async function copyDiagnostics() {
+    const diagnostics = await api.getDiagnostics();
+    await navigator.clipboard.writeText(JSON.stringify(diagnostics, null, 2));
+    setDiagnosticsMessage('Diagnostics copied locally');
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -96,6 +104,13 @@ export function Settings({}: SettingsProps) {
               </select>
             </div>
           </div>
+        </div>
+
+        <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-10 p-4">
+          <h3 className="text-sm font-semibold text-forge-text-primary mb-2">Privacy-safe diagnostics</h3>
+          <p className="text-xs text-forge-text-muted mb-3">Only allowlisted runtime facts are copied; project contents and environment variables are excluded.</p>
+          <button className="btn-secondary" onClick={copyDiagnostics}>Copy diagnostics</button>
+          {diagnosticsMessage && <span className="ml-3 text-xs text-forge-text-muted">{diagnosticsMessage}</span>}
         </div>
 
         <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-10 p-4">

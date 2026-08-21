@@ -15,6 +15,7 @@ import { ProjectReader } from './project-reader';
 import { ForgeCli } from '@main/core/cli/forge-cli';
 import { buildTaskSummary } from '@main/core/tasks/task-reader';
 import { checkProtocolCompatibility } from '@main/core/protocol/compatibility';
+import { compareAuthoritativeFacts } from '@main/core/protocol/semantic-parity';
 
 export interface ProjectCompatibilityContext {
   source: 'PROTOCOL_INFO' | 'ARTIFACT_ONLY';
@@ -66,6 +67,15 @@ export class ProjectSnapshotBuilder {
             : [{ success: false } as const, { success: false } as const];
           const status = extractHealthStatus(statusResult.data);
           const taskSummary = buildTaskSummary(taskKey, artifacts as any, nextResult.success ? nextResult.data as Record<string, unknown> : undefined);
+          const parity = statusResult.success
+            ? compareAuthoritativeFacts(
+              { phase: taskSummary.phase },
+              { phase: extractPhase(statusResult.data) },
+            )
+            : undefined;
+          if (parity && !parity.consistent) {
+            taskSummary.protocolConflicts = parity.differences;
+          }
           return { taskSummary, status: statusResult.success ? status : undefined };
         } catch (error) {
           console.warn(`Failed to build summary for task ${taskKey}:`, error);
@@ -225,6 +235,11 @@ function extractHealthStatus(value: unknown): string | undefined {
   const record = value as Record<string, unknown>;
   const candidate = [record.status, record.stateStatus, record.state, record.health].find((item) => typeof item === 'string');
   return typeof candidate === 'string' ? candidate.toUpperCase() : undefined;
+}
+function extractPhase(value: unknown): string | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const phase = (value as Record<string, unknown>).phase;
+  return typeof phase === 'string' ? phase.toUpperCase() : undefined;
 }
 export function normalizePolicyStatus(value: unknown, complianceMode = 'Unknown', integritySource: PolicySummary['integritySource'] = 'UNKNOWN'): PolicySummary {
   const record = value && typeof value === 'object' ? value as Record<string, unknown> : {};

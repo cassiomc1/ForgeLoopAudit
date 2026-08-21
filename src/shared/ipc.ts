@@ -8,6 +8,7 @@ import type {
   RecentProject,
   RawArtifactRequest,
 } from './domain';
+import type { StudioDiagnostics } from './diagnostics';
 
 export interface ForgeLoopStudioAPI {
   selectProject(): Promise<ProjectDetectionResult | null>;
@@ -23,6 +24,7 @@ export interface ForgeLoopStudioAPI {
   addRecentProject(project: RecentProject): Promise<void>;
   removeRecentProject(path: string): Promise<void>;
   notifyRendererReady(): Promise<void>;
+  getDiagnostics(): Promise<StudioDiagnostics>;
 
   subscribeProjectUpdates(
     listener: (update: ProjectUpdate) => void
@@ -63,6 +65,7 @@ export const IPC_CHANNELS = {
   ADD_RECENT_PROJECT: 'studio:add-recent-project',
   REMOVE_RECENT_PROJECT: 'studio:remove-recent-project',
   RENDERER_READY: 'studio:renderer-ready',
+  GET_DIAGNOSTICS: 'studio:get-diagnostics',
   SUBSCRIBE_UPDATES: 'studio:subscribe-updates',
   UNSUBSCRIBE_UPDATES: 'studio:unsubscribe-updates',
   PROJECT_UPDATE: 'studio:project-update',

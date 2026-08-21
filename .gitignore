@@ -8,3 +8,8 @@ src/**/*.d.ts.map
 .env
 .env.*
 *.log
+coverage/
+dist-electron/
+npm-audit.json
+release-staging/
+test-results/

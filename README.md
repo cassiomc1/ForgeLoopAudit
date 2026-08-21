@@ -6,9 +6,9 @@ ForgeLoop Studio is a local-first desktop companion for ForgeLoop. Open a ForgeL
 
 ## Status
 
-Release candidate — the read-only Studio runtime, trusted protocol validation, functional fixture E2E and multi-platform release staging are implemented. RC2 macOS and Windows assets are explicitly unsigned previews; signing, notarization and Gatekeeper acceptance are deferred to a future distribution milestone.
+Release candidate — the read-only Studio runtime, trusted protocol validation, functional fixture E2E and multi-platform release staging are implemented. The current development target is `v0.1.0-rc.3`; RC2 remains immutable and represents the earlier unsigned-preview release configuration. Post-RC2 release-matrix hardening is first included in RC3.
 
-For the current RC2 policy, Linux, macOS and Windows builds are unsigned preview artifacts. Validate the published checksums and expect normal operating-system security warnings; signed/notarized distribution is not part of this release candidate.
+For the current RC3 policy, Linux, macOS and Windows builds are unsigned preview artifacts. Validate the published checksums and expect normal operating-system security warnings; signed/notarized distribution is not part of this release candidate.
 
 ## Stack
 

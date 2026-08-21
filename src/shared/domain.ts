@@ -178,6 +178,7 @@ export interface TaskSummary {
   policySnapshot?: Record<string, unknown>;
   artifactErrors?: string[];
   gateErrors?: string[];
+  protocolConflicts?: Array<{ field: string; artifactValue: unknown; cliValue: unknown }>;
 }
 
 export interface SessionSummary {
@@ -353,4 +354,5 @@ export interface ProjectUpdate {
   detection?: ProjectDetectionResult;
   data?: unknown;
   timestamp: string;
+  generation?: number;
 }
