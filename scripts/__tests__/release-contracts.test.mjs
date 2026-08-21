@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { discoverPublicDistributables, parseChecksumManifest, assertReleaseCompleteness } from '../release-contracts.mjs';
+import { assertEvidenceCommitMatchesTag } from '../release-identity.mjs';
 
 test('rejects a checksum manifest that omits an actual distributable', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'forgeloop-release-'));
@@ -27,4 +28,26 @@ test('rejects a checksum manifest that omits an actual distributable', async () 
 test('rejects duplicate checksum entries and path traversal', () => {
   assert.throws(() => parseChecksumManifest(`${'a'.repeat(64)}  app.AppImage\n${'a'.repeat(64)}  app.AppImage\n`), /duplicate/);
   assert.throws(() => parseChecksumManifest(`${'a'.repeat(64)}  ../app.AppImage\n`), /unsafe/);
+});
+
+test('accepts evidence whose only commit matches the resolved lightweight tag commit', () => {
+  assert.doesNotThrow(() => assertEvidenceCommitMatchesTag(new Set(['a'.repeat(40)]), 'a'.repeat(40)));
+});
+
+test('accepts evidence whose only commit matches the resolved annotated tag commit', () => {
+  assert.doesNotThrow(() => assertEvidenceCommitMatchesTag(new Set(['b'.repeat(40)]), 'b'.repeat(40)));
+});
+
+test('rejects evidence that consistently points at a different tag commit', () => {
+  assert.throws(
+    () => assertEvidenceCommitMatchesTag(new Set(['c'.repeat(40)]), 'd'.repeat(40)),
+    /does not match resolved tag commit/
+  );
+});
+
+test('rejects evidence with inconsistent commit identities', () => {
+  assert.throws(
+    () => assertEvidenceCommitMatchesTag(new Set(['e'.repeat(40), 'f'.repeat(40)]), 'e'.repeat(40)),
+    /inconsistent commit identities/
+  );
 });

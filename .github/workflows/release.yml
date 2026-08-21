@@ -22,8 +22,8 @@ jobs:
       - name: Verify tag matches package version
         if: ${{ github.ref_type == 'tag' }}
         run: node scripts/assert-release-version.mjs "${{ github.ref_name }}"
-      - run: npm run audit:prod
-      - run: npm run verify
+      - name: Run full release verification contract
+        run: npm run verify:full
       - name: Build unsigned macOS preview app
         run: npm run build && npx --no-install electron-builder --mac --dir --config electron-builder.release.yml --publish never
       - name: Smoke macOS packaged app
@@ -64,12 +64,14 @@ jobs:
       - name: Verify tag matches package version
         if: ${{ github.ref_type == 'tag' }}
         run: node scripts/assert-release-version.mjs "${{ github.ref_name }}"
-      - run: npm run audit:prod
-      - run: npm run verify
+      - name: Run full release verification contract
+        run: npm run verify:full
       - name: Build Windows unpacked app
         run: npm run build && npx --no-install electron-builder --win --dir --config electron-builder.release.yml --publish never
       - name: Smoke Windows packaged app
         run: node scripts/packaged-smoke.mjs
+      - name: Verify Windows Electron fuses
+        run: npm run verify:electron-fuses -- dist-electron
       - name: Build Windows distributables
         run: npx --no-install electron-builder --win --config electron-builder.release.yml --publish never
       - name: Verify Windows release matrix
@@ -91,12 +93,14 @@ jobs:
       - name: Verify tag matches package version
         if: ${{ github.ref_type == 'tag' }}
         run: node scripts/assert-release-version.mjs "${{ github.ref_name }}"
-      - run: npm run audit:prod
-      - run: npm run verify
+      - name: Run full release verification contract
+        run: npm run verify:full
       - name: Build Linux unpacked app
         run: npm run build && npx --no-install electron-builder --linux --dir --config electron-builder.release.yml --publish never
       - name: Smoke Linux packaged app
         run: xvfb-run -a node scripts/packaged-smoke.mjs
+      - name: Verify Linux Electron fuses
+        run: npm run verify:electron-fuses -- dist-electron
       - name: Build Linux distributables
         run: npx --no-install electron-builder --linux --config electron-builder.release.yml --publish never
       - name: Verify Linux release matrix
