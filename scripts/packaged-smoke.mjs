@@ -27,7 +27,8 @@ let stdout = '';
 let stderr = '';
 try {
   console.log(`Packaged smoke executable=${executablePath}`);
-  child = spawn(executablePath, [], { env: { ...process.env, NODE_ENV: 'production', FORGELOOP_STUDIO_SMOKE: '1', FORGELOOP_STUDIO_SMOKE_FILE: smokeFile }, stdio: ['ignore', 'pipe', 'pipe'] });
+  const args = process.platform === 'linux' ? ['--no-sandbox'] : [];
+  child = spawn(executablePath, args, { env: { ...process.env, NODE_ENV: 'production', FORGELOOP_STUDIO_SMOKE: '1', FORGELOOP_STUDIO_SMOKE_FILE: smokeFile }, stdio: ['ignore', 'pipe', 'pipe'] });
   child.stdout.on('data', (chunk) => { stdout = `${stdout}${chunk}`.slice(-20_000); });
   child.stderr.on('data', (chunk) => { stderr = `${stderr}${chunk}`.slice(-20_000); });
   await waitForSpawn(child, LAUNCH_TIMEOUT_MS);
