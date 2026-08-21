@@ -5,6 +5,7 @@ import { StatusBadge } from '../components/ui/StatusBadge';
 import { TaskRow } from '../components/tasks/TaskRow';
 import { NextSafeAction } from '../components/ui/NextSafeAction';
 import { cn } from '../lib/utils';
+import { Provenance } from '../components/ui/Provenance';
 import { formatEvidenceSummary } from '../lib/evidence-display';
 import {
   Activity,
@@ -54,6 +55,7 @@ export function Overview({ snapshot, watcherStatus: _watcherStatus, onTaskSelect
         <div className="flex items-center gap-3">
           <StatusBadge status={snapshot.health.status} />
           <span className="text-xs text-forge-text-muted">Source: {snapshot.health.source === 'FORGELOOP_STATUS_AGGREGATE' ? 'ForgeLoop task status aggregate' : snapshot.health.source}</span>
+          <Provenance source="ForgeLoop status aggregate" authority="FORGELOOP" observedAt={snapshot.updatedAt} />
         </div>
       </div>
 
@@ -192,6 +194,13 @@ export function Overview({ snapshot, watcherStatus: _watcherStatus, onTaskSelect
         <div className="bg-forge-danger/5 border border-forge-danger/20 rounded-10 p-4">
           <h2 className="text-sm font-semibold text-forge-danger">Gate validation error</h2>
           <p className="text-xs text-forge-text-secondary mt-1">A gate artifact is invalid and was not treated as a satisfied or absent gate.</p>
+        </div>
+      )}
+
+      {snapshot.tasks.some((task) => task.protocolConflicts && task.protocolConflicts.length > 0) && (
+        <div className="bg-forge-danger/5 border border-forge-danger/20 rounded-10 p-4">
+          <h2 className="text-sm font-semibold text-forge-danger">CLI/artifact contradiction</h2>
+          <p className="text-xs text-forge-text-secondary mt-1">ForgeLoop artifacts and the optional CLI observation disagree. Review the authoritative artifact before acting.</p>
         </div>
       )}
 

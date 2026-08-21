@@ -8,15 +8,15 @@ const candidates = [];
 function walk(dir) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const path = join(dir, entry.name);
-    if (entry.isDirectory()) walk(path);
-    else if (entry.name.endsWith('.app')) candidates.push(path);
+    if (entry.isDirectory() && entry.name.endsWith('.app')) candidates.push(path);
+    else if (entry.isDirectory()) walk(path);
   }
 }
 walk(root);
 if (candidates.length === 0) throw new Error(`No packaged macOS app found under ${root}`);
 for (const appPath of candidates) {
   const output = execFileSync('npx', ['--no-install', 'electron-fuses', 'read', '--app', appPath], { encoding: 'utf8' });
-  for (const expected of ['RunAsNode=off', 'EnableNodeOptionsEnvironmentVariable=off', 'EnableNodeCliInspectArguments=off', 'EnableEmbeddedAsarIntegrityValidation=on', 'OnlyLoadAppFromAsar=on']) {
+  for (const expected of ['RunAsNode is Disabled', 'EnableNodeOptionsEnvironmentVariable is Disabled', 'EnableNodeCliInspectArguments is Disabled', 'EnableEmbeddedAsarIntegrityValidation is Enabled', 'OnlyLoadAppFromAsar is Enabled']) {
     if (!output.includes(expected)) throw new Error(`Fuse assertion failed for ${appPath}: ${expected}\n${output}`);
   }
 }

@@ -2,6 +2,11 @@ name: CI
 on:
   push:
   pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   verify:
     strategy:
@@ -13,11 +18,17 @@ jobs:
         with: { node-version: 22, cache: npm }
       - run: npm ci
       - run: npm run audit:prod
+      - run: npm run dependency:policy
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
+      - run: npm run test:coverage
+      - run: npm run protocol:schemas:verify
+      - run: npm run docs:check
       - run: npm run build
       - run: if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then xvfb-run -a npm run test:electron-smoke; else npm run test:electron-smoke; fi
         shell: bash
       - run: if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then xvfb-run -a npm run test:packaged-smoke; else npm run test:packaged-smoke; fi
+        shell: bash
+      - run: if [ "${{ matrix.os }}" = "macos-latest" ]; then npm run verify:electron-fuses -- dist-electron; else echo "Fuse binary verification is executed on macOS packaging"; fi
         shell: bash

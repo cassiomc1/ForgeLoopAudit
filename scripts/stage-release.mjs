@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync, statSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
+import { execFileSync } from 'node:child_process';
 
 const platform = process.argv[2];
 const allowedPlatforms = new Set(['macos', 'windows', 'linux']);
@@ -43,3 +44,6 @@ writeFileSync(join(stageDir, `RELEASE-METADATA-${platform}.json`), `${JSON.strin
   windowsSigning: platform === 'windows' ? 'unsigned-preview' : 'not-applicable',
   publicAssets: [...stagedNames.values(), checksumName],
 }, null, 2)}\n`);
+if (existsSync('package.json')) {
+  execFileSync(process.execPath, [join(dirname(new URL(import.meta.url).pathname), 'generate-release-evidence.mjs'), platform, join(stageDir, stagedNames.get(distributables[0])), stageDir], { stdio: 'inherit' });
+}
