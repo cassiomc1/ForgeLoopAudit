@@ -2,7 +2,7 @@ import type { StudioDiagnostics } from '@shared/diagnostics';
 
 export function buildStudioDiagnostics(input: Partial<StudioDiagnostics> = {}): StudioDiagnostics {
   return {
-    studioVersion: input.studioVersion || '0.1.0-rc.3',
+    studioVersion: input.studioVersion || '0.1.0-rc.4',
     electronVersion: input.electronVersion || process.versions.electron || 'unknown',
     nodeVersion: input.nodeVersion || process.versions.node || 'unknown',
     platform: input.platform || process.platform,
