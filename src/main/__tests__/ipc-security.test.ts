@@ -4,6 +4,7 @@ import { assertTrustedSender } from '@main/security/sender-policy';
 describe('IPC sender policy', () => {
   it('accepts only the owned renderer origin', () => {
     expect(() => assertTrustedSender('http://localhost:5173/index.html', false)).not.toThrow();
+    expect(() => assertTrustedSender('file:///app/dist/index.html', false, 'file:///app/dist/index.html')).not.toThrow();
     expect(() => assertTrustedSender('file:///app/dist/index.html', true, 'file:///app/dist/index.html')).not.toThrow();
   });
   it('rejects foreign and malformed origins', () => {

@@ -93,7 +93,6 @@
     "wait-on": "^8.0.1"
   },
   "build": {
-    "afterPack": "scripts/after-pack-fuses.mjs",
     "appId": "com.forgeloop.studio",
     "productName": "ForgeLoop Studio",
     "directories": {
