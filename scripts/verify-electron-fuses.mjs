@@ -24,7 +24,8 @@ const candidates = packagedApps(root);
 if (candidates.length === 0) throw new Error(`No supported packaged executable found under ${root}`);
 const commonExpected = ['RunAsNode is Disabled', 'EnableNodeOptionsEnvironmentVariable is Disabled', 'EnableNodeCliInspectArguments is Disabled', 'OnlyLoadAppFromAsar is Enabled'];
 for (const candidate of candidates) {
-  const output = execFileSync('npx', ['--no-install', 'electron-fuses', 'read', '--app', candidate.path], { encoding: 'utf8' });
+  const npx = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+  const output = execFileSync(npx, ['--no-install', 'electron-fuses', 'read', '--app', candidate.path], { encoding: 'utf8' });
   const expected = candidate.platform === 'Linux' ? commonExpected : [...commonExpected, 'EnableEmbeddedAsarIntegrityValidation is Enabled'];
   for (const fuse of expected) if (!output.includes(fuse)) throw new Error(`Fuse assertion failed for ${candidate.platform} (${candidate.path}): ${fuse}\n${output}`);
   console.log(`Electron fuses verified: ${candidate.platform} (${candidate.path})`);
