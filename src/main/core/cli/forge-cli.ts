@@ -12,13 +12,22 @@ export interface CliResult<T> {
   exitCode?: number;
 }
 
+export interface ForgeCliOptions {
+  timeoutMs?: number;
+  maxOutputBytes?: number;
+}
+
 export class ForgeCli {
   private readonly projectRoot: string;
   private readonly forgeLoopPath: string | null;
+  private readonly timeoutMs: number;
+  private readonly maxOutputBytes: number;
 
-  constructor(projectRoot: string, forgeLoopPath: string = 'forgeloop') {
+  constructor(projectRoot: string, forgeLoopPath: string = 'forgeloop', options: ForgeCliOptions = {}) {
     this.projectRoot = projectRoot;
     this.forgeLoopPath = resolveTrustedForgeLoopPath(forgeLoopPath, projectRoot);
+    this.timeoutMs = options.timeoutMs ?? CLI_TIMEOUT_MS;
+    this.maxOutputBytes = options.maxOutputBytes ?? CLI_MAX_STDOUT_BYTES;
   }
 
   private async executeCommand(args: string[]): Promise<CliResult<unknown>> {
@@ -61,18 +70,18 @@ export class ForgeCli {
         child.kill('SIGTERM');
         finish({
           success: false,
-          error: `Command timed out after ${CLI_TIMEOUT_MS}ms`,
+          error: `Command timed out after ${this.timeoutMs}ms`,
           exitCode: -1,
         });
-      }, CLI_TIMEOUT_MS);
+      }, this.timeoutMs);
 
       child.stdout?.on('data', (chunk: Buffer) => {
         stdoutBytes += chunk.length;
-        if (stdoutBytes > CLI_MAX_STDOUT_BYTES) {
+        if (stdoutBytes > this.maxOutputBytes) {
           child.kill('SIGTERM');
           finish({
             success: false,
-            error: `Command output exceeded maximum size of ${CLI_MAX_STDOUT_BYTES} bytes`,
+            error: `Command output exceeded maximum size of ${this.maxOutputBytes} bytes`,
             exitCode: -1,
           });
         }
@@ -81,9 +90,9 @@ export class ForgeCli {
 
       child.stderr?.on('data', (chunk: Buffer) => {
         stderrBytes += chunk.length;
-        if (stderrBytes > CLI_MAX_STDOUT_BYTES) {
+        if (stderrBytes > this.maxOutputBytes) {
           child.kill('SIGTERM');
-          finish({ success: false, error: `Command stderr exceeded maximum size of ${CLI_MAX_STDOUT_BYTES} bytes`, exitCode: -1 });
+          finish({ success: false, error: `Command stderr exceeded maximum size of ${this.maxOutputBytes} bytes`, exitCode: -1 });
           return;
         }
         stderr += chunk.toString('utf8');
@@ -307,7 +316,7 @@ export class ForgeCli {
         const child = spawn(invocation.executable, invocation.args, { cwd: this.projectRoot, shell: false, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, FORGELOOP_NO_COLOR: '1' } });
         let settled = false;
         const finish = (value: CliResult<unknown>) => { if (!settled) { settled = true; resolve(value); } };
-        const timeout = setTimeout(() => { child.kill('SIGTERM'); finish({ success: false, error: 'Version probe timed out', exitCode: -1 }); }, CLI_TIMEOUT_MS);
+        const timeout = setTimeout(() => { child.kill('SIGTERM'); finish({ success: false, error: 'Version probe timed out', exitCode: -1 }); }, this.timeoutMs);
         child.on('error', (error) => { clearTimeout(timeout); finish({ success: false, error: error.message, exitCode: -1 }); });
         child.on('close', (code) => { clearTimeout(timeout); finish({ success: code === 0, exitCode: code ?? -1 }); });
       });

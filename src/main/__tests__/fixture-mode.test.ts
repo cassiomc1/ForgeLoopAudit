@@ -7,5 +7,10 @@ describe('fixture project mode', () => {
       FORGELOOP_STUDIO_SMOKE: '1',
       FORGELOOP_STUDIO_FIXTURE_PROJECT: '/tmp/fixture-project',
     })).toBe(false);
+    expect(isFixtureProjectMode(false, {
+      FORGELOOP_STUDIO_SMOKE: '1',
+      FORGELOOP_STUDIO_FIXTURE_PROJECT: '/tmp/fixture-project',
+    })).toBe(true);
+    expect(isFixtureProjectMode(false, {})).toBe(false);
   });
 });

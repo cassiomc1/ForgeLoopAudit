@@ -1,23 +1,31 @@
 import { existsSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, normalize } from 'node:path';
 import { execFileSync } from 'node:child_process';
 
-const root = process.argv[2] || 'dist-electron';
+const root = normalize(process.argv[2] || 'dist-electron');
 if (!existsSync(root)) throw new Error(`Packaged output not found: ${root}`);
-const candidates = [];
-function walk(dir) {
+
+function packagedApps(dir) {
+  const results = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const path = join(dir, entry.name);
-    if (entry.isDirectory() && entry.name.endsWith('.app')) candidates.push(path);
-    else if (entry.isDirectory()) walk(path);
+    if (entry.isDirectory() && entry.name.endsWith('.app')) {
+      if (existsSync(join(path, 'Contents', 'MacOS', 'ForgeLoop Studio'))) results.push({ path, platform: 'macOS' });
+      continue;
+    }
+    if (entry.isFile() && entry.name === 'ForgeLoop Studio.exe') results.push({ path: dir, platform: 'Windows' });
+    if (entry.isFile() && entry.name === 'forgeloop-studio' && dir.endsWith('linux-unpacked')) results.push({ path: dir, platform: 'Linux' });
+    if (entry.isDirectory()) results.push(...packagedApps(path));
   }
+  return results;
 }
-walk(root);
-if (candidates.length === 0) throw new Error(`No packaged macOS app found under ${root}`);
-for (const appPath of candidates) {
-  const output = execFileSync('npx', ['--no-install', 'electron-fuses', 'read', '--app', appPath], { encoding: 'utf8' });
-  for (const expected of ['RunAsNode is Disabled', 'EnableNodeOptionsEnvironmentVariable is Disabled', 'EnableNodeCliInspectArguments is Disabled', 'EnableEmbeddedAsarIntegrityValidation is Enabled', 'OnlyLoadAppFromAsar is Enabled']) {
-    if (!output.includes(expected)) throw new Error(`Fuse assertion failed for ${appPath}: ${expected}\n${output}`);
-  }
+
+const candidates = packagedApps(root);
+if (candidates.length === 0) throw new Error(`No supported packaged executable found under ${root}`);
+const expected = ['RunAsNode is Disabled', 'EnableNodeOptionsEnvironmentVariable is Disabled', 'EnableNodeCliInspectArguments is Disabled', 'EnableEmbeddedAsarIntegrityValidation is Enabled', 'OnlyLoadAppFromAsar is Enabled'];
+for (const candidate of candidates) {
+  const output = execFileSync('npx', ['--no-install', 'electron-fuses', 'read', '--app', candidate.path], { encoding: 'utf8' });
+  for (const fuse of expected) if (!output.includes(fuse)) throw new Error(`Fuse assertion failed for ${candidate.platform} (${candidate.path}): ${fuse}\n${output}`);
+  console.log(`Electron fuses verified: ${candidate.platform} (${candidate.path})`);
 }
-console.log(`Electron fuses verified for ${candidates.length} app(s)`);
+console.log(`Electron fuses verified for ${candidates.length} packaged executable(s)`);

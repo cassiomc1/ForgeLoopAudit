@@ -23,6 +23,11 @@ describe('ForgeLoop conformance fixtures', () => {
       const artifacts = reader.readTaskSummaryArtifacts(taskKey);
       expect(reader.getArtifactErrors(taskKey), name).toEqual([]);
       expect(artifacts['work-state.json']).toBeDefined();
+      for (const artifactName of ['task.json', 'work-state.json']) {
+        expect(artifacts[artifactName]).toMatchObject({ protocolVersion: 1, schemaVersion: 1 });
+      }
+      if (artifacts['contract.json']) expect(artifacts['contract.json']).toMatchObject({ protocolVersion: 1, schemaVersion: 1 });
+      expect(artifacts['work-state.json']).toMatchObject({ phase: metadata.expectedPhase });
       expect(metadata.expectedPhase).toMatch(/^[A-Z_]+$/);
       expect(metadata.expectedStudioHealth).toBe('VALID');
     }

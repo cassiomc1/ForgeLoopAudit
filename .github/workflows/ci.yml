@@ -23,12 +23,16 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run test:coverage
+      - run: npm run verify:critical-coverage
+      - run: npm run verify:performance
       - run: npm run protocol:schemas:verify
       - run: npm run docs:check
       - run: npm run build
       - run: if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then xvfb-run -a npm run test:electron-smoke; else npm run test:electron-smoke; fi
         shell: bash
+      - run: if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then xvfb-run -a npm run test:e2e -- --grep-invert "deterministic primary shell"; else npm run test:e2e -- --grep-invert "deterministic primary shell"; fi
+        shell: bash
       - run: if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then xvfb-run -a npm run test:packaged-smoke; else npm run test:packaged-smoke; fi
         shell: bash
-      - run: if [ "${{ matrix.os }}" = "macos-latest" ]; then npm run verify:electron-fuses -- dist-electron; else echo "Fuse binary verification is executed on macOS packaging"; fi
+      - run: npm run verify:electron-fuses -- dist-electron
         shell: bash

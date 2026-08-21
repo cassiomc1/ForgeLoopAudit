@@ -39,11 +39,12 @@ const checksums = distributables.map((name) => {
 }).join('\n') + '\n';
 writeFileSync(join(stageDir, checksumName), checksums);
 
+for (const name of distributables) {
+  execFileSync(process.execPath, [join(dirname(new URL(import.meta.url).pathname), 'generate-release-evidence.mjs'), platform, join(stageDir, stagedNames.get(name)), stageDir], { stdio: 'inherit' });
+}
+
 writeFileSync(join(stageDir, `RELEASE-METADATA-${platform}.json`), `${JSON.stringify({
   platform,
   windowsSigning: platform === 'windows' ? 'unsigned-preview' : 'not-applicable',
-  publicAssets: [...stagedNames.values(), checksumName],
+  publicAssets: [...stagedNames.values(), checksumName, ...distributables.map((name) => `RELEASE-EVIDENCE-${stagedNames.get(name)}.json`)],
 }, null, 2)}\n`);
-if (existsSync('package.json')) {
-  execFileSync(process.execPath, [join(dirname(new URL(import.meta.url).pathname), 'generate-release-evidence.mjs'), platform, join(stageDir, stagedNames.get(distributables[0])), stageDir], { stdio: 'inherit' });
-}

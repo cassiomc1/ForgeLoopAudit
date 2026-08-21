@@ -1,4 +1,5 @@
 forceCodeSigning: false
+afterPack: scripts/after-pack-fuses.mjs
 appId: com.forgeloop.studio
 productName: ForgeLoop Studio
 directories:

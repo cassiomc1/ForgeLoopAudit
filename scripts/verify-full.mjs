@@ -8,6 +8,8 @@ const gates = [
   ['lint', 'npm', ['run', 'lint']],
   ['tests', 'npm', ['test']],
   ['coverage', 'npm', ['run', 'test:coverage']],
+  ['critical-coverage', 'npm', ['run', 'verify:critical-coverage']],
+  ['performance-budget', 'npm', ['run', 'verify:performance']],
   ['build', 'npm', ['run', 'build']],
   ['package-contract', 'node', ['scripts/verify-package-contents.mjs', 'dist']],
 ];

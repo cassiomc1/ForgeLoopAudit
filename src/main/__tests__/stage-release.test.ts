@@ -27,6 +27,8 @@ describe('stage-release', () => {
         'ForgeLoop.Studio.Portable.exe',
         'ForgeLoop.Studio.Setup.exe',
         'SHA256SUMS-windows',
+        'RELEASE-EVIDENCE-ForgeLoop.Studio.Portable.exe.json',
+        'RELEASE-EVIDENCE-ForgeLoop.Studio.Setup.exe.json',
       ]);
     } finally {
       rmSync(root, { recursive: true, force: true });
