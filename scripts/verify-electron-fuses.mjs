@@ -14,7 +14,7 @@ function packagedApps(dir) {
       continue;
     }
     if (entry.isFile() && entry.name === 'ForgeLoop Studio.exe') results.push({ path: dir, platform: 'Windows' });
-    if (entry.isFile() && entry.name === 'forgeloop-studio' && dir.endsWith('linux-unpacked')) results.push({ path: dir, platform: 'Linux' });
+    if (entry.isFile() && entry.name === 'forgeloop-studio' && dir.endsWith('linux-unpacked')) results.push({ path, platform: 'Linux' });
     if (entry.isDirectory()) results.push(...packagedApps(path));
   }
   return results;
