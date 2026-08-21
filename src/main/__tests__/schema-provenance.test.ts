@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { loadSchemaProvenance } from '@main/core/protocol/schema-provenance';
 
 const manifestPath = 'schemas/provenance.json';
 
@@ -23,5 +24,11 @@ describe('trusted schema provenance', () => {
       expect(actual, name).toBe(entry.sha256);
       expect(entry.upstreamPath).toBe(`schemas/${name}`);
     }
+  });
+
+  it('loads the committed manifest as an app-owned protocol contract', () => {
+    const manifest = loadSchemaProvenance('schemas');
+    expect(manifest.forgeLoopPackageVersion).toBe('1.3.0');
+    expect(Object.keys(manifest.schemas)).toHaveLength(17);
   });
 });
