@@ -34,8 +34,8 @@
     "package:win": "npm run build && electron-builder --win",
     "package:linux": "npm run build && electron-builder --linux",
     "verify": "npm run typecheck && npm run lint && npm test && npm run build",
-    "package:dir": "npm run build && electron-builder --dir && node scripts/apply-electron-fuses.mjs dist-electron",
-    "test:packaged-smoke": "npm run package:dir && node scripts/packaged-smoke.mjs",
+    "package:dir": "npm run build && electron-builder --dir",
+    "test:packaged-smoke": "npm run package:dir && node scripts/packaged-smoke.mjs && node scripts/apply-electron-fuses.mjs dist-electron",
     "test:electron-smoke": "npm run build && playwright test tests/e2e/electron-smoke.spec.ts"
   },
   "keywords": [

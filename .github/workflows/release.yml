@@ -25,9 +25,11 @@ jobs:
       - run: npm run audit:prod
       - run: npm run verify
       - name: Build unsigned macOS preview app
-        run: npm run build && npx --no-install electron-builder --mac --dir --config electron-builder.release.yml --publish never && node scripts/apply-electron-fuses.mjs dist-electron
+        run: npm run build && npx --no-install electron-builder --mac --dir --config electron-builder.release.yml --publish never
       - name: Smoke macOS packaged app
         run: node scripts/packaged-smoke.mjs
+      - name: Apply and verify macOS Electron fuses
+        run: node scripts/apply-electron-fuses.mjs dist-electron && npm run verify:electron-fuses -- dist-electron
       - name: Verify unsigned macOS packaged app
         run: |
           set -euo pipefail
