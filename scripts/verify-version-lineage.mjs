@@ -21,7 +21,7 @@ const tagRef = `refs/tags/v${version}`;
 
 let listing;
 try {
-  listing = execFileSync('git', ['ls-remote', '--tags', remote], { cwd, encoding: 'utf8' });
+  listing = execFileSync('git', ['ls-remote', '--tags', remote, tagRef, `${tagRef}^{}`], { cwd, encoding: 'utf8' });
 } catch (error) {
   throw new Error(`Version lineage cannot proceed: cannot query tags on remote "${remote}": ${error.stderr ?? error.message}`);
 }
