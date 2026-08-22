@@ -4,6 +4,14 @@
 
 ForgeLoop Studio is a local-first desktop companion for ForgeLoop. Open a ForgeLoop-enabled project and visualize tasks, lifecycle phases, contracts, routing, gates, checks, evidence, recovery cycles, continuity, policy state and completion health in real time.
 
+## Screenshots
+
+| | |
+|---|---|
+| ![Screenshot 1](screen/screenshot.png) | ![Screenshot 2](screen/screenshot%20(1).png) |
+| ![Screenshot 3](screen/screenshot%20(2).png) | ![Screenshot 4](screen/screenshot%20(3).png) |
+| ![Screenshot 5](screen/screenshot%20(4).png) | |
+
 ## Status
 
 Release candidate — the read-only Studio runtime, trusted protocol validation, functional fixture E2E and multi-platform release staging are implemented. The current development target is `v0.1.0-rc.5`; RC3 remains immutable at its tagged commit and represents the earlier release configuration without pre-publication semantic evidence validation. Semantic release-evidence hardening is first included in RC4.
