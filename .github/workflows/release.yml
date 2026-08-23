@@ -50,7 +50,7 @@ jobs:
       - name: Verify macOS release matrix
         run: node scripts/assert-release-matrix.mjs macos
       - run: node scripts/stage-release.mjs macos
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: forgeloop-studio-macos
           path: release-staging/macos/*
@@ -81,7 +81,7 @@ jobs:
       - name: Verify Windows release matrix
         run: node scripts/assert-release-matrix.mjs windows
       - run: node scripts/stage-release.mjs windows
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: forgeloop-studio-windows
           path: release-staging/windows/*
@@ -112,7 +112,7 @@ jobs:
       - name: Verify Linux release matrix
         run: node scripts/assert-release-matrix.mjs linux
       - run: node scripts/stage-release.mjs linux
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: forgeloop-studio-linux
           path: release-staging/linux/*
@@ -138,7 +138,7 @@ jobs:
         run: node scripts/normalize-release-sbom.mjs release-assets/SBOM-cyclonedx.json
       - name: Verify staged checksums
         run: node scripts/verify-release-assets.mjs release-assets
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: forgeloop-studio-assembled
           path: release-assets/*
