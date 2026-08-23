@@ -64,7 +64,7 @@ describe('core/integration/task-projection', () => {
 // Snapshot-level authority: project/tasks drives semantic task existence in
 // INTEGRATION_V1 mode.
 import { beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync } from 'fs';
+import { mkdtempSync, mkdirSync, rmSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { PathBoundary } from '@main/security/path-boundary';
