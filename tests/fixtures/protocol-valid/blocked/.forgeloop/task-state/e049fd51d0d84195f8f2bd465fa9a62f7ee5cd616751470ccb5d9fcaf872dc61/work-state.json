@@ -5,14 +5,26 @@
   "contractFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   "repositoryFingerprint": {
     "branch": "main",
-    "head": "fixture"
+    "head": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
   },
   "phase": "BLOCKED",
   "selectedGuides": [],
+  "requiredGates": [],
+  "satisfiedGates": [],
+  "complianceMode": "standard",
   "completedSteps": [],
   "pendingSteps": [],
   "checks": [],
   "failures": [],
-  "blockers": [],
-  "lastUpdated": "2026-01-01T00:00:00.000Z"
+  "blockers": [
+    {
+      "id": "fixture-blocker",
+      "reason": "FIXTURE_BLOCKED",
+      "detail": "Intentional blocked scenario."
+    }
+  ],
+  "verificationEvidence": [],
+  "evidenceCoverage": [],
+  "lastUpdated": "2026-01-01T00:00:00.000Z",
+  "previousPhase": "EXECUTING"
 }
