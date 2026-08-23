@@ -13,6 +13,7 @@ import '@xyflow/react/dist/style.css';
 import type { ProjectSnapshot, TaskSummary, ForgeLoopPhase } from '@shared/domain';
 import { PHASE_ORDER } from '@shared/domain';
 import { FlowNode } from '../components/flow/FlowNode';
+import { OwnershipBadge } from '../components/task/OwnershipBadge';
 import { InspectorPanel } from '../components/inspectors/InspectorPanel';
 
 interface FlowProps {
@@ -160,6 +161,12 @@ export function Flow({ snapshot, selectedTaskId, onSelectedTaskChange }: FlowPro
             <p className="text-sm text-forge-text-muted mt-1">ForgeLoop protocol lifecycle visualization</p>
           </div>
           <div className="flex items-center gap-2">
+            {selectedTask && (
+              <div className="flex items-center gap-2 mr-2">
+                <span className="text-xs text-forge-text-muted">Ownership:</span>
+                <OwnershipBadge state={selectedTask.operationalState} />
+              </div>
+            )}
             <select
               className="input w-48"
               value={selectedTask?.taskId || ''}

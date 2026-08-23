@@ -2,6 +2,7 @@ import type { TaskSummary, ForgeLoopPhase } from '@shared/domain';
 import { cn } from '../../lib/utils';
 import { classifyDemoScenario } from '../../lib/demo-scenarios';
 import { DemoScenarioBadge } from '../demo/DemoScenarioBadge';
+import { OwnershipBadge } from '../task/OwnershipBadge';
 import { ChevronRight, AlertTriangle } from 'lucide-react';
 
 interface TaskRowProps {
@@ -59,6 +60,8 @@ export function TaskRow({ task, isActive, isDemoProject, onClick }: TaskRowProps
         })}>
           {task.phase}
         </span>
+
+        <OwnershipBadge state={task.operationalState} />
 
         <DemoScenarioBadge match={demoScenario} />
 
