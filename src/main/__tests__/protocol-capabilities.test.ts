@@ -176,3 +176,34 @@ describe('core/protocol/protocol-capabilities', () => {
     });
   });
 });
+
+describe('compatibility version axes', () => {
+  it('evaluates the Integration API axis independently from the protocol axis', () => {
+    // protocol 1 + schema 1 are valid; a future Integration API v2 must fail
+    // as capability drift, not as an unsupported protocol version.
+    const result = negotiateCompatibilityMode({
+      protocolInfo: normalizeCanonicalProtocolInfo(validProtocolInfo()),
+      capabilities: validCapabilities({ integrationApiVersion: 2 }),
+    });
+    expect(result.mode).toBe('INCOMPATIBLE');
+    expect(result.reason).toBe('CAPABILITY_DRIFT');
+  });
+
+  it('evaluates the taskClaimRecovery feature axis independently', () => {
+    const result = negotiateCompatibilityMode({
+      protocolInfo: normalizeCanonicalProtocolInfo(validProtocolInfo()),
+      capabilities: validCapabilities({
+        features: {
+          taskClaimRecovery: {
+            version: 2,
+            durableRecoveryState: true,
+            explicitResume: true,
+            validatedClaimProjection: true,
+          },
+        },
+      }),
+    });
+    expect(result.mode).toBe('INCOMPATIBLE');
+    expect(result.reason).toBe('CAPABILITY_DRIFT');
+  });
+});
