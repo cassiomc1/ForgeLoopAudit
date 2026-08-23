@@ -26,14 +26,16 @@ function canonicalize(value: unknown): unknown {
 
 function createFixtureProject(): string {
   const root = mkdtempSync(join(tmpdir(), 'forgeloop-studio-e2e-'));
-  const taskDir = join(root, '.forgeloop', 'task-state', 'fixture-task');
+  // Canonical ForgeLoop layout: directory name must be sha256(taskId).
+  const fixtureKey = createHash('sha256').update('fixture-task').digest('hex');
+  const taskDir = join(root, '.forgeloop', 'task-state', fixtureKey);
   mkdirSync(taskDir, { recursive: true });
   writeFileSync(join(root, '.forgeloop', 'config.json'), JSON.stringify({ schemaVersion: 1, protocolVersion: 1, complianceMode: 'strict' }));
   writeFileSync(join(taskDir, 'task.json'), JSON.stringify({
     schemaVersion: 1,
     protocolVersion: 1,
     taskId: 'fixture-task',
-    taskKey: 'a'.repeat(64),
+    taskKey: fixtureKey,
     createdAt: '2026-08-20T00:00:00.000Z',
     updatedAt: '2026-08-20T00:00:00.000Z',
     writeClaims: [],
@@ -79,7 +81,7 @@ test('fixture project flows through the functional v0.1 renderer surfaces', asyn
   try {
     const window = await app.firstWindow();
     await expect(window.getByRole('heading', { name: 'Project Overview' })).toBeVisible();
-    await expect(window.getByText('fixture-task')).toBeVisible();
+    await expect(window.getByText('fixture-task').first()).toBeVisible();
     for (const page of [
       ['Tasks', 'Tasks'],
       ['Flow', 'Lifecycle Flow'],

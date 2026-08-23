@@ -15,8 +15,12 @@ export interface CanonicalProtocolInfo {
   packageVersion: string | null;
 }
 
+// Compatibility version axes are independent: never compare one axis
+// against another axis's constant.
 const SUPPORTED_PROTOCOL_VERSION = 1;
 const SUPPORTED_SCHEMA_VERSION = 1;
+const SUPPORTED_INTEGRATION_API_VERSION = 1;
+const SUPPORTED_TASK_CLAIM_RECOVERY_VERSION = 1;
 
 const REQUIRED_RESOURCES = Object.freeze([
   'protocol/info',
@@ -68,13 +72,13 @@ export interface CapabilityNegotiationResult {
 }
 
 function capabilitiesAreComplete(capabilities: ForgeLoopCapabilitiesSummary): boolean {
-  if (capabilities.integrationApiVersion !== SUPPORTED_PROTOCOL_VERSION) return false;
+  if (capabilities.integrationApiVersion !== SUPPORTED_INTEGRATION_API_VERSION) return false;
   if (capabilities.executorParity !== true) return false;
   const recovery = (capabilities.features as Record<string, unknown> | undefined)?.taskClaimRecovery as
     | Record<string, unknown>
     | undefined;
   if (!recovery) return false;
-  if (recovery.version !== SUPPORTED_PROTOCOL_VERSION) return false;
+  if (recovery.version !== SUPPORTED_TASK_CLAIM_RECOVERY_VERSION) return false;
   if (recovery.durableRecoveryState !== true) return false;
   if (recovery.explicitResume !== true) return false;
   if (recovery.validatedClaimProjection !== true) return false;

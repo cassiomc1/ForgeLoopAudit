@@ -41,7 +41,7 @@ ForgeLoop Studio is designed as a **read-only observer by default**. ForgeLoop r
 
 Studio consumes the bundled `@cassiomc1/forgeloop/integration` public subpath as its semantic boundary: canonical task discovery, canonical claim ownership (`claimState`, `mutationAllowed`, `ownershipValid`, historical vs effective write claims), durable recovery state and execution provenance. Direct `.forgeloop/` artifact reading remains available for detail views and diagnostics only — it never determines current ownership. The Studio never executes mutable ForgeLoop commands; recovery/resume actions are displayed as copy-only instructions.
 
-Compatibility modes: `INTEGRATION_V1` (full support), `ARTIFACT_ONLY` (visual reading with ownership unavailable), `LEGACY_CLI_READ_ONLY` (ForgeLoop <= 1.3), and `INCOMPATIBLE` (fail closed). See [docs/PROTOCOL_COMPATIBILITY.md](docs/PROTOCOL_COMPATIBILITY.md) for the full matrix.
+Compatibility modes: `INTEGRATION_V1` (full support), `ARTIFACT_ONLY` (visual reading with ownership unavailable; also the degraded mode for ForgeLoop <= 1.3 projects), and `INCOMPATIBLE` (fail closed). There is deliberately no inferred legacy mode — without an explicit project-level signal, downgrading a broken integration into "legacy" would mask regressions. See [docs/PROTOCOL_COMPATIBILITY.md](docs/PROTOCOL_COMPATIBILITY.md) for the full matrix.
 
 The visual direction is a premium, modern, minimal dark developer interface focused on clarity rather than decorative effects.
 

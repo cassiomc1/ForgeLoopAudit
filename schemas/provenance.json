@@ -1,8 +1,8 @@
 {
   "forgeLoopPackageVersion": "1.5.0",
-  "forgeLoopGitCommit": "6a6843041ccbdf85794c01f4adfb3a2e07fa74ff",
+  "forgeLoopGitCommit": "e938fa68f96b1daa19df97fd5f4c9a77ea928e0a",
   "protocolVersion": 1,
-  "generatedAt": "2026-08-23T16:21:43.380Z",
+  "generatedAt": "2026-08-23T19:33:16.720Z",
   "schemas": {
     "activation.schema.json": {
       "sha256": "19c60c9b8dd99467d7b639031179f1df00971bc5a276bcb00a6b74e7f60f0f6f",
