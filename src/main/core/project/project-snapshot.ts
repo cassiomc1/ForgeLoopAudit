@@ -13,7 +13,7 @@ import type {
   ForgeLoopCompatibilityMode,
 } from '@shared/domain';
 import { ProjectReader } from './project-reader';
-import { ForgeCli } from '@main/core/cli/forge-cli';
+import { ForgeCli, type CliResult } from '@main/core/cli/forge-cli';
 import { buildTaskSummary } from '@main/core/tasks/task-reader';
 import { checkProtocolCompatibility } from '@main/core/protocol/compatibility';
 import { compareAuthoritativeFacts } from '@main/core/protocol/semantic-parity';
@@ -76,10 +76,12 @@ export class ProjectSnapshotBuilder {
         try {
           const artifacts = this.projectReader.readTaskSummaryArtifacts(taskKey);
           const taskId = String((artifacts['task.json'] as Record<string, unknown>)?.taskId || taskKey);
+          const cliUnavailable = { success: false } as CliResult<Record<string, unknown>>;
+          const wantsCanonicalOwnership = Boolean(this.integration && this.compatibilityContext?.compatibilityMode === 'INTEGRATION_V1');
           const [nextResult, statusResult, canonicalOwnership] = await Promise.all([
-            this.cliEnabled ? this.forgeCli.next(taskId) : Promise.resolve({ success: false } as const),
-            this.cliEnabled ? this.forgeCli.status(taskId) : Promise.resolve({ success: false } as const),
-            this.integration && this.compatibilityContext?.compatibilityMode === 'INTEGRATION_V1'
+            this.cliEnabled ? this.forgeCli.next(taskId) : Promise.resolve(cliUnavailable),
+            this.cliEnabled ? this.forgeCli.status(taskId) : Promise.resolve(cliUnavailable),
+            wantsCanonicalOwnership && this.integration
               ? this.integration.readTaskOwnership(this.pathBoundary.getProjectRoot(), taskId).catch(() => null)
               : Promise.resolve(null),
           ]);
