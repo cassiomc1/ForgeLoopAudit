@@ -28,12 +28,6 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with: { node-version: 22, cache: npm }
-      - name: "Check out pinned ForgeLoop source (file: dependency)"
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-        with:
-          repository: cassiomc1/ForgeLoop
-          ref: 6a6843041ccbdf85794c01f4adfb3a2e07fa74ff
-          path: ForgeLoop
       - run: npm ci
       - run: node scripts/verify-public-release.mjs "${{ github.repository_owner }}" "${{ github.event.repository.name }}" "${{ inputs.tag || github.event.release.tag_name }}"
         env:
