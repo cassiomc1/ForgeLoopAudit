@@ -1,6 +1,7 @@
 import { PathBoundary } from '@main/security/path-boundary';
 import { basename, join, resolve, sep } from 'path';
 import { lstatSync, readFileSync, realpathSync } from 'fs';
+import { ForgeLoopStudioError } from '@shared/errors';
 import type {
   ProjectSnapshot,
   ProjectSummary,
@@ -47,13 +48,57 @@ export class ProjectSnapshotBuilder {
 
   async build(): Promise<ProjectSnapshot> {
     const config = this.projectReader.readConfig();
-    const taskKeys = this.projectReader.listTaskKeys();
+    const fsTaskKeys = this.projectReader.listTaskKeys();
     const diagnostics: string[] = [];
+    const integrationMode = Boolean(this.integration && this.compatibilityContext?.compatibilityMode === 'INTEGRATION_V1');
 
     let canonicalDiscovery: CanonicalTaskDiscoveryResult | null = null;
-    if (this.integration && this.compatibilityContext?.compatibilityMode === 'INTEGRATION_V1') {
-      canonicalDiscovery = await discoverCanonicalTasks(this.integration, this.pathBoundary.getProjectRoot(), taskKeys);
+    if (this.integration && integrationMode) {
+      canonicalDiscovery = await discoverCanonicalTasks(this.integration, this.pathBoundary.getProjectRoot(), fsTaskKeys);
       diagnostics.push(...canonicalDiscovery.diagnostics);
+    }
+
+    // In INTEGRATION_V1 the canonical `project/tasks` resource drives semantic
+    // task existence. The filesystem only locates artifacts and produces
+    // diagnostics; extra namespaces are never promoted into tasks.
+    let workItems: Array<{ taskId: string | null; taskKey: string }>;
+    if (integrationMode) {
+      if (!canonicalDiscovery || canonicalDiscovery.source !== 'FORGELOOP_INTEGRATION') {
+        throw ForgeLoopStudioError.unknown(
+          'Canonical task discovery unavailable; refusing filesystem fallback in INTEGRATION_V1',
+          'project/tasks could not be read for this project',
+        );
+      }
+      const namespaceByTaskId = new Map<string, string>();
+      for (const key of fsTaskKeys) {
+        try {
+          const descriptor = this.projectReader.readTaskDescriptor(key);
+          if (typeof descriptor.taskId === 'string' && descriptor.taskId) {
+            namespaceByTaskId.set(descriptor.taskId, key);
+          } else {
+            diagnostics.push(`filesystem namespace ${key} has no readable taskId`);
+          }
+        } catch (error) {
+          diagnostics.push(`corrupt task namespace ${key}: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
+      workItems = [];
+      for (const canonical of canonicalDiscovery.tasks) {
+        const key = namespaceByTaskId.get(canonical.taskId);
+        if (!key) {
+          diagnostics.push(`canonical task ${canonical.taskId} has no readable filesystem namespace`);
+          continue;
+        }
+        workItems.push({ taskId: canonical.taskId, taskKey: key });
+      }
+      const canonicalIds = new Set(canonicalDiscovery.tasks.map((task) => task.taskId));
+      for (const [taskId, key] of namespaceByTaskId) {
+        if (!canonicalIds.has(taskId)) {
+          diagnostics.push(`filesystem namespace ${key} (${taskId}) is not a canonical task; not promoted`);
+        }
+      }
+    } else {
+      workItems = fsTaskKeys.map((taskKey) => ({ taskId: null as string | null, taskKey }));
     }
 
     const protocolSummary: ProtocolSummary = checkProtocolCompatibility({
@@ -77,16 +122,17 @@ export class ProjectSnapshotBuilder {
     let activeTaskId: string | undefined;
     const authoritativeStatuses: string[] = [];
 
-    for (let offset = 0; offset < taskKeys.length; offset += 4) {
-      const batch = await Promise.all(taskKeys.slice(offset, offset + 4).map(async (taskKey) => {
+    for (let offset = 0; offset < workItems.length; offset += 4) {
+      const batch = await Promise.all(workItems.slice(offset, offset + 4).map(async (item) => {
+        const taskKey = item.taskKey;
         try {
-          const artifacts = this.projectReader.readTaskSummaryArtifacts(taskKey);
-          const taskId = String((artifacts['task.json'] as Record<string, unknown>)?.taskId || taskKey);
-          if (this.integration && this.compatibilityContext?.compatibilityMode === 'INTEGRATION_V1') {
+          if (item.taskId !== null && integrationMode && this.integration) {
             // Canonical path: the shared read service owns all semantic facts.
-            const read = await this.canonicalTasks().readTask(taskId, taskKey);
+            const read = await this.canonicalTasks().readTask(item.taskId, taskKey);
             return { taskSummary: read.summary, status: extractHealthStatus(read.status) };
           }
+          const artifacts = this.projectReader.readTaskSummaryArtifacts(taskKey);
+          const taskId = String((artifacts['task.json'] as Record<string, unknown>)?.taskId || taskKey);
           const cliUnavailable = { success: false } as CliResult<Record<string, unknown>>;
           const nextResult = this.cliEnabled ? await this.legacyCli.next(taskId) : cliUnavailable;
           const statusResult = this.cliEnabled ? await this.legacyCli.status(taskId) : cliUnavailable;
@@ -116,15 +162,6 @@ export class ProjectSnapshotBuilder {
     }
 
     activeTaskId = selectActiveTaskId(tasks);
-
-    if (canonicalDiscovery && canonicalDiscovery.source === 'FORGELOOP_INTEGRATION') {
-      const builtTaskIds = new Set(tasks.map((task) => task.taskId));
-      for (const canonical of canonicalDiscovery.tasks) {
-        if (!builtTaskIds.has(canonical.taskId)) {
-          diagnostics.push(`canonical task ${canonical.taskId} has no readable filesystem namespace`);
-        }
-      }
-    }
 
     const policy = await this.buildPolicy();
     const health = this.buildHealth(protocolSummary, authoritativeStatuses);
