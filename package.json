@@ -98,7 +98,7 @@
     "typescript-eslint": "^8.67.0",
     "vite": "^5.4.8",
     "vitest": "^2.1.2",
-    "wait-on": "^8.0.1"
+    "wait-on": "^9.1.0"
   },
   "build": {
     "afterPack": "scripts/after-pack-fuses.mjs",
