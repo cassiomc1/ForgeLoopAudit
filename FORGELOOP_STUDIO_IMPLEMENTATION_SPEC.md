@@ -52,6 +52,18 @@ ForgeLoop Studio
 
 The UI must represent actual ForgeLoop protocol concepts and artifacts. It must not invent hidden lifecycle states, undocumented completion rules, synthetic evidence, or alternative transitions.
 
+### 2.1a ForgeLoop 1.5 Integration boundary (RC6+)
+
+Semantic facts come exclusively from the bundled `@cassiomc1/forgeloop/integration` public subpath (Integration API v1, protocol v1, schema v1):
+
+- `protocol/info` — compatibility via `compatibility.schemaVersion` (there is no top-level `schemaVersion`);
+- `project/tasks` — canonical task discovery with filesystem parity diagnostics;
+- `task/ownership` — canonical claim ownership (`claimState`, `mutationAllowed`, `ownershipValid`, `historicalWriteClaims`, `effectiveWriteClaims`, `reasonCodes`);
+- `task/status`, `task/contract`, `task/continuity` — canonical per-task reads;
+- read commands (`next`, `progress`, `audit`, `report`, `policy-status`, `validate-state`, `validate-receipt`) run through a Studio allowlist guard that refuses any invocation whose classification is not strictly `READ_ONLY`, `mutatesProtocol === false` and `executesExternalProcess === false`.
+
+Compatibility modes: `INTEGRATION_V1`, `ARTIFACT_ONLY`, `INCOMPATIBLE`. Capability drift fails closed. In `INTEGRATION_V1`, `project/tasks` drives semantic task existence, policy status runs through the Integration API, snapshot and GET_TASK share one canonical task read service, and the execution provenance reader enforces realpath/symlink boundaries on both the executions directory and each file. A legacy CLI mode is intentionally absent from the public mode set: no artifact-level signal reliably identifies pre-1.5 projects, so the Studio never infers legacy semantics. Operational state is derived from canonical ownership (`ACTIVE`, `RECOVERY_RESUME_REQUIRED`, `COMPLETED_RELEASED`, `BLOCKED`, `OWNERSHIP_INCONSISTENT`, `READ_ONLY_UNKNOWN`) — phase alone never proves claim release. The legacy external CLI remains an isolated read-only compatibility adapter for pre-1.5 projects; the normal `INTEGRATION_V1` snapshot never spawns it.
+
 ### 2.2 Read-only by default
 
 Version 1 must not mutate target project protocol state.
@@ -2023,7 +2035,7 @@ Recommended implementation sequence:
 ## Phase B — ForgeLoop core adapter
 
 1. protocol detector;
-2. `protocol-info` bridge;
+2. `protocol-info` bridge via the ForgeLoop Integration API;
 3. task index;
 4. artifact registry;
 5. JSON validation;

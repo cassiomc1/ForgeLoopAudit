@@ -43,6 +43,7 @@ const SCHEMA_BY_FILE: Record<string, string> = {
   'preflight.json': ARTIFACT_SCHEMAS['preflight.json'],
   'work-state.json': ARTIFACT_SCHEMAS['work-state.json'],
   'continuity.json': ARTIFACT_SCHEMAS['continuity.json'],
+  'recovery.json': ARTIFACT_SCHEMAS['recovery.json'],
   'execution-receipt.json': ARTIFACT_SCHEMAS['execution-receipt.json'],
   'session.json': ARTIFACT_SCHEMAS['session.json'],
   'policy-snapshot.json': ARTIFACT_SCHEMAS['policy-snapshot.json'],
@@ -59,6 +60,7 @@ const TASK_JSON_ARTIFACTS = new Set([
   'preflight.json',
   'work-state.json',
   'continuity.json',
+  'recovery.json',
   'execution-receipt.json',
   'policy-snapshot.json',
 ]);
@@ -105,6 +107,7 @@ export class ProjectDetector {
       schemaVersion: config.schemaVersion,
       compatible: protocolResult.compatible,
       warnings,
+      projectKind: 'PROJECT',
     };
   }
 }

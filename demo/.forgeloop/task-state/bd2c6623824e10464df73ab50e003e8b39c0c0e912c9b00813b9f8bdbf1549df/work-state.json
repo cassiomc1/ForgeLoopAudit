@@ -11,7 +11,7 @@
   "phase": "EXECUTING",
   "selectedGuides": [
     "security",
-    "testing"
+    "test"
   ],
   "requiredGates": [
     "integration-tests",
@@ -31,30 +31,70 @@
   ],
   "checks": [
     {
+      "schemaVersion": 1,
+      "protocolVersion": 1,
       "id": "checkout-integration-tests",
+      "kind": "command",
       "requirement": "Checkout integration tests pass",
       "status": "passed",
       "evidenceKind": "OBSERVED",
-      "timestamp": "2026-08-05T09:10:00.000Z"
+      "source": "vitest run",
+      "exitCode": 0,
+      "timestamp": "2026-08-05T09:10:00.000Z",
+      "executionRef": "executions/exec-checkout-integration-tests.json",
+      "provenance": "FORGELOOP_EXECUTED"
     },
     {
+      "schemaVersion": 1,
+      "protocolVersion": 1,
       "id": "retry-policy-tests",
+      "kind": "command",
       "requirement": "Retry policy handles transient failures",
       "status": "not-run",
       "evidenceKind": "NOT_VERIFIED",
+      "source": "planned",
       "timestamp": "2026-08-05T09:12:00.000Z"
     }
   ],
   "failures": [],
   "blockers": [],
+  "verificationEvidence": [],
   "evidenceCoverage": [
     {
+      "schemaVersion": 1,
+      "protocolVersion": 1,
+      "requirement": "Orders submit through the client",
+      "requiredEvidence": [
+        "Orders submit through the client"
+      ],
+      "observedEvidence": [
+        "Orders submit through the client"
+      ],
       "status": "COVERED"
     },
     {
+      "schemaVersion": 1,
+      "protocolVersion": 1,
+      "requirement": "Transient errors retry with backoff",
+      "requiredEvidence": [
+        "Transient errors retry with backoff"
+      ],
+      "observedEvidence": [],
       "status": "NOT_VERIFIED"
     },
     {
+      "schemaVersion": 1,
+      "protocolVersion": 1,
+      "requirement": "Checkout integration tests pass (6 cases)",
+      "requiredEvidence": [
+        "Checkout integration tests pass (6 cases)"
+      ],
+      "observedEvidence": [
+        "Checkout integration tests pass (6 cases)"
+      ],
+      "details": {
+        "readinessStatus": "PARTIAL"
+      },
       "status": "PARTIAL"
     }
   ],

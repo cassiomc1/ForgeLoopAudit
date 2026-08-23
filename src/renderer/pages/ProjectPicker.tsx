@@ -37,7 +37,11 @@ export function ProjectPicker({ onOpenProject, onOpenDemoProject, onOpenRecentPr
   };
 
   return (
-    <div className="flex h-screen w-full forge-background">
+    <div className="flex h-screen w-full flex-col forge-background">
+      <div
+        className="app-drag-region h-12 shrink-0 border-b forge-border-subtle forge-primary-surface"
+        onDoubleClick={() => void window.forgeLoopStudio?.toggleMaximizeWindow?.().catch(() => undefined)}
+      />
       <div className="flex-1 flex flex-col items-center justify-center px-8">
         <div className="w-full max-w-2xl animate-fade-in">
           <div className="text-center mb-12">
@@ -74,6 +78,13 @@ export function ProjectPicker({ onOpenProject, onOpenDemoProject, onOpenRecentPr
               <FlaskConical className="w-5 h-5" />
               <span>Open Demo Project</span>
             </button>
+            <p className="text-center text-xs text-forge-text-muted mt-3">
+              Scenario-rich ForgeShop fixture with intentional complete, active, blocked, and planned tasks.
+              Includes intentional COMPLETE, VERIFYING, EXECUTING, BLOCKED, and PLANNED scenarios.
+            </p>
+            <p className="text-center text-xs text-forge-text-muted mt-1">
+              Use it to explore verification, recovery, continuity, evidence, and policy behavior.
+            </p>
             <p className="text-center text-xs text-forge-text-muted mt-3">
               Select a directory containing a <code className="font-mono text-forge-text-secondary">.forgeloop</code> folder
             </p>

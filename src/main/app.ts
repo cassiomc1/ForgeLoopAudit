@@ -16,8 +16,12 @@ function createWindow(): BrowserWindow {
     height: 900,
     minWidth: 1000,
     minHeight: 700,
-    titleBarStyle: 'hidden',
-    trafficLightPosition: { x: 16, y: 16 },
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
+    trafficLightPosition: { x: 14, y: 17 },
+    titleBarOverlay:
+      process.platform === 'darwin'
+        ? false
+        : { color: '#0D0D10', symbolColor: '#A1A1AA', height: 48 },
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -34,9 +38,17 @@ function createWindow(): BrowserWindow {
     window.show();
     const smokeFile = process.env.FORGELOOP_STUDIO_SMOKE_FILE;
     if (smokeFile) {
-      void window.webContents.executeJavaScript('typeof window.forgeLoopStudio').then((bridgeType) => {
-        writeFileSync(smokeFile, JSON.stringify({ title: window.getTitle(), bridgeType }));
-      });
+      void (async () => {
+        let forgeLoopPackageVersion: string | null = null;
+        try {
+          const { createForgeLoopIntegration } = await import('./core/integration/forgeloop-integration');
+          forgeLoopPackageVersion = (await createForgeLoopIntegration()).getPackageVersion();
+        } catch (error) {
+          console.error('Bundled ForgeLoop Integration API unavailable:', error);
+        }
+        const bridgeType = await window.webContents.executeJavaScript('typeof window.forgeLoopStudio');
+        writeFileSync(smokeFile, JSON.stringify({ title: window.getTitle(), bridgeType, forgeLoopPackageVersion }));
+      })();
     }
     if (isDevelopment) {
       window.webContents.openDevTools({ mode: 'detach' });

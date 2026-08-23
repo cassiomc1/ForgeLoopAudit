@@ -1,14 +1,21 @@
 import type { TaskSummary, ForgeLoopPhase } from '@shared/domain';
 import { cn } from '../../lib/utils';
+import { classifyDemoScenario } from '../../lib/demo-scenarios';
+import { DemoScenarioBadge } from '../demo/DemoScenarioBadge';
+import { OwnershipBadge } from '../task/OwnershipBadge';
 import { ChevronRight, AlertTriangle } from 'lucide-react';
 
 interface TaskRowProps {
   task: TaskSummary;
   isActive?: boolean;
+  isDemoProject?: boolean;
   onClick?: () => void;
 }
 
-export function TaskRow({ task, isActive, onClick }: TaskRowProps) {
+export function TaskRow({ task, isActive, isDemoProject, onClick }: TaskRowProps) {
+  const demoScenario = isDemoProject
+    ? classifyDemoScenario(task)
+    : ({ kind: 'unknown' } as const);
   const getPhaseIcon = (phase: ForgeLoopPhase) => {
     switch (phase) {
       case 'COMPLETE':
@@ -53,6 +60,10 @@ export function TaskRow({ task, isActive, onClick }: TaskRowProps) {
         })}>
           {task.phase}
         </span>
+
+        <OwnershipBadge state={task.operationalState} />
+
+        <DemoScenarioBadge match={demoScenario} />
 
         {task.evidenceCoverage && (
           <span title="Studio Coverage Score" aria-label="Studio Coverage Score" className="text-xs text-forge-text-muted font-mono w-10 text-right">

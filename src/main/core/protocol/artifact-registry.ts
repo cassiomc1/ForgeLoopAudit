@@ -13,6 +13,8 @@ export type ArtifactName =
   | 'preflight.json'
   | 'work-state.json'
   | 'continuity.json'
+  | 'recovery.json'
+  | 'execution.json'
   | 'execution-receipt.json'
   | 'session.json'
   | 'gate.json'

@@ -1,14 +1,20 @@
 import { app, ipcMain, dialog, BrowserWindow } from 'electron';
 import { PathBoundary } from '@main/security/path-boundary';
 import { ForgeLoopStudioError } from '@shared/errors';
-import type { ProjectDetectionResult, RecentProject, StudioError } from '@shared/domain';
+import type { ProjectDetectionResult, ProjectKind, RecentProject, StudioError, ForgeLoopCompatibilityMode } from '@shared/domain';
+import { resolveRecentProjectKind } from './project-kind';
 import { IPC_CHANNELS } from '@shared/ipc';
 import { createProjectSnapshotBuilder, normalizePolicyStatus, type ProjectSnapshotBuilder, type ProjectCompatibilityContext } from '@main/core/project/project-snapshot';
 import { createProjectDetector, createProjectReader, type ProjectReader } from '@main/core/project/project-reader';
 import { ForgeCli } from '@main/core/cli/forge-cli';
 import { createProjectWatcher } from '@main/watcher/project-watcher';
+import { createExecutionReader, type ExecutionReader } from '@main/core/executions/execution-reader';
 import { createTaskIndexer, createTaskSnapshotBuilder, createGateReader, type TaskIndexer, type TaskSnapshotBuilder } from '@main/core/tasks/task-index';
 import { createEventLedgerReader, type EventLedgerReader } from '@main/core/events/ledger-reader';
+import { createForgeLoopIntegration, type ForgeLoopIntegrationAdapter } from '@main/core/integration/forgeloop-integration';
+import { normalizeCanonicalProtocolInfo, negotiateCompatibilityMode } from '@main/core/protocol/protocol-capabilities';
+import { runStudioReadCommand } from '@main/core/integration/studio-read-commands';
+import { createCanonicalTaskReadService, type CanonicalTaskReadService } from '@main/core/tasks/canonical-task-read-service';
 import Store from 'electron-store';
 import { z } from 'zod';
 import { basename } from 'path';
@@ -28,7 +34,11 @@ let currentProjectReader: ProjectReader | null = null;
 let currentTaskIndexer: TaskIndexer | null = null;
 let currentTaskSnapshotBuilder: TaskSnapshotBuilder | null = null;
 let currentEventReader: EventLedgerReader | null = null;
+let currentExecutionReader: ExecutionReader | null = null;
+let currentCanonicalTaskService: CanonicalTaskReadService | null = null;
 let currentForgeCli: ForgeCli | null = null;
+let currentIntegration: ForgeLoopIntegrationAdapter | null = null;
+let currentCompatibilityMode: string | null = null;
 let currentWatcher: ReturnType<typeof createProjectWatcher> | null = null;
 let currentSnapshotBuilder: ProjectSnapshotBuilder | null = null;
 let currentMainWindow: BrowserWindow | null = null;
@@ -37,8 +47,9 @@ let snapshotGeneration = 0;
 const TaskIdSchema = z.string().min(1).max(200);
 const ProjectPathSchema = z.string().min(1).max(4096);
 const EventQuerySchema = z.object({ taskId: TaskIdSchema, cursor: z.string().max(256).optional(), limit: z.number().int().min(1).max(500).optional() });
-const RecentProjectSchema = z.object({ path: z.string().min(1).max(4096), name: z.string().max(300), lastOpenedAt: z.string().max(100) });
-const RawArtifactSchema = z.object({ taskId: TaskIdSchema, artifact: z.enum(['task.json', 'contract.json', 'routing-result.json', 'preflight.json', 'work-state.json', 'continuity.json', 'execution-receipt.json', 'policy-snapshot.json', 'events.ndjson']) });
+const RecentProjectSchema = z.object({ path: z.string().min(1).max(4096), name: z.string().max(300), lastOpenedAt: z.string().max(100), kind: z.enum(['PROJECT', 'DEMO']).optional() });
+const RawArtifactSchema = z.object({ taskId: TaskIdSchema, artifact: z.enum(['task.json', 'contract.json', 'routing-result.json', 'preflight.json', 'work-state.json', 'continuity.json', 'recovery.json', 'execution-receipt.json', 'policy-snapshot.json', 'events.ndjson']) });
+const ExecutionQuerySchema = z.object({ taskId: TaskIdSchema, limit: z.number().int().min(1).max(100).optional() });
 
 function assertTrustedSender(event: Electron.IpcMainInvokeEvent): void {
   if (!currentMainWindow || event.sender.id !== currentMainWindow.webContents.id) throw ForgeLoopStudioError.unknown('Untrusted IPC sender');
@@ -62,19 +73,20 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
     }
 
     const projectRoot = result.filePaths[0];
-    return openProject(projectRoot);
+    return openProject(projectRoot, 'PROJECT');
   });
 
   ipcMain.handle(IPC_CHANNELS.OPEN_RECENT_PROJECT, async (event, path: string): Promise<ProjectDetectionResult> => {
     assertTrustedSender(event); ProjectPathSchema.parse(path);
-    return openProject(path);
+    const kind = resolveRecentProjectKind(store.get('recentProjects'), path);
+    return openProject(path, kind);
   });
 
   ipcMain.handle(IPC_CHANNELS.OPEN_DEMO_PROJECT, async (event): Promise<ProjectDetectionResult> => {
     assertTrustedSender(event);
     const demoRoot = resolveBundledDemoPath({ isPackaged: app.isPackaged, appPath: app.getAppPath(), resourcesPath: process.resourcesPath });
     if (!demoRoot) throw ForgeLoopStudioError.projectNotForgeLoop('bundled demo');
-    return openProject(demoRoot);
+    return openProject(demoRoot, 'DEMO');
   });
 
   ipcMain.handle(IPC_CHANNELS.CLOSE_PROJECT, async (event): Promise<void> => {
@@ -103,8 +115,18 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
     }
 
     const artifacts = currentProjectReader!.readTaskSummaryArtifacts(task.taskKey);
-    const nextResult = await currentForgeCli!.next(taskId);
-    const { summary, events } = currentTaskSnapshotBuilder.buildSnapshot(task.taskKey, artifacts, nextResult.success ? nextResult.data : undefined);
+    // Same canonical projection the snapshot uses — detail views can never
+    // disagree with overview semantics.
+    const canonical = currentCanonicalTaskService
+      ? await currentCanonicalTaskService.readTask(task.taskId, task.taskKey)
+      : null;
+    const nextResult = canonical ? { success: true as const } : await readNextAction(taskId);
+    const { summary, events } = currentTaskSnapshotBuilder.buildSnapshot(
+      task.taskKey,
+      artifacts,
+      nextResult.success ? (nextResult as { data?: Record<string, unknown> }).data : undefined,
+      canonical?.summary,
+    );
 
     return {
       summary,
@@ -113,6 +135,7 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
       preflight: artifacts['preflight.json'],
       workState: artifacts['work-state.json'],
       continuity: artifacts['continuity.json'],
+      recovery: artifacts['recovery.json'],
       executionReceipt: artifacts['execution-receipt.json'],
       events,
       policySnapshot: artifacts['policy-snapshot.json'],
@@ -124,10 +147,22 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
     const safeTaskId = taskId === undefined ? undefined : TaskIdSchema.parse(taskId);
     if (!currentForgeCli || !currentProjectReader) throw ForgeLoopStudioError.unknown('No project open');
     if (isFixtureProjectMode()) return null;
-    const result = await currentForgeCli.policyStatus<Record<string, unknown>>(safeTaskId);
-    if (!result.success) return null;
+    let policyResult: { success: boolean; data?: Record<string, unknown> };
+    if (currentIntegration && currentCompatibilityMode === 'INTEGRATION_V1' && getCurrentProjectRoot()) {
+      const outcome = await runStudioReadCommand<Record<string, unknown>>(
+        currentIntegration,
+        getCurrentProjectRoot()!,
+        'policy-status',
+        safeTaskId ? { taskId: safeTaskId } : {},
+      );
+      policyResult = outcome.kind === 'DOMAIN_OUTCOME' ? { success: true, data: outcome.data ?? undefined } : { success: false };
+    } else {
+      const cliStatus = await currentForgeCli.policyStatus<Record<string, unknown>>(safeTaskId);
+      policyResult = cliStatus;
+    }
+    if (!policyResult.success) return null;
     const config = currentProjectReader.readConfig();
-    return normalizePolicyStatus(result.data, typeof config.complianceMode === 'string' ? config.complianceMode : 'Unknown', 'POLICY_STATUS');
+    return normalizePolicyStatus(policyResult.data, typeof config.complianceMode === 'string' ? config.complianceMode : 'Unknown', 'POLICY_STATUS');
   });
 
   ipcMain.handle(IPC_CHANNELS.GET_TASK_EVENTS, async (event, taskId: string, cursor?: string, limit?: number): Promise<any> => {
@@ -176,6 +211,19 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
     return typeof content === 'string' ? content : JSON.stringify(content, null, 2);
   });
 
+  ipcMain.handle(IPC_CHANNELS.GET_TASK_EXECUTIONS, async (event, taskId: string, limit?: number) => {
+    assertTrustedSender(event);
+    const query = ExecutionQuerySchema.parse({ taskId, limit });
+    if (!currentTaskIndexer || !currentExecutionReader) {
+      throw ForgeLoopStudioError.unknown('No project open');
+    }
+    const task = currentTaskIndexer.listTasks().find((t) => t.taskId === query.taskId || t.taskKey === query.taskId);
+    if (!task) {
+      throw ForgeLoopStudioError.artifactUnreadable(query.taskId, 'Task not found');
+    }
+    return currentExecutionReader.readExecutions(task.taskKey, { limit: query.limit });
+  });
+
   ipcMain.handle(IPC_CHANNELS.GET_RECENT_PROJECTS, async (event): Promise<RecentProject[]> => {
     assertTrustedSender(event);
     return store.get('recentProjects') || [];
@@ -209,7 +257,7 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
 
   ipcMain.handle(IPC_CHANNELS.GET_DIAGNOSTICS, async (event) => {
     assertTrustedSender(event);
-    return buildStudioDiagnostics({ studioVersion: app.getVersion(), forgeLoopCompatibilityMode: currentForgeCli ? 'CLI_ENHANCED' : 'ARTIFACT_ONLY' });
+    return buildStudioDiagnostics({ studioVersion: app.getVersion(), forgeLoopCompatibilityMode: (currentCompatibilityMode as ForgeLoopCompatibilityMode) ?? 'ARTIFACT_ONLY' });
   });
 
 }
@@ -218,7 +266,7 @@ export function updateProjectIpcWindow(mainWindow: BrowserWindow): void {
   currentMainWindow = mainWindow;
 }
 
-async function openProject(projectRoot: string): Promise<ProjectDetectionResult> {
+async function openProject(projectRoot: string, projectKind: ProjectKind = 'PROJECT'): Promise<ProjectDetectionResult> {
   closeProject();
 
   const pathBoundary = new PathBoundary(projectRoot);
@@ -242,35 +290,57 @@ async function openProject(projectRoot: string): Promise<ProjectDetectionResult>
   currentProjectReader = createProjectReader(pathBoundary, protocolSchemas);
   const fixtureCliDisabled = isFixtureProjectMode();
   currentForgeCli = new ForgeCli(projectRoot, fixtureCliDisabled ? '__fixture_cli_unavailable__' : 'forgeloop');
-  const protocolInfo = await currentForgeCli.protocolInfo<{ protocolVersion: number; schemaVersion: number; packageVersion?: string }>();
-  if (protocolInfo.success && protocolInfo.data) {
-    if (protocolInfo.data.protocolVersion !== detectionResult.protocolVersion || protocolInfo.data.schemaVersion !== detectionResult.schemaVersion) {
-      throw ForgeLoopStudioError.protocolUnsupported(protocolInfo.data.protocolVersion, projectRoot);
-    }
-    detectionResult.forgeLoopVersion = protocolInfo.data.packageVersion;
-    detectionResult.warnings = [...detectionResult.warnings, 'Compatibility verified by forgeloop protocol-info.'];
-  } else {
-    detectionResult.warnings = [...detectionResult.warnings, 'ForgeLoop CLI unavailable; compatibility is artifact-only.'];
+
+  const integration = await createForgeLoopIntegration();
+  let canonicalProtocolInfo: ReturnType<typeof normalizeCanonicalProtocolInfo> = null;
+  try {
+    canonicalProtocolInfo = normalizeCanonicalProtocolInfo(await integration.readProtocolInfo(projectRoot));
+  } catch {
+    canonicalProtocolInfo = null;
   }
+  const capabilities = integration.getCapabilities();
+  const negotiation = negotiateCompatibilityMode({ protocolInfo: canonicalProtocolInfo, capabilities });
+  if (negotiation.mode === 'INCOMPATIBLE') {
+    throw ForgeLoopStudioError.protocolUnsupported(
+      canonicalProtocolInfo?.protocolVersion ?? detectionResult.protocolVersion,
+      projectRoot,
+    );
+  }
+  currentIntegration = integration;
+  currentCompatibilityMode = negotiation.mode;
+  detectionResult.forgeLoopVersion = canonicalProtocolInfo?.packageVersion ?? detectionResult.forgeLoopVersion;
+  detectionResult.compatibilityMode = negotiation.mode;
+  detectionResult.warnings = [
+    ...detectionResult.warnings,
+    negotiation.mode === 'INTEGRATION_V1'
+      ? 'Compatibility negotiated through ForgeLoop Integration API v1.'
+      : `Degraded compatibility mode: ${negotiation.mode}${negotiation.reason ? ` (${negotiation.reason})` : ''}.`,
+  ];
 
   const taskEventReader = createEventLedgerReader(pathBoundary, protocolSchemas);
   const gateReader = createGateReader(pathBoundary, protocolSchemas);
   currentTaskIndexer = createTaskIndexer(pathBoundary, currentProjectReader);
   currentEventReader = taskEventReader;
+  currentExecutionReader = createExecutionReader(pathBoundary, protocolSchemas);
+  currentCanonicalTaskService = integration && negotiation.mode === 'INTEGRATION_V1'
+    ? createCanonicalTaskReadService({ projectRoot, projectReader: currentProjectReader!, integration })
+    : null;
   currentTaskSnapshotBuilder = createTaskSnapshotBuilder(pathBoundary, taskEventReader, gateReader);
 
   const compatibilityContext: ProjectCompatibilityContext = {
-    source: protocolInfo.success ? 'PROTOCOL_INFO' : 'ARTIFACT_ONLY',
-    protocolVersion: protocolInfo.data?.protocolVersion ?? detectionResult.protocolVersion,
-    schemaVersion: protocolInfo.data?.schemaVersion ?? detectionResult.schemaVersion,
-    packageVersion: protocolInfo.data?.packageVersion,
+    source: canonicalProtocolInfo ? 'PROTOCOL_INFO' : 'ARTIFACT_ONLY',
+    protocolVersion: canonicalProtocolInfo?.protocolVersion ?? detectionResult.protocolVersion,
+    schemaVersion: canonicalProtocolInfo?.schemaVersion ?? detectionResult.schemaVersion,
+    packageVersion: canonicalProtocolInfo?.packageVersion ?? undefined,
+    compatibilityMode: negotiation.mode,
   };
   currentSnapshotBuilder = createProjectSnapshotBuilder(
     pathBoundary,
     currentProjectReader,
     currentForgeCli,
     compatibilityContext,
-    !fixtureCliDisabled
+    !fixtureCliDisabled,
+    integration
   );
 
   currentWatcher = createProjectWatcher(
@@ -285,16 +355,32 @@ async function openProject(projectRoot: string): Promise<ProjectDetectionResult>
     path: projectRoot,
     name: basename(projectRoot) || 'Unknown',
     lastOpenedAt: new Date().toISOString(),
+    kind: projectKind,
   };
   store.set('recentProjects', [recentProject, ...(store.get('recentProjects') || []).filter((p) => p.path !== projectRoot)].slice(0, 10));
 
-  notifyUpdate({ type: 'project-opened', detection: detectionResult, snapshot: await currentSnapshotBuilder.build(), timestamp: new Date().toISOString() });
+  const classifiedDetection = classifyDetection(detectionResult, projectKind);
 
-  return detectionResult;
+  notifyUpdate({ type: 'project-opened', detection: classifiedDetection, snapshot: await currentSnapshotBuilder.build(), timestamp: new Date().toISOString() });
+
+  return classifiedDetection;
+}
+
+function classifyDetection(detectionResult: ProjectDetectionResult, projectKind: ProjectKind): ProjectDetectionResult {
+  return { ...detectionResult, projectKind };
 }
 
 function isFixtureProjectMode(): boolean {
   return resolveFixtureProjectMode(app.isPackaged, process.env);
+}
+
+async function readNextAction(taskId: string): Promise<{ success: boolean; data?: Record<string, unknown> }> {
+  if (currentIntegration && currentCompatibilityMode === 'INTEGRATION_V1' && getCurrentProjectRoot()) {
+    const outcome = await runStudioReadCommand<Record<string, unknown>>(currentIntegration, getCurrentProjectRoot()!, 'next', { taskId });
+    if (outcome.kind === 'DOMAIN_OUTCOME') return { success: true, data: outcome.data ?? undefined };
+    return { success: false };
+  }
+  return currentForgeCli ? currentForgeCli.next(taskId) : { success: false };
 }
 
 export async function openProjectForAutomation(projectRoot: string): Promise<ProjectDetectionResult> {
@@ -315,7 +401,11 @@ function closeProject(): void {
   currentTaskIndexer = null;
   currentTaskSnapshotBuilder = null;
   currentEventReader = null;
+  currentExecutionReader = null;
+  currentCanonicalTaskService = null;
   currentForgeCli = null;
+  currentIntegration = null;
+  currentCompatibilityMode = null;
   currentSnapshotBuilder = null;
 }
 
@@ -326,6 +416,11 @@ function handleWatcherEvent(event: any): void {
     data: event,
     timestamp: new Date().toISOString(),
   });
+
+  // Execution provenance is loaded lazily per task; a lightweight
+  // notification is enough. Only recovery/artifact changes rebuild the full
+  // snapshot, and the scheduled flag coalesces bursts into one rebuild.
+  if (event.type === 'execution-changed') return;
 
   if (currentSnapshotBuilder && !snapshotRefreshScheduled) {
     snapshotRefreshScheduled = true;

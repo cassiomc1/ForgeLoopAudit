@@ -8,6 +8,7 @@ import { Flow } from './pages/Flow';
 import { Contract } from './pages/Contract';
 import { Evidence } from './pages/Evidence';
 import { Events } from './pages/Events';
+import { Executions } from './pages/Executions';
 import { Continuity } from './pages/Continuity';
 import { Policy } from './pages/Policy';
 import { Settings } from './pages/Settings';
@@ -21,6 +22,7 @@ export const NAV_ITEMS = [
   { id: 'contract', label: 'Contract', icon: 'file-text' },
   { id: 'evidence', label: 'Evidence', icon: 'clipboard-check' },
   { id: 'events', label: 'Events', icon: 'history' },
+  { id: 'executions', label: 'Executions', icon: 'terminal' },
   { id: 'continuity', label: 'Continuity', icon: 'repeat' },
   { id: 'policy', label: 'Policy', icon: 'shield' },
   { id: 'settings', label: 'Settings', icon: 'settings' },
@@ -174,6 +176,8 @@ export function App() {
     );
   }
 
+  const isDemoProject = detectionResult.projectKind === 'DEMO';
+
   const renderPage = () => {
     if (!snapshot) {
       return <LoadingState />;
@@ -183,7 +187,7 @@ export function App() {
       case 'overview':
         return <Overview snapshot={snapshot} watcherStatus={watcherStatus} onTaskSelect={(taskId) => { setSelectedTaskId(taskId); setActiveNav('flow'); }} onViewAllTasks={() => setActiveNav('tasks')} />;
       case 'tasks':
-        return <Tasks snapshot={snapshot} onTaskSelect={(taskId) => { setSelectedTaskId(taskId); setActiveNav('flow'); }} />;
+        return <Tasks snapshot={snapshot} isDemoProject={isDemoProject} onTaskSelect={(taskId) => { setSelectedTaskId(taskId); setActiveNav('flow'); }} />;
       case 'flow':
         return <Flow snapshot={snapshot} selectedTaskId={selectedTaskId} onSelectedTaskChange={setSelectedTaskId} />;
       case 'contract':
@@ -192,6 +196,8 @@ export function App() {
         return <Evidence snapshot={snapshot} selectedTaskId={selectedTaskId} onSelectedTaskChange={setSelectedTaskId} />;
       case 'events':
         return <Events snapshot={snapshot} selectedTaskId={selectedTaskId} onSelectedTaskChange={setSelectedTaskId} />;
+      case 'executions':
+        return <Executions snapshot={snapshot} selectedTaskId={selectedTaskId} onSelectedTaskChange={setSelectedTaskId} />;
       case 'continuity':
         return <Continuity snapshot={snapshot} selectedTaskId={selectedTaskId} onSelectedTaskChange={setSelectedTaskId} />;
       case 'policy':
@@ -206,6 +212,7 @@ export function App() {
   return (
     <AppShell
       projectName={snapshot?.project.name || 'Project'}
+      isDemoProject={isDemoProject}
       branch={snapshot?.project.branch}
       head={snapshot?.project.head}
       protocolVersion={detectionResult.protocolVersion}

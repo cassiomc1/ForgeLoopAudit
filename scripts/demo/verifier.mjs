@@ -34,6 +34,7 @@ const SCHEMA_BY_FILE = {
   'preflight.json': 'preflight.json',
   'work-state.json': 'work-state.json',
   'continuity.json': 'continuity.json',
+  'recovery.json': 'recovery.json',
   'execution-receipt.json': 'execution-receipt.json',
   'session.json': 'session.json',
   'policy-snapshot.json': 'policy-snapshot.json',
@@ -131,6 +132,13 @@ export function verifyDemoProject(root) {
             assertSchemaValid('gate.json', value);
             represented.add('gate.json');
             for (const artifactRef of value.artifacts ?? []) pathReferences.push({ taskId: value.taskId, path: artifactRef.path });
+          }
+        }
+        if (entry.name === 'executions') {
+          for (const execFile of readdirSync(join(taskDir, 'executions')).filter((name) => /^exec-.*\.json$/.test(name))) {
+            const value = JSON.parse(readFileSync(join(taskDir, 'executions', execFile), 'utf8'));
+            assertSchemaValid('execution.json', value);
+            represented.add('execution.json');
           }
         }
         continue;
@@ -250,11 +258,79 @@ export function verifyDemoProject(root) {
       phases: [...phases].sort(),
       sessions: sessionFiles.length,
       checkedReferences: pathReferences.length,
+      taskIds: [...seenTaskIds.keys()].sort(),
       artifactCoverage: {
         represented: REGISTERED_ARTIFACT_TYPES.length - missingArtifactTypes.length,
         total: REGISTERED_ARTIFACT_TYPES.length,
         missing: missingArtifactTypes,
       },
     },
+  };
+}
+
+/**
+ * Expected canonical ownership per demo scenario (ForgeLoop 1.5). The
+ * recovered scenario stays mutation-blocked until a canonical resume.
+ */
+const EXPECTED_OWNERSHIP = {
+  'TASK-001': { phase: 'COMPLETE', claimState: 'RELEASED_BY_COMPLETION', mutationAllowed: false, ownershipValid: true, effectiveClaimsEmpty: true },
+  'TASK-002': { phase: 'VERIFYING', claimState: 'ACTIVE', mutationAllowed: true, ownershipValid: true },
+  'TASK-003': { phase: 'EXECUTING', claimState: 'ACTIVE', mutationAllowed: true, ownershipValid: true, effectiveClaimsPresent: true },
+  'TASK-004': { phase: 'BLOCKED', claimState: 'RELEASED_BY_RECOVERY', mutationAllowed: false, ownershipValid: true, effectiveClaimsEmpty: true, resumeRequired: true },
+  'TASK-005': { phase: 'PLANNED', claimState: 'ACTIVE', mutationAllowed: true, ownershipValid: true },
+  'TASK-006': { phase: 'COMPLETE', claimState: 'RELEASED_BY_COMPLETION', mutationAllowed: false, ownershipValid: true, effectiveClaimsEmpty: true },
+};
+
+/**
+ * Assert the demo's canonical ownership semantics through the bundled
+ * ForgeLoop Integration API. Raw artifacts alone are never authority; this
+ * check mirrors exactly what the Studio shows at runtime.
+ */
+export async function verifyCanonicalDemoSemantics(root) {
+  const errors = [];
+  const { readForgeLoopIntegrationResource } = await import('@cassiomc1/forgeloop/integration');
+  const list = await readForgeLoopIntegrationResource('project/tasks', { projectPath: root });
+  const canonicalById = new Map(list.data.tasks.map((task) => [task.taskId, task]));
+
+  for (const [taskId, expected] of Object.entries(EXPECTED_OWNERSHIP)) {
+    if (!canonicalById.has(taskId)) {
+      errors.push(`canonical discovery missing ${taskId}`);
+      continue;
+    }
+    let ownership;
+    try {
+      ownership = (await readForgeLoopIntegrationResource('task/ownership', { projectPath: root, taskId })).data;
+    } catch (error) {
+      errors.push(`${taskId}: task/ownership unavailable: ${error.message}`);
+      continue;
+    }
+    if (ownership.claimState !== expected.claimState) {
+      errors.push(`${taskId}: expected claimState ${expected.claimState}, got ${ownership.claimState}`);
+    }
+    if (Boolean(ownership.ownershipValid) !== expected.ownershipValid) {
+      errors.push(`${taskId}: expected ownershipValid ${expected.ownershipValid}`);
+    }
+    if (Boolean(ownership.mutationAllowed) !== expected.mutationAllowed) {
+      errors.push(`${taskId}: expected mutationAllowed ${expected.mutationAllowed}`);
+    }
+    if (expected.effectiveClaimsEmpty && ownership.effectiveWriteClaims.length > 0) {
+      errors.push(`${taskId}: expected empty effective claims, got ${JSON.stringify(ownership.effectiveWriteClaims)}`);
+    }
+    if (expected.effectiveClaimsPresent && ownership.effectiveWriteClaims.length === 0) {
+      errors.push(`${taskId}: expected non-empty effective claims`);
+    }
+    if (expected.resumeRequired && !(ownership.claimState === 'RELEASED_BY_RECOVERY' && ownership.mutationAllowed === false)) {
+      errors.push(`${taskId}: expected recovery resume-required projection`);
+    }
+    if (expected.claimState !== 'RELEASED_BY_RECOVERY' && ownership.historicalWriteClaims.length > 0
+      && ownership.claimState === 'ACTIVE' && ownership.effectiveWriteClaims.length === 0) {
+      errors.push(`${taskId}: historical claims leaked into an active state without effective claims`);
+    }
+  }
+
+  return {
+    ok: errors.length === 0,
+    errors,
+    stats: { tasksChecked: canonicalById.size },
   };
 }

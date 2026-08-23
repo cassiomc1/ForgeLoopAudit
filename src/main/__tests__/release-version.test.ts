@@ -8,7 +8,7 @@ const version = JSON.parse(readFileSync('package.json', 'utf8')).version as stri
 
 describe('release version guard', () => {
   it('uses the next immutable release-candidate identity', () => {
-    expect(version).toBe('0.1.0-rc.5');
+    expect(version).toBe('0.1.0-rc.6');
   });
 
   it('accepts the tag that exactly matches package.json', () => {

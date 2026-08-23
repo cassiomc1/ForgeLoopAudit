@@ -17,8 +17,10 @@
 ## ForgeLoop adapter
 
 - [ ] Detect `.forgeloop/`.
-- [ ] Execute allowlisted `protocol-info --json`.
-- [ ] Validate ForgeLoop protocol v1 compatibility.
+- [x] Negotiate ForgeLoop 1.5 capabilities through the bundled Integration API (`@cassiomc1/forgeloop/integration`).
+- [x] Read `protocol/info` via the canonical resource (`compatibility.schemaVersion`, no top-level `schemaVersion`).
+- [x] Validate protocol v1 / schema v1 compatibility and fail closed on capability drift.
+- [x] Select compatibility mode (`INTEGRATION_V1`, `ARTIFACT_ONLY`, `INCOMPATIBLE`) — no inferred legacy mode.
 - [ ] Create protocol adapter registry.
 - [ ] Read project configuration.
 - [ ] Index task directories.
@@ -29,8 +31,17 @@
 - [ ] Parse `work-state.json`.
 - [ ] Parse gates.
 - [ ] Parse continuity.
-- [ ] Parse execution receipt.
-- [ ] Parse execution provenance.
+- [x] Parse execution receipt.
+- [x] Parse execution provenance (`executions/exec-*.json`, bounded, schema-validated, lazy per task).
+- [x] Read `recovery.json` raw artifact with symlink rejection and trusted `task-recovery.schema.json` validation.
+- [x] Project canonical ownership (`claimState`, `mutationAllowed`, `ownershipValid`, historical vs effective claims) from `task/ownership`.
+- [x] Canonical `project/tasks` drives task existence in `INTEGRATION_V1`; extra/corrupt filesystem namespaces surface as diagnostics only.
+- [x] Policy status via the Integration API in `INTEGRATION_V1`; no external CLI in the canonical snapshot.
+- [x] Snapshot and GET_TASK share one canonical task read service (single semantic projection).
+- [x] Execution provenance reader validates realpath/symlink on the directory itself and every file.
+- [x] Classify operational state (`ACTIVE`, `RECOVERY_RESUME_REQUIRED`, `COMPLETED_RELEASED`, `BLOCKED`, `OWNERSHIP_INCONSISTENT`, `READ_ONLY_UNKNOWN`).
+- [x] Display ownership/recovery panels and ownership badges; recovered tasks are never shown as active.
+- [x] Present recovery/resume next actions as copy-only text; no mutable command is ever executable.
 - [ ] Parse policy snapshot.
 - [ ] Parse policy state.
 - [ ] Parse event ledger.

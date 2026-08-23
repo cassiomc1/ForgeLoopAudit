@@ -1,4 +1,6 @@
-import { TaskSummary } from '@shared/domain';
+import type { TaskSummary } from '@shared/domain';
+import { OwnershipPanel } from '../task/OwnershipPanel';
+import { RecoveryPanel } from '../task/RecoveryPanel';
 import { X } from 'lucide-react';
 import { cn, formatDate, getPhaseBadgeClass, getEvidenceKindColor, getCheckStatusColor } from '../../lib/utils';
 
@@ -45,6 +47,12 @@ export function InspectorPanel({ task, onClose }: InspectorPanelProps) {
               <h3 className="text-xs font-semibold text-forge-text-muted uppercase tracking-wider mb-3">Objective</h3>
               <p className="text-sm text-forge-text-secondary">{task.objective}</p>
             </div>
+          )}
+
+          <OwnershipPanel ownership={task.ownership} />
+
+          {task.recovery && task.recovery.status !== 'NONE' && (
+            <RecoveryPanel recovery={task.recovery} />
           )}
 
           <div>

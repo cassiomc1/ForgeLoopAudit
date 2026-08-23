@@ -1,8 +1,8 @@
 {
-  "forgeLoopPackageVersion": "1.3.0",
-  "forgeLoopGitCommit": "19355e701e191d830c56d64e535835e925843bae",
+  "forgeLoopPackageVersion": "1.5.0",
+  "forgeLoopGitCommit": "e938fa68f96b1daa19df97fd5f4c9a77ea928e0a",
   "protocolVersion": 1,
-  "generatedAt": "2026-08-21T01:09:07.202Z",
+  "generatedAt": "2026-08-23T19:33:16.720Z",
   "schemas": {
     "activation.schema.json": {
       "sha256": "19c60c9b8dd99467d7b639031179f1df00971bc5a276bcb00a6b74e7f60f0f6f",
@@ -27,6 +27,10 @@
     "execution-receipt.schema.json": {
       "sha256": "29b14cc96492e5d7d7b0cb423e05246957c624ca3d58a1785632ac564b763183",
       "upstreamPath": "schemas/execution-receipt.schema.json"
+    },
+    "execution.schema.json": {
+      "sha256": "079c62b87ad826136263e070afd9a4494333d0c1439ee8b05ab1d6b456fd8b3b",
+      "upstreamPath": "schemas/execution.schema.json"
     },
     "gate.schema.json": {
       "sha256": "7e7e1350838586c0b0385c19f5fb4520abf8f290ea60c9d36bdba2d3682b9690",
@@ -67,6 +71,10 @@
     "task-descriptor.schema.json": {
       "sha256": "b6ab6835c2512d050da3cb6a47a1c9ee3827b21e9a23a020e801db29994e959e",
       "upstreamPath": "schemas/task-descriptor.schema.json"
+    },
+    "task-recovery.schema.json": {
+      "sha256": "ac8bcca5d9ed9f93a3db3908cc03f0e50cad45032c8d73b1f2131941d2396ec1",
+      "upstreamPath": "schemas/task-recovery.schema.json"
     },
     "work-state.schema.json": {
       "sha256": "5f227628f07aa926327022396bb8cb3619aca313aaa28300700874b0e3f678b4",

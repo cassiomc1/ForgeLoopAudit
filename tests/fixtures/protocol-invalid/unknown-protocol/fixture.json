@@ -1,4 +1,5 @@
 {
-  "forgeloopVersion": "1.3.0",
-  "protocolVersion": 2
+  "forgeloopVersion": "1.5.0",
+  "protocolVersion": 2,
+  "legacy": false
 }

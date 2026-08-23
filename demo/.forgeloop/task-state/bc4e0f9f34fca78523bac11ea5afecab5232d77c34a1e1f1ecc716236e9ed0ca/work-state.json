@@ -29,8 +29,16 @@
   "checks": [],
   "failures": [],
   "blockers": [],
+  "verificationEvidence": [],
   "evidenceCoverage": [
     {
+      "schemaVersion": 1,
+      "protocolVersion": 1,
+      "requirement": "LCP at most 1.8s on the seeded catalog page",
+      "requiredEvidence": [
+        "LCP at most 1.8s on the seeded catalog page"
+      ],
+      "observedEvidence": [],
       "status": "NOT_VERIFIED"
     }
   ],

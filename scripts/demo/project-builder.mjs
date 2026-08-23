@@ -12,8 +12,8 @@ function baseArtifact(taskId) {
   return { schemaVersion: 1, protocolVersion: 1, taskId };
 }
 
-function taskDescriptor(taskId, createdAt, updatedAt) {
-  return { ...baseArtifact(taskId), taskKey: taskKeyFor(taskId), createdAt, updatedAt, writeClaims: [] };
+function taskDescriptor(taskId, createdAt, updatedAt, writeClaims = []) {
+  return { ...baseArtifact(taskId), taskKey: taskKeyFor(taskId), createdAt, updatedAt, writeClaims };
 }
 
 function contract(taskId, shape) {
@@ -85,6 +85,7 @@ function workState(taskId, shape) {
     checks: shape.checks ?? [],
     failures: shape.failures ?? [],
     blockers: shape.blockers ?? [],
+    verificationEvidence: shape.verificationEvidence ?? [],
     evidenceCoverage: shape.evidenceCoverage ?? [],
     lastUpdated: shape.lastUpdated,
     ...Object.fromEntries(
@@ -146,8 +147,87 @@ function gate(taskId, gateName, status, evidence, decisions = [], artifactPath =
   };
 }
 
-function covered(status = 'COVERED') {
-  return { status };
+// ForgeLoop 1.5 lifecycle helpers -------------------------------------------------
+
+/**
+ * Canonical 1.5 check entry: versioned, typed, sourced, and — for observed
+ * command evidence — backed by execution provenance.
+ */
+function demoCheck({ id, requirement, status, evidenceKind = 'NOT_VERIFIED', kind = 'command', source = 'demo-fixture', timestamp, executionRef, exitCode }) {
+  return {
+    schemaVersion: 1,
+    protocolVersion: 1,
+    id,
+    kind,
+    requirement,
+    status,
+    evidenceKind,
+    source,
+    ...(exitCode !== undefined ? { exitCode } : {}),
+    ...(timestamp !== undefined ? { timestamp } : {}),
+    ...(executionRef !== undefined ? { executionRef } : {}),
+    ...(kind === 'command' && evidenceKind === 'OBSERVED' ? { provenance: 'FORGELOOP_EXECUTED' } : {}),
+  };
+}
+
+/**
+ * Canonical 1.5 evidence coverage entry: status must be derivable from the
+ * required/observed evidence lists (PARTIAL carries readiness details).
+ */
+function cov(requirement, mode = 'not-verified') {
+  const requiredEvidence = [requirement];
+  const observedEvidence = mode === 'observed' || mode === 'partial' ? [requirement] : [];
+  const status =
+    mode === 'blocked' ? 'BLOCKED'
+      : mode === 'partial' ? 'PARTIAL'
+        : mode === 'observed' ? 'COVERED'
+          : 'NOT_VERIFIED';
+  return {
+    schemaVersion: 1,
+    protocolVersion: 1,
+    requirement,
+    requiredEvidence,
+    observedEvidence,
+    ...(mode === 'partial' ? { details: { readinessStatus: 'PARTIAL' } } : {}),
+    status,
+  };
+}
+
+/** Gate satisfaction ledger event keyed by details.gate. */
+function gateSatisfied(ledger, gateName) {
+  return ledger.append('GATE_SATISFIED', { gate: gateName });
+}
+
+function recoveryRecorded(ledger, details) {
+  return ledger.append('TASK_RECOVERY_RECORDED', details);
+}
+
+/**
+ * Canonical 1.5 execution provenance artifact (executions/exec-*.json).
+ */
+function executionRecord({ executionId, taskId, checkId, requirement, argv, startedAt, finishedAt, status = 'passed', exitCode = 0 }) {
+  return {
+    schemaVersion: 1,
+    protocolVersion: 1,
+    executionId,
+    taskId,
+    checkId,
+    requirement,
+    verificationCycle: 1,
+    kind: 'COMMAND_EXECUTION',
+    argv,
+    cwd: `/workspace/${DEMO_PROJECT_ID}`,
+    resolution: { resolutionMode: 'direct', mayInstall: false, installer: null, tool: null },
+    startedAt,
+    finishedAt,
+    durationMs: 42_000,
+    termination: 'exit',
+    signal: null,
+    stdoutSha256: fingerprint(`stdout:${executionId}`),
+    stderrSha256: fingerprint(`stderr:${executionId}`),
+    status,
+    exitCode,
+  };
 }
 
 const TASKS = {
@@ -194,24 +274,37 @@ function buildCatalogTask() {
   const taskId = t.id;
   const ledger = new EventLedgerBuilder(taskId, { startAt: t.startAt });
   ledger.append('TASK_CREATED', { title: t.title });
-  ledger.append('CONTRACT_ACCEPTED', { objective: t.title });
+  ledger.append('CONTRACT_VALIDATED', { objective: t.title });
+  ledger.append('ROUTE_VALIDATED', { primary: 'implementation' });
+  gateSatisfied(ledger, 'unit-tests');
+  gateSatisfied(ledger, 'typecheck');
+  gateSatisfied(ledger, 'lint');
+  ledger.append('PREFLIGHT_READY', { requiredGates: ['unit-tests', 'typecheck', 'lint'] });
   ledger.append('PLAN_CREATED', { steps: ['models', 'filtering', 'grid view'] });
   ledger.append('EXECUTION_STARTED', { area: 'src/catalog.ts' });
   ledger.append('CHECK_PASSED', { check: 'unit-tests', result: 'catalog unit tests: 14 passed' });
   ledger.append('CHECK_PASSED', { check: 'typecheck', result: 'tsc --noEmit clean' });
   ledger.append('CHECK_PASSED', { check: 'lint', result: 'eslint clean' });
-  ledger.append('REVIEW_PASSED', { reviewer: 'harness-a' });
+  ledger.append('VERIFICATION_STARTED', { verificationCycle: 1 });
+  ledger.append('REVIEW_STARTED', { verificationCycle: 1, reviewer: 'harness-a' });
   ledger.append('VALIDATION_PASSED', { coverage: '100% of success criteria observed' });
+  ledger.append('VERIFICATION_RECORDED', { verificationCycle: 1, outcome: 'passed' });
   ledger.append('TASK_COMPLETED', { receipt: 'execution-receipt.json' });
+  ledger.append('COMPLETION_VALIDATED', { receipt: 'execution-receipt.json' });
 
   const checks = [
-    { id: 'catalog-unit-tests', requirement: 'Catalog unit tests pass', status: 'passed', evidenceKind: 'OBSERVED', timestamp: '2026-08-03T09:35:00.000Z' },
-    { id: 'typecheck', requirement: 'TypeScript compiles without errors', status: 'passed', evidenceKind: 'OBSERVED', timestamp: '2026-08-03T09:40:00.000Z' },
-    { id: 'lint', requirement: 'Lint passes on changed files', status: 'passed', evidenceKind: 'OBSERVED', timestamp: '2026-08-03T09:42:00.000Z' },
+    demoCheck({ id: 'catalog-unit-tests', requirement: 'Catalog unit tests pass', status: 'passed', evidenceKind: 'OBSERVED', source: 'vitest run', exitCode: 0, timestamp: '2026-08-03T09:35:00.000Z', executionRef: 'executions/exec-catalog-unit-tests.json' }),
+    demoCheck({ id: 'typecheck', requirement: 'TypeScript compiles without errors', status: 'passed', evidenceKind: 'OBSERVED', source: 'tsc --noEmit', exitCode: 0, timestamp: '2026-08-03T09:40:00.000Z', executionRef: 'executions/exec-catalog-typecheck.json' }),
+    demoCheck({ id: 'lint', requirement: 'Lint passes on changed files', status: 'passed', evidenceKind: 'OBSERVED', source: 'eslint', exitCode: 0, timestamp: '2026-08-03T09:42:00.000Z', executionRef: 'executions/exec-catalog-lint.json' }),
   ];
-  const coverage = [covered(), covered(), covered(), covered()];
+  const coverage = [
+    cov('Products render in a responsive grid', 'observed'),
+    cov('Filters combine category and price range', 'observed'),
+    cov('Catalog unit tests pass (14 cases)', 'observed'),
+    cov('Filtering logic covered by table-driven tests', 'observed'),
+  ];
   const artifacts = {};
-  artifacts['task.json'] = taskDescriptor(taskId, t.startAt, '2026-08-03T10:05:00.000Z');
+  artifacts['task.json'] = taskDescriptor(taskId, t.startAt, '2026-08-03T10:05:00.000Z', []);
   artifacts['contract.json'] = contract(taskId, {
     objective: 'Implement the premium product catalog with filtering and a responsive grid view.',
     deliverables: ['Product data model with typed catalog entries', 'Category and price filtering', 'Responsive product grid component'],
@@ -223,11 +316,11 @@ function buildCatalogTask() {
     unresolvedDecisions: [],
     sourceRefs: ['src/catalog.ts', 'tests/catalog.test.ts'],
   });
-  artifacts['routing-result.json'] = routingResult(taskId, 'implementation', ['testing', 'clean-code'], { implementation: ['Direct feature work with test coverage'] });
+  artifacts['routing-result.json'] = routingResult(taskId, 'implementation', ['test', 'clean'], { implementation: ['Direct feature work with test coverage'] });
   artifacts['preflight.json'] = preflight(taskId, { requiredGates: ['unit-tests', 'typecheck', 'lint'], satisfiedGates: ['unit-tests', 'typecheck', 'lint'] });
   artifacts['work-state.json'] = workState(taskId, {
     phase: 'COMPLETE',
-    selectedGuides: ['testing', 'clean-code'],
+    selectedGuides: ['test', 'clean'],
     requiredGates: ['unit-tests', 'typecheck', 'lint'],
     satisfiedGates: ['unit-tests', 'typecheck', 'lint'],
     completedSteps: ['Model product entries', 'Implement filtering', 'Build grid view', 'Verify with unit tests'],
@@ -235,6 +328,10 @@ function buildCatalogTask() {
     checks,
     publicationStatus: 'pushed',
     revision: 3,
+    verificationCycle: 1,
+    verificationEvidence: [
+      { id: 'verif-catalog-cycle-1', summary: 'Every success criterion observed during verification cycle 1.', status: 'OBSERVED', timestamp: '2026-08-03T10:00:00.000Z' },
+    ],
     evidenceCoverage: coverage,
     lastUpdated: '2026-08-03T10:05:00.000Z',
   });
@@ -246,7 +343,7 @@ function buildCatalogTask() {
     resumeNote: 'Completed; kept as reference lifecycle for the ForgeShop demo.',
   });
   artifacts['execution-receipt.json'] = executionReceipt(taskId, {
-    selectedGuides: ['testing', 'clean-code'],
+    selectedGuides: ['test', 'clean'],
     changedPaths: ['src/catalog.ts', 'tests/catalog.test.ts'],
     checks,
     review: { reviewer: 'harness-a', outcome: 'approved', notes: 'Grid keyboard focus order verified manually.' },
@@ -260,7 +357,12 @@ function buildCatalogTask() {
   artifacts['gates/unit-tests.json'] = gate(taskId, 'unit-tests', 'satisfied', [{ kind: 'OBSERVED', source: 'vitest run', result: '14 passed' }]);
   artifacts['gates/typecheck.json'] = gate(taskId, 'typecheck', 'satisfied', [{ kind: 'OBSERVED', source: 'tsc --noEmit', result: 'clean' }]);
   artifacts['gates/lint.json'] = gate(taskId, 'lint', 'satisfied', [{ kind: 'OBSERVED', source: 'eslint', result: 'clean' }]);
-  return { taskId, ledger, artifacts };
+  const executions = [
+    executionRecord({ executionId: 'exec-catalog-unit-tests', taskId, checkId: 'catalog-unit-tests', requirement: 'Catalog unit tests pass', argv: ['npx', 'vitest', 'run', 'tests/catalog.test.ts'], startedAt: '2026-08-03T09:33:00.000Z', finishedAt: '2026-08-03T09:35:00.000Z' }),
+    executionRecord({ executionId: 'exec-catalog-typecheck', taskId, checkId: 'typecheck', requirement: 'TypeScript compiles without errors', argv: ['npx', 'tsc', '--noEmit'], startedAt: '2026-08-03T09:38:00.000Z', finishedAt: '2026-08-03T09:40:00.000Z' }),
+    executionRecord({ executionId: 'exec-catalog-lint', taskId, checkId: 'lint', requirement: 'Lint passes on changed files', argv: ['npx', 'eslint', 'src/catalog.ts'], startedAt: '2026-08-03T09:41:00.000Z', finishedAt: '2026-08-03T09:42:00.000Z' }),
+  ].map((record) => [`executions/${record.executionId}.json`, record]);
+  return { taskId, ledger, artifacts, executions };
 }
 
 function buildCartTask() {
@@ -268,22 +370,31 @@ function buildCartTask() {
   const taskId = t.id;
   const ledger = new EventLedgerBuilder(taskId, { startAt: t.startAt });
   ledger.append('TASK_CREATED', { title: t.title });
-  ledger.append('CONTRACT_ACCEPTED', { objective: t.title });
+  ledger.append('CONTRACT_VALIDATED', { objective: t.title });
+  ledger.append('ROUTE_VALIDATED', { primary: 'implementation' });
+  gateSatisfied(ledger, 'unit-tests');
+  gateSatisfied(ledger, 'typecheck');
+  ledger.append('PREFLIGHT_READY', { requiredGates: ['unit-tests', 'typecheck'] });
   ledger.append('PLAN_CREATED', { steps: ['cart store', 'localStorage adapter', 'hydration on launch'] });
   ledger.append('EXECUTION_STARTED', { area: 'src/cart.ts' });
   ledger.append('CHECK_PASSED', { check: 'unit-tests', result: 'cart unit tests: 8 passed' });
   ledger.append('EXECUTION_COMPLETED', { area: 'src/cart.ts' });
-  ledger.append('VERIFICATION_STARTED', { cycle: 1 });
+  ledger.append('VERIFICATION_STARTED', { verificationCycle: 1 });
   ledger.append('CHECK_WARNING', { check: 'hydration-edge-case', note: 'Hydration edge case found for corrupted stored carts' });
 
   const checks = [
-    { id: 'cart-unit-tests', requirement: 'Cart unit tests pass', status: 'passed', evidenceKind: 'OBSERVED', timestamp: '2026-08-04T10:20:00.000Z' },
-    { id: 'corrupt-cart-hydration', requirement: 'Corrupted persisted carts are discarded safely', status: 'failed', evidenceKind: 'NOT_VERIFIED', timestamp: '2026-08-04T10:55:00.000Z' },
-    { id: 'typecheck', requirement: 'TypeScript compiles without errors', status: 'passed', evidenceKind: 'OBSERVED', timestamp: '2026-08-04T10:58:00.000Z' },
+    demoCheck({ id: 'cart-unit-tests', requirement: 'Cart unit tests pass', status: 'passed', evidenceKind: 'OBSERVED', source: 'vitest run', exitCode: 0, timestamp: '2026-08-04T10:20:00.000Z' }),
+    demoCheck({ id: 'corrupt-cart-hydration', requirement: 'Corrupted persisted carts are discarded safely', status: 'failed', evidenceKind: 'NOT_VERIFIED', source: 'manual observation', timestamp: '2026-08-04T10:55:00.000Z' }),
+    demoCheck({ id: 'typecheck', requirement: 'TypeScript compiles without errors', status: 'passed', evidenceKind: 'OBSERVED', source: 'tsc --noEmit', exitCode: 0, timestamp: '2026-08-04T10:58:00.000Z' }),
   ];
-  const coverage = [covered(), { status: 'PARTIAL' }, covered(), { status: 'NOT_VERIFIED' }];
+  const coverage = [
+    cov('Cart survives a simulated restart', 'observed'),
+    cov('Corrupted carts are dropped with a warning', 'partial'),
+    cov('Cart unit tests pass (8 cases)', 'observed'),
+    cov('Hydration edge case regression test exists', 'not-verified'),
+  ];
   const artifacts = {};
-  artifacts['task.json'] = taskDescriptor(taskId, t.startAt, '2026-08-04T11:00:00.000Z');
+  artifacts['task.json'] = taskDescriptor(taskId, t.startAt, '2026-08-04T11:00:00.000Z', ['src/cart.ts']);
   artifacts['contract.json'] = contract(taskId, {
     objective: 'Persist the shopping cart across sessions using a local storage adapter.',
     deliverables: ['Typed cart store', 'Storage adapter with corruption handling', 'Hydration on application launch'],
@@ -295,12 +406,12 @@ function buildCartTask() {
     unresolvedDecisions: ['Whether to version the storage payload format'],
     sourceRefs: ['src/cart.ts', 'tests/cart.test.ts'],
   });
-  artifacts['routing-result.json'] = routingResult(taskId, 'implementation', ['testing', 'design'], { implementation: ['Store plus adapter pattern'] });
+  artifacts['routing-result.json'] = routingResult(taskId, 'implementation', ['test', 'design'], { implementation: ['Store plus adapter pattern'] });
   artifacts['preflight.json'] = preflight(taskId, { requiredGates: ['unit-tests', 'typecheck'], satisfiedGates: ['unit-tests', 'typecheck'] });
   artifacts['work-state.json'] = workState(taskId, {
     phase: 'VERIFYING',
     previousPhase: 'EXECUTING',
-    selectedGuides: ['testing', 'design'],
+    selectedGuides: ['test', 'design'],
     requiredGates: ['unit-tests', 'typecheck'],
     satisfiedGates: ['unit-tests', 'typecheck'],
     completedSteps: ['Cart store', 'Storage adapter', 'Launch hydration'],
@@ -338,18 +449,25 @@ function buildCheckoutTask() {
   const taskId = t.id;
   const ledger = new EventLedgerBuilder(taskId, { startAt: t.startAt });
   ledger.append('TASK_CREATED', { title: t.title });
-  ledger.append('CONTRACT_ACCEPTED', { objective: t.title });
+  ledger.append('CONTRACT_VALIDATED', { objective: t.title });
+  ledger.append('ROUTE_VALIDATED', { primary: 'implementation' });
+  gateSatisfied(ledger, 'integration-tests');
+  ledger.append('PREFLIGHT_READY', { requiredGates: ['integration-tests'] });
   ledger.append('PLAN_APPROVED', { steps: ['client', 'error mapping', 'retry policy'] });
   ledger.append('EXECUTION_STARTED', { area: 'src/checkout.ts' });
   ledger.append('CHECK_PASSED', { check: 'integration-tests', result: 'checkout integration tests: 6 passed' });
 
   const checks = [
-    { id: 'checkout-integration-tests', requirement: 'Checkout integration tests pass', status: 'passed', evidenceKind: 'OBSERVED', timestamp: '2026-08-05T09:10:00.000Z' },
-    { id: 'retry-policy-tests', requirement: 'Retry policy handles transient failures', status: 'not-run', evidenceKind: 'NOT_VERIFIED', timestamp: '2026-08-05T09:12:00.000Z' },
+    demoCheck({ id: 'checkout-integration-tests', requirement: 'Checkout integration tests pass', status: 'passed', evidenceKind: 'OBSERVED', source: 'vitest run', exitCode: 0, timestamp: '2026-08-05T09:10:00.000Z', executionRef: 'executions/exec-checkout-integration-tests.json' }),
+    demoCheck({ id: 'retry-policy-tests', requirement: 'Retry policy handles transient failures', status: 'not-run', evidenceKind: 'NOT_VERIFIED', source: 'planned', timestamp: '2026-08-05T09:12:00.000Z' }),
   ];
-  const coverage = [covered(), { status: 'NOT_VERIFIED' }, { status: 'PARTIAL' }];
+  const coverage = [
+    cov('Orders submit through the client', 'observed'),
+    cov('Transient errors retry with backoff', 'not-verified'),
+    cov('Checkout integration tests pass (6 cases)', 'partial'),
+  ];
   const artifacts = {};
-  artifacts['task.json'] = taskDescriptor(taskId, t.startAt, '2026-08-05T09:15:00.000Z');
+  artifacts['task.json'] = taskDescriptor(taskId, t.startAt, '2026-08-05T09:15:00.000Z', ['src/checkout.ts']);
   artifacts['contract.json'] = contract(taskId, {
     objective: 'Integrate the checkout API client with error mapping and a retry policy.',
     deliverables: ['Checkout API client', 'Typed error mapping', 'Retry policy for transient failures'],
@@ -361,11 +479,11 @@ function buildCheckoutTask() {
     unresolvedDecisions: ['Final retry backoff ceiling'],
     sourceRefs: ['src/checkout.ts', 'tests/checkout.test.ts'],
   });
-  artifacts['routing-result.json'] = routingResult(taskId, 'implementation', ['security', 'testing'], { implementation: ['Client with explicit error taxonomy'] });
-  artifacts['preflight.json'] = preflight(taskId, { requiredGates: ['integration-tests', 'security-review'], satisfiedGates: [] });
+  artifacts['routing-result.json'] = routingResult(taskId, 'implementation', ['security', 'test'], { implementation: ['Client with explicit error taxonomy'] });
+  artifacts['preflight.json'] = preflight(taskId, { requiredGates: ['integration-tests', 'security-review'], satisfiedGates: ['integration-tests'] });
   artifacts['work-state.json'] = workState(taskId, {
     phase: 'EXECUTING',
-    selectedGuides: ['security', 'testing'],
+    selectedGuides: ['security', 'test'],
     requiredGates: ['integration-tests', 'security-review'],
     satisfiedGates: ['integration-tests'],
     completedSteps: ['API client skeleton', 'Error mapping'],
@@ -385,31 +503,67 @@ function buildCheckoutTask() {
     inspectFirst: ['src/checkout.ts'],
     resumeNote: 'Execution in progress; integration tests green, retry policy next.',
   });
-  return { taskId, ledger, artifacts };
+  const executions = [
+    executionRecord({ executionId: 'exec-checkout-integration-tests', taskId, checkId: 'checkout-integration-tests', requirement: 'Checkout integration tests pass', argv: ['npx', 'vitest', 'run', 'tests/checkout.test.ts'], startedAt: '2026-08-05T09:07:00.000Z', finishedAt: '2026-08-05T09:10:00.000Z' }),
+  ].map((record) => [`executions/${record.executionId}.json`, record]);
+  return { taskId, ledger, artifacts, executions };
 }
 
 function buildA11yTask() {
   const t = TASKS.a11y;
   const taskId = t.id;
+  const releasedClaims = ['src/catalog.ts'];
   const ledger = new EventLedgerBuilder(taskId, { startAt: t.startAt });
   ledger.append('TASK_CREATED', { title: t.title });
-  ledger.append('CONTRACT_ACCEPTED', { objective: t.title });
+  ledger.append('CONTRACT_VALIDATED', { objective: t.title });
+  ledger.append('ROUTE_VALIDATED', { primary: 'diagnosis' });
   ledger.append('SESSION_ACTIVATED', { harness: 'harness-a' });
-  ledger.append('EXECUTION_STARTED', { area: 'audit:keyboard-navigation' });
+  ledger.append('EXECUTION_REVIEWED', { area: 'audit:keyboard-navigation' });
   ledger.append('CHECK_FAILED', { check: 'keyboard-navigation', finding: '2 keyboard navigation findings in grid pagination' });
   ledger.append('TASK_BLOCKED', { reason: 'ACCESSIBILITY_GATE_FAILED' });
   ledger.append('RECOVERY_ROUTE_SELECTED', { route: 'correct-and-resume', decidedBy: 'harness-a' });
   ledger.append('HANDOFF_CREATED', { from: 'harness-a', to: 'harness-b', note: 'Resume after fixing grid pagination focus trap' });
   ledger.append('SESSION_ACTIVATED', { harness: 'harness-b' });
   ledger.append('RESUMED_FROM_CONTINUITY', { harness: 'harness-b', phase: 'CORRECTING' });
+  const recoveryEvent = recoveryRecorded(ledger, {
+    recoveryId: 'recovery-a11y-stale-lock',
+    classification: 'STALE',
+    previousPhase: 'BLOCKED',
+    previousRevision: 2,
+    authorityKind: 'HOST_ATTESTED',
+    reasonCodes: ['E_TASK_CLAIM_STALE'],
+    releasedClaims,
+    currentBranch: BRANCH,
+    currentHead: HEAD,
+  });
+
+  const recovery = {
+    schemaVersion: 1,
+    protocolVersion: 1,
+    taskId,
+    status: 'RECOVERED',
+    recoveredAt: recoveryEvent.at,
+    recoveryId: recoveryEvent.details.recoveryId,
+    recoveryEventSeq: recoveryEvent.seq,
+    classificationAtRecovery: recoveryEvent.details.classification,
+    reasonCodes: recoveryEvent.details.reasonCodes,
+    releasedClaims,
+    previousPhase: recoveryEvent.details.previousPhase,
+    previousRevision: recoveryEvent.details.previousRevision,
+    repositoryFingerprint: repositoryFingerprint(),
+    authority: { kind: recoveryEvent.details.authorityKind, grantRef: 'host-attestation:forgeshop-demo-lock-controller' },
+  };
 
   const checks = [
-    { id: 'keyboard-navigation', requirement: 'All interactive controls are reachable by keyboard', status: 'failed', evidenceKind: 'BLOCKED', timestamp: '2026-08-06T10:40:00.000Z' },
-    { id: 'screen-reader-labels', requirement: 'Dynamic regions expose accessible names', status: 'passed', evidenceKind: 'OBSERVED', timestamp: '2026-08-06T10:38:00.000Z' },
+    demoCheck({ id: 'keyboard-navigation', requirement: 'All interactive controls are reachable by keyboard', status: 'failed', evidenceKind: 'BLOCKED', kind: 'audit', source: 'audit:keyboard-navigation', timestamp: '2026-08-06T10:40:00.000Z' }),
+    demoCheck({ id: 'screen-reader-labels', requirement: 'Dynamic regions expose accessible names', status: 'passed', evidenceKind: 'OBSERVED', kind: 'audit', source: 'axe scan', timestamp: '2026-08-06T10:38:00.000Z' }),
   ];
-  const coverage = [{ status: 'COVERED' }, { status: 'BLOCKED' }];
+  const coverage = [
+    cov('Every interactive control is reachable by keyboard', 'blocked'),
+    cov('Focus order matches visual order', 'blocked'),
+  ];
   const artifacts = {};
-  artifacts['task.json'] = taskDescriptor(taskId, t.startAt, '2026-08-06T11:20:00.000Z');
+  artifacts['task.json'] = taskDescriptor(taskId, t.startAt, '2026-08-06T11:20:00.000Z', releasedClaims);
   artifacts['contract.json'] = contract(taskId, {
     objective: 'Audit and fix accessibility gaps with emphasis on keyboard navigation.',
     deliverables: ['Keyboard navigation audit report', 'Fixes for all blocking findings', 'Regression checks for focus order'],
@@ -421,12 +575,13 @@ function buildA11yTask() {
     unresolvedDecisions: [],
     sourceRefs: ['src/app.ts', 'src/catalog.ts'],
   });
-  artifacts['routing-result.json'] = routingResult(taskId, 'diagnosis', ['accessibility', 'testing'], { diagnosis: ['Failed audit requires correction before resuming'] });
+  artifacts['routing-result.json'] = routingResult(taskId, 'diagnosis', ['accessibility', 'test'], { diagnosis: ['Failed audit requires correction before resuming'] });
   artifacts['preflight.json'] = preflight(taskId, { status: 'READY', requiredGates: ['accessibility-audit'], satisfiedGates: [] });
+  artifacts['recovery.json'] = recovery;
   artifacts['work-state.json'] = workState(taskId, {
     phase: 'BLOCKED',
     previousPhase: 'VERIFYING',
-    selectedGuides: ['accessibility', 'testing'],
+    selectedGuides: ['accessibility', 'test'],
     requiredGates: ['accessibility-audit'],
     satisfiedGates: [],
     completedSteps: ['Automated axe scan', 'Manual keyboard walkthrough (partial)'],
@@ -446,8 +601,8 @@ function buildA11yTask() {
     ],
     knownIssues: [{ id: 'keyboard-navigation-finding', summary: '2 keyboard navigation findings in grid pagination' }],
     changedAreas: ['src/catalog.ts'],
-    inspectFirst: ['src/catalog.ts', 'src/catalog.ts'],
-    resumeNote: 'Blocked by accessibility gate. harness-a recorded findings; harness-b resumes in CORRECTING after the focus-trap fix.',
+    inspectFirst: ['src/catalog.ts'],
+    resumeNote: 'Recovered from a stale claim lock after the harness-a → harness-b handoff; mutations stay blocked until an authorized harness performs task-resume.',
   });
   artifacts['policy-snapshot.json'] = {
     schemaVersion: 1,
@@ -473,7 +628,7 @@ function buildPerfTask() {
   ledger.append('PLANNING_STARTED', { baseline: 'LCP 3.1s on the seeded catalog page' });
 
   const artifacts = {};
-  artifacts['task.json'] = taskDescriptor(taskId, t.startAt, '2026-08-07T11:50:00.000Z');
+  artifacts['task.json'] = taskDescriptor(taskId, t.startAt, '2026-08-07T11:50:00.000Z', []);
   artifacts['contract.json'] = contract(taskId, {
     objective: 'Improve image loading performance so the largest contentful paint stays under 2 seconds.',
     deliverables: ['Lazy-loaded product imagery', 'Responsive image sizes', 'Performance budget check'],
@@ -495,7 +650,7 @@ function buildPerfTask() {
     completedSteps: ['Baseline measurement'],
     pendingSteps: ['Lazy loading', 'Responsive sizes', 'Budget verification'],
     checks: [],
-    evidenceCoverage: [{ status: 'NOT_VERIFIED' }],
+    evidenceCoverage: [cov('LCP at most 1.8s on the seeded catalog page')],
     lastUpdated: '2026-08-07T11:50:00.000Z',
   });
   artifacts['continuity.json'] = continuity(taskId, 'PLANNED', '2026-08-07T11:55:00.000Z', {
@@ -513,21 +668,31 @@ function buildSecurityTask() {
   const taskId = t.id;
   const ledger = new EventLedgerBuilder(taskId, { startAt: t.startAt });
   ledger.append('TASK_CREATED', { title: t.title });
-  ledger.append('CONTRACT_ACCEPTED', { objective: t.title });
+  ledger.append('CONTRACT_VALIDATED', { objective: t.title });
+  ledger.append('ROUTE_VALIDATED', { primary: 'review' });
+  gateSatisfied(ledger, 'security-review');
+  ledger.append('PREFLIGHT_READY', { requiredGates: ['security-review'] });
   ledger.append('PLAN_CREATED', { steps: ['threat model', 'dependency scan', 'flow review'] });
   ledger.append('EXECUTION_STARTED', { area: 'audit:checkout-security' });
   ledger.append('CHECK_PASSED', { check: 'security-scan', result: 'security scan: no critical findings' });
   ledger.append('CHECK_PASSED', { check: 'secret-scan', result: 'no secrets detected in checkout flow' });
-  ledger.append('REVIEW_PASSED', { reviewer: 'harness-b' });
+  ledger.append('VERIFICATION_STARTED', { verificationCycle: 1 });
+  ledger.append('REVIEW_STARTED', { verificationCycle: 1, reviewer: 'harness-b' });
+  ledger.append('VERIFICATION_RECORDED', { verificationCycle: 1, outcome: 'passed' });
   ledger.append('TASK_COMPLETED', { receipt: 'execution-receipt.json' });
+  ledger.append('COMPLETION_VALIDATED', { receipt: 'execution-receipt.json' });
 
   const checks = [
-    { id: 'security-scan', requirement: 'Dependency and flow scan reports no critical findings', status: 'passed', evidenceKind: 'OBSERVED', timestamp: '2026-08-07T14:40:00.000Z' },
-    { id: 'secret-scan', requirement: 'No secrets committed in checkout flow', status: 'passed', evidenceKind: 'OBSERVED', timestamp: '2026-08-07T14:45:00.000Z' },
+    demoCheck({ id: 'security-scan', requirement: 'Dependency and flow scan reports no critical findings', status: 'passed', evidenceKind: 'OBSERVED', source: 'node tests/security-scan.mjs', exitCode: 0, timestamp: '2026-08-07T14:40:00.000Z', executionRef: 'executions/exec-security-scan.json' }),
+    demoCheck({ id: 'secret-scan', requirement: 'No secrets committed in checkout flow', status: 'passed', evidenceKind: 'OBSERVED', source: 'node tests/secret-scan.mjs', exitCode: 0, timestamp: '2026-08-07T14:45:00.000Z', executionRef: 'executions/exec-secret-scan.json' }),
   ];
-  const coverage = [covered(), covered(), covered()];
+  const coverage = [
+    cov('No critical or high findings remain untriaged', 'observed'),
+    cov('Security scan reports no critical findings', 'observed'),
+    cov('Checkout flow reviewed against the threat model', 'observed'),
+  ];
   const artifacts = {};
-  artifacts['task.json'] = taskDescriptor(taskId, t.startAt, '2026-08-07T15:00:00.000Z');
+  artifacts['task.json'] = taskDescriptor(taskId, t.startAt, '2026-08-07T15:00:00.000Z', []);
   artifacts['contract.json'] = contract(taskId, {
     objective: 'Review the checkout flow for security weaknesses before integration ships.',
     deliverables: ['Threat model for checkout', 'Scan results with dispositions', 'Sign-off for TASK-003 integration'],
@@ -551,6 +716,10 @@ function buildSecurityTask() {
     checks,
     publicationStatus: 'committed',
     revision: 2,
+    verificationCycle: 1,
+    verificationEvidence: [
+      { id: 'verif-security-cycle-1', summary: 'Security review sign-off recorded during verification cycle 1.', status: 'OBSERVED', timestamp: '2026-08-07T14:55:00.000Z' },
+    ],
     evidenceCoverage: coverage,
     lastUpdated: '2026-08-07T15:00:00.000Z',
   });
@@ -580,7 +749,11 @@ function buildSecurityTask() {
     capturedAt: '2026-08-07T14:05:00.000Z',
   };
   artifacts['gates/security-review.json'] = gate(taskId, 'security-review', 'satisfied', [{ kind: 'OBSERVED', source: 'audit:security-scan', result: 'no critical findings' }], [], 'src/checkout.ts');
-  return { taskId, ledger, artifacts };
+  const executions = [
+    executionRecord({ executionId: 'exec-security-scan', taskId, checkId: 'security-scan', requirement: 'Dependency and flow scan reports no critical findings', argv: ['node', 'tests/security-scan.mjs'], startedAt: '2026-08-07T14:38:00.000Z', finishedAt: '2026-08-07T14:40:00.000Z' }),
+    executionRecord({ executionId: 'exec-secret-scan', taskId, checkId: 'secret-scan', requirement: 'No secrets committed in checkout flow', argv: ['node', 'tests/secret-scan.mjs'], startedAt: '2026-08-07T14:43:00.000Z', finishedAt: '2026-08-07T14:45:00.000Z' }),
+  ].map((record) => [`executions/${record.executionId}.json`, record]);
+  return { taskId, ledger, artifacts, executions };
 }
 
 function buildPolicyFiles() {
@@ -752,7 +925,7 @@ export function buildForgeShopProject() {
   const builders = [buildCatalogTask, buildCartTask, buildCheckoutTask, buildA11yTask, buildPerfTask, buildSecurityTask];
   let eventCount = 0;
   for (const build of builders) {
-    const { taskId, ledger, artifacts } = build();
+    const { taskId, ledger, artifacts, executions = [] } = build();
     const key = taskKeyFor(taskId);
     for (const [name, value] of Object.entries(artifacts)) {
       const artifactName = name === 'events.ndjson'
@@ -761,6 +934,9 @@ export function buildForgeShopProject() {
           ? 'gate.json'
           : name;
       put(`.forgeloop/task-state/${key}/${name}`, value, artifactName);
+    }
+    for (const [relativePath, record] of executions) {
+      put(`.forgeloop/task-state/${key}/${relativePath}`, record, 'execution.json');
     }
     for (const event of ledger.events) assertSchemaValid('event', event);
     eventCount += ledger.events.length;

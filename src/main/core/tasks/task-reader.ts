@@ -1,5 +1,5 @@
 import { PHASE_ORDER } from '@shared/domain';
-import type { TaskSummary, ForgeLoopPhase, EvidenceCoverageSummary, BlockerSummary, FailureSummary, CheckSummary, GateSummary, NextActionSummary, ContinuitySummary, ContinuityWorkItem } from '@shared/domain';
+import type { TaskSummary, ForgeLoopPhase, EvidenceCoverageSummary, BlockerSummary, FailureSummary, CheckSummary, GateSummary, NextActionSummary, ContinuitySummary, ContinuityWorkItem, TaskOwnershipSummary, TaskRecoverySummary } from '@shared/domain';
 import type { AllowedArtifact } from '@shared/domain';
 
 export interface RawTaskArtifacts {
@@ -9,6 +9,7 @@ export interface RawTaskArtifacts {
   'preflight.json'?: Record<string, unknown>;
   'work-state.json'?: Record<string, unknown>;
   'continuity.json'?: Record<string, unknown>;
+  'recovery.json'?: Record<string, unknown>;
   'execution-receipt.json'?: Record<string, unknown>;
   'policy-snapshot.json'?: Record<string, unknown>;
   'events.ndjson'?: string;
@@ -205,6 +206,56 @@ function buildContinuity(continuity: Record<string, unknown> | undefined): Conti
   };
 }
 
+export function buildRecoverySummary(
+  rawRecovery: Record<string, unknown> | undefined,
+  ownershipSummary: TaskOwnershipSummary,
+): TaskRecoverySummary {
+  const canonicalRecovered =
+    ownershipSummary.source === 'FORGELOOP_INTEGRATION' && ownershipSummary.claimState === 'RELEASED_BY_RECOVERY';
+  const hasArtifact = Boolean(rawRecovery) && typeof rawRecovery === 'object';
+
+  if (!canonicalRecovered && !hasArtifact) {
+    return { status: 'NONE', releasedClaims: [], reasonCodes: [], resumeRequired: false, source: 'UNAVAILABLE' };
+  }
+
+  if (!canonicalRecovered && hasArtifact) {
+    if (ownershipSummary.source === 'FORGELOOP_INTEGRATION') {
+      // Canonical authority resolved the recovery (e.g. resumed): the raw
+      // artifact is history, never a live recovery state.
+      return { status: 'NONE', releasedClaims: [], reasonCodes: [], resumeRequired: false, source: 'FORGELOOP_INTEGRATION' };
+    }
+    return {
+      status: 'UNKNOWN',
+      recoveryId: safeString(rawRecovery, 'recoveryId'),
+      recoveredAt: safeString(rawRecovery, 'recoveredAt'),
+      classificationAtRecovery: safeString(rawRecovery, 'classificationAtRecovery'),
+      releasedClaims: safeStringArray(rawRecovery, 'releasedClaims'),
+      reasonCodes: safeStringArray(rawRecovery, 'reasonCodes'),
+      previousPhase: safeString(rawRecovery, 'previousPhase'),
+      previousRevision: safeNumber(rawRecovery, 'previousRevision'),
+      resumeRequired: false,
+      source: 'RAW_ARTIFACT',
+    };
+  }
+
+  const authority = rawRecovery?.authority;
+  const authorityRecord = authority && typeof authority === 'object' ? authority as Record<string, unknown> : undefined;
+  return {
+    status: 'RECOVERED',
+    recoveryId: safeString(rawRecovery, 'recoveryId'),
+    recoveredAt: safeString(rawRecovery, 'recoveredAt'),
+    classificationAtRecovery: safeString(rawRecovery, 'classificationAtRecovery'),
+    releasedClaims: safeStringArray(rawRecovery, 'releasedClaims'),
+    reasonCodes: ownershipSummary.reasonCodes.length > 0 ? ownershipSummary.reasonCodes : safeStringArray(rawRecovery, 'reasonCodes'),
+    previousPhase: safeString(rawRecovery, 'previousPhase'),
+    previousRevision: safeNumber(rawRecovery, 'previousRevision'),
+    authorityKind: safeString(authorityRecord, 'kind') === 'CALLER_ACKNOWLEDGED' ? 'CALLER_ACKNOWLEDGED' : safeString(authorityRecord, 'kind') === 'HOST_ATTESTED' ? 'HOST_ATTESTED' : undefined,
+    grantRef: safeString(authorityRecord, 'grantRef'),
+    resumeRequired: ownershipSummary.mutationAllowed === false,
+    source: 'FORGELOOP_INTEGRATION',
+  };
+}
+
 export function buildTaskSummary(
   taskKey: string,
   artifacts: RawTaskArtifacts,
@@ -247,6 +298,18 @@ export function buildTaskSummary(
     nextAction,
     continuity: continuitySummary,
     writeClaims: safeStringArray(taskJson, 'writeClaims'),
+    historicalWriteClaims: safeStringArray(taskJson, 'writeClaims'),
+    effectiveWriteClaims: [],
+    ownership: {
+      claimState: 'UNKNOWN',
+      mutationAllowed: null,
+      ownershipValid: null,
+      historicalWriteClaims: safeStringArray(taskJson, 'writeClaims'),
+      effectiveWriteClaims: [],
+      reasonCodes: [],
+      source: 'UNAVAILABLE',
+    },
+    operationalState: 'READ_ONLY_UNKNOWN',
     policySnapshot: artifacts['policy-snapshot.json'],
     artifactErrors: artifacts.artifactErrors,
   };

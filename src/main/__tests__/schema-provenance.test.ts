@@ -14,8 +14,8 @@ describe('trusted schema provenance', () => {
       schemas: Record<string, { sha256: string; upstreamPath: string }>;
     };
 
-    expect(manifest.forgeLoopPackageVersion).toBe('1.3.0');
-    expect(manifest.forgeLoopGitCommit).toBe('19355e701e191d830c56d64e535835e925843bae');
+    expect(manifest.forgeLoopPackageVersion).toBe('1.5.0');
+    expect(manifest.forgeLoopGitCommit).toBe('e938fa68f96b1daa19df97fd5f4c9a77ea928e0a');
     expect(manifest.protocolVersion).toBe(1);
 
     for (const [name, entry] of Object.entries(manifest.schemas)) {
@@ -28,7 +28,7 @@ describe('trusted schema provenance', () => {
 
   it('loads the committed manifest as an app-owned protocol contract', () => {
     const manifest = loadSchemaProvenance('schemas');
-    expect(manifest.forgeLoopPackageVersion).toBe('1.3.0');
-    expect(Object.keys(manifest.schemas)).toHaveLength(17);
+    expect(manifest.forgeLoopPackageVersion).toBe('1.5.0');
+    expect(Object.keys(manifest.schemas)).toHaveLength(19);
   });
 });
