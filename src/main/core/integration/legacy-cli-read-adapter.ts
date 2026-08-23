@@ -5,9 +5,10 @@ import { ForgeLoopStudioError } from '@shared/errors';
 /**
  * Legacy read-only compatibility adapter over the external ForgeLoop CLI.
  *
- * This adapter only exists for LEGACY_CLI_READ_ONLY / ARTIFACT_ONLY modes
- * (ForgeLoop <= 1.3 projects without the bundled Integration API). In
- * INTEGRATION_V1 mode the normal snapshot never spawns an external CLI.
+ * This adapter is an internal enrichment detail for ARTIFACT_ONLY mode
+ * (ForgeLoop <= 1.3 projects without the bundled Integration API). It is
+ * never a selectable semantic compatibility mode, and in INTEGRATION_V1 mode
+ * the normal snapshot never spawns an external CLI.
  *
  * Security invariants preserved:
  * - spawn uses shell:false;

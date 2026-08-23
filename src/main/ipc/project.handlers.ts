@@ -1,7 +1,7 @@
 import { app, ipcMain, dialog, BrowserWindow } from 'electron';
 import { PathBoundary } from '@main/security/path-boundary';
 import { ForgeLoopStudioError } from '@shared/errors';
-import type { ProjectDetectionResult, ProjectKind, RecentProject, StudioError } from '@shared/domain';
+import type { ProjectDetectionResult, ProjectKind, RecentProject, StudioError, ForgeLoopCompatibilityMode } from '@shared/domain';
 import { resolveRecentProjectKind } from './project-kind';
 import { IPC_CHANNELS } from '@shared/ipc';
 import { createProjectSnapshotBuilder, normalizePolicyStatus, type ProjectSnapshotBuilder, type ProjectCompatibilityContext } from '@main/core/project/project-snapshot';
@@ -14,6 +14,7 @@ import { createEventLedgerReader, type EventLedgerReader } from '@main/core/even
 import { createForgeLoopIntegration, type ForgeLoopIntegrationAdapter } from '@main/core/integration/forgeloop-integration';
 import { normalizeCanonicalProtocolInfo, negotiateCompatibilityMode } from '@main/core/protocol/protocol-capabilities';
 import { runStudioReadCommand } from '@main/core/integration/studio-read-commands';
+import { createCanonicalTaskReadService, type CanonicalTaskReadService } from '@main/core/tasks/canonical-task-read-service';
 import Store from 'electron-store';
 import { z } from 'zod';
 import { basename } from 'path';
@@ -34,6 +35,7 @@ let currentTaskIndexer: TaskIndexer | null = null;
 let currentTaskSnapshotBuilder: TaskSnapshotBuilder | null = null;
 let currentEventReader: EventLedgerReader | null = null;
 let currentExecutionReader: ExecutionReader | null = null;
+let currentCanonicalTaskService: CanonicalTaskReadService | null = null;
 let currentForgeCli: ForgeCli | null = null;
 let currentIntegration: ForgeLoopIntegrationAdapter | null = null;
 let currentCompatibilityMode: string | null = null;
@@ -113,8 +115,18 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
     }
 
     const artifacts = currentProjectReader!.readTaskSummaryArtifacts(task.taskKey);
-    const nextResult = await readNextAction(taskId);
-    const { summary, events } = currentTaskSnapshotBuilder.buildSnapshot(task.taskKey, artifacts, nextResult.success ? nextResult.data : undefined);
+    // Same canonical projection the snapshot uses — detail views can never
+    // disagree with overview semantics.
+    const canonical = currentCanonicalTaskService
+      ? await currentCanonicalTaskService.readTask(task.taskId, task.taskKey)
+      : null;
+    const nextResult = canonical ? { success: true as const } : await readNextAction(taskId);
+    const { summary, events } = currentTaskSnapshotBuilder.buildSnapshot(
+      task.taskKey,
+      artifacts,
+      nextResult.success ? (nextResult as { data?: Record<string, unknown> }).data : undefined,
+      canonical?.summary,
+    );
 
     return {
       summary,
@@ -123,6 +135,7 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
       preflight: artifacts['preflight.json'],
       workState: artifacts['work-state.json'],
       continuity: artifacts['continuity.json'],
+      recovery: artifacts['recovery.json'],
       executionReceipt: artifacts['execution-receipt.json'],
       events,
       policySnapshot: artifacts['policy-snapshot.json'],
@@ -244,7 +257,7 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
 
   ipcMain.handle(IPC_CHANNELS.GET_DIAGNOSTICS, async (event) => {
     assertTrustedSender(event);
-    return buildStudioDiagnostics({ studioVersion: app.getVersion(), forgeLoopCompatibilityMode: currentForgeCli ? 'CLI_ENHANCED' : 'ARTIFACT_ONLY' });
+    return buildStudioDiagnostics({ studioVersion: app.getVersion(), forgeLoopCompatibilityMode: (currentCompatibilityMode as ForgeLoopCompatibilityMode) ?? 'ARTIFACT_ONLY' });
   });
 
 }
@@ -309,6 +322,9 @@ async function openProject(projectRoot: string, projectKind: ProjectKind = 'PROJ
   currentTaskIndexer = createTaskIndexer(pathBoundary, currentProjectReader);
   currentEventReader = taskEventReader;
   currentExecutionReader = createExecutionReader(pathBoundary, protocolSchemas);
+  currentCanonicalTaskService = integration && negotiation.mode === 'INTEGRATION_V1'
+    ? createCanonicalTaskReadService({ projectRoot, projectReader: currentProjectReader!, integration })
+    : null;
   currentTaskSnapshotBuilder = createTaskSnapshotBuilder(pathBoundary, taskEventReader, gateReader);
 
   const compatibilityContext: ProjectCompatibilityContext = {
@@ -386,6 +402,7 @@ function closeProject(): void {
   currentTaskSnapshotBuilder = null;
   currentEventReader = null;
   currentExecutionReader = null;
+  currentCanonicalTaskService = null;
   currentForgeCli = null;
   currentIntegration = null;
   currentCompatibilityMode = null;

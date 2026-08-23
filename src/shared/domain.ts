@@ -51,7 +51,6 @@ export type ProjectKind = 'PROJECT' | 'DEMO';
 
 export type ForgeLoopCompatibilityMode =
   | 'INTEGRATION_V1'
-  | 'LEGACY_CLI_READ_ONLY'
   | 'ARTIFACT_ONLY'
   | 'INCOMPATIBLE';
 
@@ -301,7 +300,7 @@ export interface PolicySummary {
 }
 
 export type ForgeLoopHealthStatus = 'VALID' | 'INCOMPLETE' | 'STALE' | 'INCONSISTENT' | 'INVALID' | 'UNKNOWN';
-export type ForgeLoopHealthSource = 'FORGELOOP_STATUS_AGGREGATE' | 'FORGELOOP_VALIDATE_STATE' | 'ARTIFACT_VALIDATION' | 'UNKNOWN';
+export type ForgeLoopHealthSource = 'FORGELOOP_STATUS_AGGREGATE' | 'FORGELOOP_OWNERSHIP' | 'FORGELOOP_VALIDATE_STATE' | 'ARTIFACT_VALIDATION' | 'UNKNOWN';
 
 export interface ProjectHealth {
   status: ForgeLoopHealthStatus;
