@@ -3,7 +3,8 @@ import { cn } from '../utils';
 
 describe('cn (clsx + tailwind-merge)', () => {
   it('joins conditional classes', () => {
-    expect(cn('a', false && 'b', 'c')).toBe('a c');
+    const hidden = false;
+    expect(cn('a', hidden && 'b', 'c')).toBe('a c');
   });
 
   it('lets later utilities win on conflicts (v3 behavior)', () => {
