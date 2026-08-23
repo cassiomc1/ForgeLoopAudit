@@ -247,6 +247,18 @@ export function buildTaskSummary(
     nextAction,
     continuity: continuitySummary,
     writeClaims: safeStringArray(taskJson, 'writeClaims'),
+    historicalWriteClaims: safeStringArray(taskJson, 'writeClaims'),
+    effectiveWriteClaims: [],
+    ownership: {
+      claimState: 'UNKNOWN',
+      mutationAllowed: null,
+      ownershipValid: null,
+      historicalWriteClaims: safeStringArray(taskJson, 'writeClaims'),
+      effectiveWriteClaims: [],
+      reasonCodes: [],
+      source: 'UNAVAILABLE',
+    },
+    operationalState: 'READ_ONLY_UNKNOWN',
     policySnapshot: artifacts['policy-snapshot.json'],
     artifactErrors: artifacts.artifactErrors,
   };

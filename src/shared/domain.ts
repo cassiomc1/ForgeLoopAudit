@@ -164,7 +164,75 @@ export interface ContinuitySummary {
   reconciliationRequired?: never;
 }
 
-export interface ContinuityWorkItem { id: string; summary: string; }
+export type ContinuityWorkItem = { id: string; summary: string };
+
+export const FORGELOOP_CLAIM_STATES = [
+  'ACTIVE',
+  'RELEASED_BY_COMPLETION',
+  'RELEASED_BY_RECOVERY',
+  'INCONSISTENT',
+] as const;
+
+export type ForgeLoopClaimState = (typeof FORGELOOP_CLAIM_STATES)[number];
+
+export type ForgeLoopClaimStateView = ForgeLoopClaimState | 'UNKNOWN';
+
+export function parseClaimState(value: unknown): ForgeLoopClaimStateView {
+  return typeof value === 'string' && (FORGELOOP_CLAIM_STATES as readonly string[]).includes(value)
+    ? (value as ForgeLoopClaimState)
+    : 'UNKNOWN';
+}
+
+export function safeStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry): entry is string => typeof entry === 'string');
+}
+
+export interface TaskOwnershipSummary {
+  claimState: ForgeLoopClaimStateView;
+  mutationAllowed: boolean | null;
+  ownershipValid: boolean | null;
+  historicalWriteClaims: string[];
+  effectiveWriteClaims: string[];
+  reasonCodes: string[];
+  source: 'FORGELOOP_INTEGRATION' | 'UNAVAILABLE';
+}
+
+export interface TaskRecoverySummary {
+  status: 'RECOVERED' | 'NONE' | 'UNKNOWN';
+  recoveryId?: string;
+  recoveredAt?: string;
+  classificationAtRecovery?: string;
+  releasedClaims: string[];
+  reasonCodes: string[];
+  previousPhase?: string;
+  previousRevision?: number;
+  authorityKind?: 'CALLER_ACKNOWLEDGED' | 'HOST_ATTESTED';
+  grantRef?: string;
+  resumeRequired: boolean;
+  source: 'FORGELOOP_INTEGRATION' | 'RAW_ARTIFACT' | 'UNAVAILABLE';
+}
+
+export type TaskOperationalState =
+  | 'ACTIVE'
+  | 'RECOVERY_RESUME_REQUIRED'
+  | 'COMPLETED_RELEASED'
+  | 'BLOCKED'
+  | 'OWNERSHIP_INCONSISTENT'
+  | 'READ_ONLY_UNKNOWN';
+
+export interface ForgeLoopIntegrationCapabilitiesSummary {
+  available: boolean;
+  integrationApiVersion?: number;
+  protocolVersion?: number;
+  executorParity?: boolean;
+  taskClaimRecovery?: {
+    version: number;
+    durableRecoveryState: boolean;
+    explicitResume: boolean;
+    validatedClaimProjection: boolean;
+  };
+}
 
 export interface TaskSummary {
   taskId: string;
@@ -185,7 +253,13 @@ export interface TaskSummary {
   lastUpdated?: string;
   nextAction?: NextActionSummary;
   continuity?: ContinuitySummary;
+  /** @deprecated Historical raw artifact field. Never represents active ownership; use `ownership.effectiveWriteClaims`. */
   writeClaims?: string[];
+  historicalWriteClaims?: string[];
+  effectiveWriteClaims?: string[];
+  ownership: TaskOwnershipSummary;
+  recovery?: TaskRecoverySummary;
+  operationalState: TaskOperationalState;
   policySnapshot?: Record<string, unknown>;
   artifactErrors?: string[];
   gateErrors?: string[];
@@ -239,6 +313,12 @@ export interface ProjectObservations {
   evidence: Pick<EvidenceCoverageSummary, 'covered' | 'partial' | 'notVerified' | 'blocked'>;
   continuity: { present: number; missing: number };
   artifactValidationErrors: number;
+  ownership: {
+    activeCount: number;
+    recoveredResumeRequiredCount: number;
+    inconsistentCount: number;
+    unavailableCount: number;
+  };
 }
 
 export interface ProjectSnapshot {

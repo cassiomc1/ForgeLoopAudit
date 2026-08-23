@@ -156,6 +156,12 @@ export class ProjectSnapshotBuilder {
         missing: tasks.filter((task) => !task.continuity).length,
       },
       artifactValidationErrors: tasks.reduce((count, task) => count + (task.artifactErrors?.length || 0) + (task.gateErrors?.length || 0), 0),
+      ownership: {
+        activeCount: tasks.filter((task) => task.operationalState === 'ACTIVE').length,
+        recoveredResumeRequiredCount: tasks.filter((task) => task.operationalState === 'RECOVERY_RESUME_REQUIRED').length,
+        inconsistentCount: tasks.filter((task) => task.operationalState === 'OWNERSHIP_INCONSISTENT' || task.ownership.claimState === 'INCONSISTENT').length,
+        unavailableCount: tasks.filter((task) => task.ownership.source === 'UNAVAILABLE').length,
+      },
     };
   }
 
