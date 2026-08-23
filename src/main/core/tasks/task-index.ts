@@ -124,11 +124,18 @@ export class TaskSnapshotBuilder {
     private readonly gateReader: GateReader
   ) {}
 
-  buildSnapshot(taskKey: string, artifacts: RawTaskArtifacts, nextResult?: Record<string, unknown>): {
+  buildSnapshot(
+    taskKey: string,
+    artifacts: RawTaskArtifacts,
+    nextResult?: Record<string, unknown>,
+    existingSummary?: TaskSummary
+  ): {
     summary: TaskSummary;
     events: EventRecord[];
   } {
-    const summary = buildTaskSummary(taskKey, artifacts, nextResult);
+    // When a canonical summary is supplied (shared task read service), it is
+    // authoritative; this method only merges gate detail and appends events.
+    const summary = existingSummary ?? buildTaskSummary(taskKey, artifacts, nextResult);
     const gateResult = this.gateReader.readGateResult(taskKey);
     summary.gates = [...summary.gates.filter((gate) => !gateResult.gates.some((detail) => detail.id === gate.id)), ...gateResult.gates];
     summary.gateErrors = gateResult.errors.length > 0 ? gateResult.errors : undefined;
