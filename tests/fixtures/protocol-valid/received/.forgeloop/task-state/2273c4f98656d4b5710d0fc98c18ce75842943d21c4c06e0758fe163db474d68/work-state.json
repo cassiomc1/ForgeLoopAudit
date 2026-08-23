@@ -5,14 +5,19 @@
   "contractFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   "repositoryFingerprint": {
     "branch": "main",
-    "head": "fixture"
+    "head": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
   },
   "phase": "RECEIVED",
   "selectedGuides": [],
+  "requiredGates": [],
+  "satisfiedGates": [],
+  "complianceMode": "standard",
   "completedSteps": [],
   "pendingSteps": [],
   "checks": [],
   "failures": [],
   "blockers": [],
+  "verificationEvidence": [],
+  "evidenceCoverage": [],
   "lastUpdated": "2026-01-01T00:00:00.000Z"
 }

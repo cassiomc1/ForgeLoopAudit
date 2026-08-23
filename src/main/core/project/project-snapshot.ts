@@ -10,32 +10,52 @@ import type {
   PolicySummary,
   ProjectHealth,
   ProjectObservations,
+  ForgeLoopCompatibilityMode,
 } from '@shared/domain';
 import { ProjectReader } from './project-reader';
-import { ForgeCli } from '@main/core/cli/forge-cli';
-import { buildTaskSummary } from '@main/core/tasks/task-reader';
+import { ForgeCli, type CliResult } from '@main/core/cli/forge-cli';
+import { LegacyCliReadAdapter } from '@main/core/integration/legacy-cli-read-adapter';
+import { buildTaskSummary, buildRecoverySummary } from '@main/core/tasks/task-reader';
+import { resolveOperationalState, selectActiveTaskId } from '@main/core/tasks/operational-state';
 import { checkProtocolCompatibility } from '@main/core/protocol/compatibility';
 import { compareAuthoritativeFacts } from '@main/core/protocol/semantic-parity';
+import { discoverCanonicalTasks, type CanonicalTaskDiscoveryResult } from '@main/core/integration/task-projection';
+import { runStudioReadCommand } from '@main/core/integration/studio-read-commands';
+import { normalizeOwnership } from '@main/core/tasks/ownership-projection';
+import type { ForgeLoopIntegrationAdapter } from '@main/core/integration/forgeloop-integration';
 
 export interface ProjectCompatibilityContext {
   source: 'PROTOCOL_INFO' | 'ARTIFACT_ONLY';
   protocolVersion: number;
   schemaVersion: number;
   packageVersion?: string;
+  compatibilityMode?: ForgeLoopCompatibilityMode;
 }
 
 export class ProjectSnapshotBuilder {
+  private readonly legacyCli: LegacyCliReadAdapter;
+
   constructor(
     private readonly pathBoundary: PathBoundary,
     private readonly projectReader: ProjectReader,
-    private readonly forgeCli: ForgeCli,
+    forgeCli: ForgeCli,
     private readonly compatibilityContext?: ProjectCompatibilityContext,
-    private readonly cliEnabled = true
-  ) {}
+    private readonly cliEnabled = true,
+    private readonly integration?: ForgeLoopIntegrationAdapter
+  ) {
+    this.legacyCli = new LegacyCliReadAdapter(forgeCli);
+  }
 
   async build(): Promise<ProjectSnapshot> {
     const config = this.projectReader.readConfig();
     const taskKeys = this.projectReader.listTaskKeys();
+    const diagnostics: string[] = [];
+
+    let canonicalDiscovery: CanonicalTaskDiscoveryResult | null = null;
+    if (this.integration && this.compatibilityContext?.compatibilityMode === 'INTEGRATION_V1') {
+      canonicalDiscovery = await discoverCanonicalTasks(this.integration, this.pathBoundary.getProjectRoot(), taskKeys);
+      diagnostics.push(...canonicalDiscovery.diagnostics);
+    }
 
     const protocolSummary: ProtocolSummary = checkProtocolCompatibility({
       protocolVersion: this.compatibilityContext?.protocolVersion ?? config.protocolVersion,
@@ -44,6 +64,7 @@ export class ProjectSnapshotBuilder {
       compatible: true,
     });
     protocolSummary.compatibilitySource = this.compatibilityContext?.source || 'ARTIFACT_ONLY';
+    protocolSummary.compatibilityMode = this.compatibilityContext?.compatibilityMode;
 
     const projectSummary: ProjectSummary = {
       name: config.projectName || basename(this.pathBoundary.getProjectRoot()) || 'Unknown Project',
@@ -62,11 +83,43 @@ export class ProjectSnapshotBuilder {
         try {
           const artifacts = this.projectReader.readTaskSummaryArtifacts(taskKey);
           const taskId = String((artifacts['task.json'] as Record<string, unknown>)?.taskId || taskKey);
-          const [nextResult, statusResult] = this.cliEnabled
-            ? await Promise.all([this.forgeCli.next(taskId), this.forgeCli.status(taskId)])
-            : [{ success: false } as const, { success: false } as const];
+          const cliUnavailable = { success: false } as CliResult<Record<string, unknown>>;
+          const wantsCanonicalRuntime = Boolean(this.integration && this.compatibilityContext?.compatibilityMode === 'INTEGRATION_V1');
+          let nextResult: CliResult<Record<string, unknown>>;
+          let statusResult: CliResult<Record<string, unknown>>;
+          if (wantsCanonicalRuntime && this.integration) {
+            const projectRoot = this.pathBoundary.getProjectRoot();
+            const [nextOutcome, canonicalStatus] = await Promise.all([
+              runStudioReadCommand<Record<string, unknown>>(this.integration, projectRoot, 'next', { taskId }),
+              this.integration.readTaskStatus(projectRoot, taskId).catch(() => null),
+            ]);
+            nextResult = nextOutcome.kind === 'DOMAIN_OUTCOME'
+              ? { success: true, data: nextOutcome.data ?? undefined, exitCode: nextOutcome.exitCode }
+              : cliUnavailable;
+            statusResult = canonicalStatus
+              ? ({ success: true, data: canonicalStatus } as CliResult<Record<string, unknown>>)
+              : cliUnavailable;
+          } else {
+            nextResult = this.cliEnabled ? await this.legacyCli.next(taskId) : cliUnavailable;
+            statusResult = this.cliEnabled ? await this.legacyCli.status(taskId) : cliUnavailable;
+          }
+          const canonicalOwnership = wantsCanonicalRuntime && this.integration
+            ? await this.integration.readTaskOwnership(this.pathBoundary.getProjectRoot(), taskId).catch(() => null)
+            : null;
           const status = extractHealthStatus(statusResult.data);
           const taskSummary = buildTaskSummary(taskKey, artifacts as any, nextResult.success ? nextResult.data as Record<string, unknown> : undefined);
+          const ownershipSummary = normalizeOwnership(canonicalOwnership);
+          taskSummary.ownership = ownershipSummary;
+          taskSummary.historicalWriteClaims = ownershipSummary.historicalWriteClaims;
+          taskSummary.effectiveWriteClaims = ownershipSummary.effectiveWriteClaims;
+          taskSummary.recovery = buildRecoverySummary(
+            artifacts['recovery.json'] as Record<string, unknown> | undefined,
+            ownershipSummary,
+          );
+          taskSummary.operationalState = resolveOperationalState({
+            phase: taskSummary.phase,
+            ownership: ownershipSummary,
+          });
           const parity = statusResult.success
             ? compareAuthoritativeFacts(
               { phase: taskSummary.phase },
@@ -79,6 +132,7 @@ export class ProjectSnapshotBuilder {
           return { taskSummary, status: statusResult.success ? status : undefined };
         } catch (error) {
           console.warn(`Failed to build summary for task ${taskKey}:`, error);
+          diagnostics.push(`corrupt task namespace ${taskKey}: ${error instanceof Error ? error.message : String(error)}`);
           return null;
         }
       }));
@@ -86,7 +140,17 @@ export class ProjectSnapshotBuilder {
         if (!result) continue;
         tasks.push(result.taskSummary);
         if (result.status) authoritativeStatuses.push(result.status);
-        if (!activeTaskId && result.taskSummary.phase !== 'COMPLETE' && result.taskSummary.phase !== 'BLOCKED') activeTaskId = result.taskSummary.taskId;
+      }
+    }
+
+    activeTaskId = selectActiveTaskId(tasks);
+
+    if (canonicalDiscovery && canonicalDiscovery.source === 'FORGELOOP_INTEGRATION') {
+      const builtTaskIds = new Set(tasks.map((task) => task.taskId));
+      for (const canonical of canonicalDiscovery.tasks) {
+        if (!builtTaskIds.has(canonical.taskId)) {
+          diagnostics.push(`canonical task ${canonical.taskId} has no readable filesystem namespace`);
+        }
       }
     }
 
@@ -103,6 +167,7 @@ export class ProjectSnapshotBuilder {
       activeTaskId,
       sessions,
       policy,
+      diagnostics: diagnostics.length > 0 ? diagnostics : undefined,
       updatedAt: new Date().toISOString(),
     };
   }
@@ -153,6 +218,12 @@ export class ProjectSnapshotBuilder {
         missing: tasks.filter((task) => !task.continuity).length,
       },
       artifactValidationErrors: tasks.reduce((count, task) => count + (task.artifactErrors?.length || 0) + (task.gateErrors?.length || 0), 0),
+      ownership: {
+        activeCount: tasks.filter((task) => task.operationalState === 'ACTIVE').length,
+        recoveredResumeRequiredCount: tasks.filter((task) => task.operationalState === 'RECOVERY_RESUME_REQUIRED').length,
+        inconsistentCount: tasks.filter((task) => task.operationalState === 'OWNERSHIP_INCONSISTENT' || task.ownership.claimState === 'INCONSISTENT').length,
+        unavailableCount: tasks.filter((task) => task.ownership.source === 'UNAVAILABLE').length,
+      },
     };
   }
 
@@ -162,7 +233,7 @@ export class ProjectSnapshotBuilder {
     const config = this.projectReader.readConfig();
     const ruleCount = rules && typeof rules === 'object' && Array.isArray((rules as Record<string, unknown>).rules) ? ((rules as Record<string, unknown>).rules as unknown[]).length : undefined;
     const cliStatus = this.cliEnabled
-      ? await this.forgeCli.policyStatus<Record<string, unknown>>()
+      ? await this.legacyCli.policyStatus<Record<string, unknown>>()
       : { success: false as const };
     const complianceMode = typeof (config as unknown as Record<string, unknown>).complianceMode === 'string' ? String((config as unknown as Record<string, unknown>).complianceMode) : 'Unknown';
     if (cliStatus.success) return normalizePolicyStatus(cliStatus.data, complianceMode, 'POLICY_STATUS');
@@ -293,7 +364,8 @@ export function createProjectSnapshotBuilder(
   projectReader: ProjectReader,
   forgeCli: ForgeCli,
   compatibilityContext?: ProjectCompatibilityContext,
-  cliEnabled = true
+  cliEnabled = true,
+  integration?: ForgeLoopIntegrationAdapter
 ): ProjectSnapshotBuilder {
-  return new ProjectSnapshotBuilder(pathBoundary, projectReader, forgeCli, compatibilityContext, cliEnabled);
+  return new ProjectSnapshotBuilder(pathBoundary, projectReader, forgeCli, compatibilityContext, cliEnabled, integration);
 }

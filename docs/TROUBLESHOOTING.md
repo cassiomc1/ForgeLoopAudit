@@ -26,3 +26,19 @@ Run a production build and inspect the renderer console for failed asset URLs, p
 ## Invalid ForgeLoop artifact
 
 Record the artifact name and schema validation error. Invalid or unverified data must remain visibly distinct from a valid protocol state.
+
+## Ownership shows "OWNERSHIP UNAVAILABLE"
+
+Canonical ownership comes exclusively from the bundled ForgeLoop 1.5 Integration API (`task/ownership`). When the Integration API is unavailable, Studio degrades to `ARTIFACT_ONLY` mode: raw artifacts stay readable for inspection but ownership facts are shown as unavailable instead of being guessed from `task.json` or the legacy CLI.
+
+## Task badge says "RECOVERED — RESUME REQUIRED"
+
+The task has a valid durable recovery (`claimState=RELEASED_BY_RECOVERY`, `mutationAllowed=false`). Mutations are blocked until an authorized harness performs the canonical ForgeLoop `task-resume`. Studio only displays this state and offers the command as copy-only text; it never executes it.
+
+## Project fails to open with a compatibility error
+
+Studio negotiates capabilities through the Integration API and fails closed on unknown protocol/schema versions or capability drift. Check the project's `.forgeloop/config.json` versions against [docs/PROTOCOL_COMPATIBILITY.md](PROTOCOL_COMPATIBILITY.md) and refresh trusted schemas only via `scripts/generate-schema-provenance.mjs`.
+
+## Execution provenance list is empty or shows withheld entries
+
+Executions load lazily per task from `.forgeloop/task-state/<key>/executions/exec-*.json`. Entries that fail the trusted `execution.schema.json`, exceed size limits, or use symlinks are withheld and counted — this is intentional fail-closed behavior, not data loss in Studio.

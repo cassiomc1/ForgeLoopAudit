@@ -10,8 +10,8 @@
   },
   "phase": "COMPLETE",
   "selectedGuides": [
-    "testing",
-    "clean-code"
+    "test",
+    "clean"
   ],
   "requiredGates": [
     "unit-tests",
@@ -33,44 +33,110 @@
   "pendingSteps": [],
   "checks": [
     {
+      "schemaVersion": 1,
+      "protocolVersion": 1,
       "id": "catalog-unit-tests",
+      "kind": "command",
       "requirement": "Catalog unit tests pass",
       "status": "passed",
       "evidenceKind": "OBSERVED",
-      "timestamp": "2026-08-03T09:35:00.000Z"
+      "source": "vitest run",
+      "exitCode": 0,
+      "timestamp": "2026-08-03T09:35:00.000Z",
+      "executionRef": "executions/exec-catalog-unit-tests.json",
+      "provenance": "FORGELOOP_EXECUTED"
     },
     {
+      "schemaVersion": 1,
+      "protocolVersion": 1,
       "id": "typecheck",
+      "kind": "command",
       "requirement": "TypeScript compiles without errors",
       "status": "passed",
       "evidenceKind": "OBSERVED",
-      "timestamp": "2026-08-03T09:40:00.000Z"
+      "source": "tsc --noEmit",
+      "exitCode": 0,
+      "timestamp": "2026-08-03T09:40:00.000Z",
+      "executionRef": "executions/exec-catalog-typecheck.json",
+      "provenance": "FORGELOOP_EXECUTED"
     },
     {
+      "schemaVersion": 1,
+      "protocolVersion": 1,
       "id": "lint",
+      "kind": "command",
       "requirement": "Lint passes on changed files",
       "status": "passed",
       "evidenceKind": "OBSERVED",
-      "timestamp": "2026-08-03T09:42:00.000Z"
+      "source": "eslint",
+      "exitCode": 0,
+      "timestamp": "2026-08-03T09:42:00.000Z",
+      "executionRef": "executions/exec-catalog-lint.json",
+      "provenance": "FORGELOOP_EXECUTED"
     }
   ],
   "failures": [],
   "blockers": [],
+  "verificationEvidence": [
+    {
+      "id": "verif-catalog-cycle-1",
+      "summary": "Every success criterion observed during verification cycle 1.",
+      "status": "OBSERVED",
+      "timestamp": "2026-08-03T10:00:00.000Z"
+    }
+  ],
   "evidenceCoverage": [
     {
+      "schemaVersion": 1,
+      "protocolVersion": 1,
+      "requirement": "Products render in a responsive grid",
+      "requiredEvidence": [
+        "Products render in a responsive grid"
+      ],
+      "observedEvidence": [
+        "Products render in a responsive grid"
+      ],
       "status": "COVERED"
     },
     {
+      "schemaVersion": 1,
+      "protocolVersion": 1,
+      "requirement": "Filters combine category and price range",
+      "requiredEvidence": [
+        "Filters combine category and price range"
+      ],
+      "observedEvidence": [
+        "Filters combine category and price range"
+      ],
       "status": "COVERED"
     },
     {
+      "schemaVersion": 1,
+      "protocolVersion": 1,
+      "requirement": "Catalog unit tests pass (14 cases)",
+      "requiredEvidence": [
+        "Catalog unit tests pass (14 cases)"
+      ],
+      "observedEvidence": [
+        "Catalog unit tests pass (14 cases)"
+      ],
       "status": "COVERED"
     },
     {
+      "schemaVersion": 1,
+      "protocolVersion": 1,
+      "requirement": "Filtering logic covered by table-driven tests",
+      "requiredEvidence": [
+        "Filtering logic covered by table-driven tests"
+      ],
+      "observedEvidence": [
+        "Filtering logic covered by table-driven tests"
+      ],
       "status": "COVERED"
     }
   ],
   "lastUpdated": "2026-08-03T10:05:00.000Z",
+  "verificationCycle": 1,
   "publicationStatus": "pushed",
   "revision": 3
 }

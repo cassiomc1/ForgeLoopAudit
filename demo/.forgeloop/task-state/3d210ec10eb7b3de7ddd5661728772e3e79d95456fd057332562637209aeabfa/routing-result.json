@@ -9,7 +9,7 @@
   "primary": "diagnosis",
   "guides": [
     "accessibility",
-    "testing"
+    "test"
   ],
   "reasons": {
     "diagnosis": [

@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { verifyDemoProject } from './demo/verifier.mjs';
+import { verifyDemoProject, verifyCanonicalDemoSemantics } from './demo/verifier.mjs';
 
 const root = process.argv[2] || join(process.cwd(), 'demo');
 const result = verifyDemoProject(root);
@@ -10,4 +10,12 @@ if (!result.ok) {
   for (const error of result.errors) console.error(`- ${error}`);
   process.exit(1);
 }
+
+const canonical = await verifyCanonicalDemoSemantics(root);
+if (!canonical.ok) {
+  console.error('DEMO CANONICAL SEMANTICS FAILED:');
+  for (const error of canonical.errors) console.error(`- ${error}`);
+  process.exit(1);
+}
+console.log(`Demo canonical ownership verified through ForgeLoop Integration API (${canonical.stats.tasksChecked} tasks)`);
 console.log('Demo project is protocol-valid and internally consistent');

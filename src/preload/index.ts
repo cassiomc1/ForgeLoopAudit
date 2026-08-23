@@ -7,6 +7,7 @@ import type {
   ProjectUpdate,
   RecentProject,
   RawArtifactRequest,
+  ExecutionPage,
 } from '@shared/domain';
 import { IPC_CHANNELS } from '@shared/ipc';
 
@@ -22,6 +23,8 @@ const api = {
   validateEventLedger: (taskId: string) => ipcRenderer.invoke(IPC_CHANNELS.VALIDATE_EVENT_LEDGER, taskId),
   getPolicyStatus: (taskId?: string) => ipcRenderer.invoke(IPC_CHANNELS.GET_POLICY_STATUS, taskId),
   getRawArtifact: (request: RawArtifactRequest): Promise<string> => ipcRenderer.invoke(IPC_CHANNELS.GET_RAW_ARTIFACT, request),
+  getTaskExecutions: (taskId: string, limit?: number): Promise<ExecutionPage> =>
+    ipcRenderer.invoke(IPC_CHANNELS.GET_TASK_EXECUTIONS, taskId, limit),
   getRecentProjects: (): Promise<RecentProject[]> => ipcRenderer.invoke(IPC_CHANNELS.GET_RECENT_PROJECTS),
   addRecentProject: (project: RecentProject): Promise<void> => ipcRenderer.invoke(IPC_CHANNELS.ADD_RECENT_PROJECT, project),
   removeRecentProject: (path: string): Promise<void> => ipcRenderer.invoke(IPC_CHANNELS.REMOVE_RECENT_PROJECT, path),

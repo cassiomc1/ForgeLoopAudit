@@ -22,6 +22,8 @@
     "integration-tests",
     "security-review"
   ],
-  "satisfiedGates": [],
+  "satisfiedGates": [
+    "integration-tests"
+  ],
   "errors": []
 }

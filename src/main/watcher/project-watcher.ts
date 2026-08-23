@@ -7,7 +7,7 @@ import { ForgeLoopStudioError } from '@shared/errors';
 import { WATCHER_RETRY_MS, WATCHER_MAX_RETRIES } from '@shared/constants';
 
 export interface WatcherEvent {
-  type: 'artifact-changed' | 'task-added' | 'task-removed' | 'event-appended' | 'policy-changed' | 'session-changed';
+  type: 'artifact-changed' | 'task-added' | 'task-removed' | 'event-appended' | 'policy-changed' | 'session-changed' | 'execution-changed';
   taskKey?: string;
   artifact?: string;
   path: string;
@@ -143,6 +143,27 @@ export class ProjectWatcher {
             type: 'event-appended',
             taskKey,
             artifact: 'events.ndjson',
+            path: change.path,
+          };
+        }
+
+        // Execution provenance artifacts live in their own per-task
+        // directory; they get a lightweight bounded event instead of a full
+        // snapshot rebuild so bursts never trigger rebuild storms.
+        if (parts.length >= 3 && parts[2] === 'executions' && change.path.endsWith('.json')) {
+          return {
+            type: 'execution-changed',
+            taskKey,
+            artifact: parts[parts.length - 1],
+            path: change.path,
+          };
+        }
+
+        if (change.path.endsWith('recovery.json')) {
+          return {
+            type: 'artifact-changed',
+            taskKey,
+            artifact: 'recovery.json',
             path: change.path,
           };
         }

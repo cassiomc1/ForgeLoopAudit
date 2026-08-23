@@ -14,7 +14,7 @@ ForgeLoop Studio is a local-first desktop companion for ForgeLoop. Open a ForgeL
 
 ## Status
 
-Release candidate — the read-only Studio runtime, trusted protocol validation, functional fixture E2E and multi-platform release staging are implemented. The current development target is `v0.1.0-rc.5`; RC3 remains immutable at its tagged commit and represents the earlier release configuration without pre-publication semantic evidence validation. Semantic release-evidence hardening is first included in RC4.
+Release candidate — the read-only Studio runtime, trusted protocol validation, functional fixture E2E and multi-platform release staging are implemented. The current development target is `v0.1.0-rc.6` (ForgeLoop 1.5 full compatibility: Integration API v1, canonical ownership, durable recovery, execution provenance). Earlier RCs remain immutable at their tagged commits.
 
 For the current RC4 policy, Linux, macOS and Windows builds are unsigned preview artifacts. Validate the published checksums and expect normal operating-system security warnings; signed/notarized distribution is not part of this release candidate.
 
@@ -31,10 +31,17 @@ For the current RC4 policy, Linux, macOS and Windows builds are unsigned preview
 - Ajv
 - Vitest
 - Playwright
+- `@cassiomc1/forgeloop` 1.5.x (bundled Integration API, read-only)
 
 ## Product direction
 
 ForgeLoop Studio is designed as a **read-only observer by default**. ForgeLoop remains the protocol authority and `.forgeloop/` remains the canonical source of truth.
+
+## ForgeLoop 1.5 compatibility
+
+Studio consumes the bundled `@cassiomc1/forgeloop/integration` public subpath as its semantic boundary: canonical task discovery, canonical claim ownership (`claimState`, `mutationAllowed`, `ownershipValid`, historical vs effective write claims), durable recovery state and execution provenance. Direct `.forgeloop/` artifact reading remains available for detail views and diagnostics only — it never determines current ownership. The Studio never executes mutable ForgeLoop commands; recovery/resume actions are displayed as copy-only instructions.
+
+Compatibility modes: `INTEGRATION_V1` (full support), `ARTIFACT_ONLY` (visual reading with ownership unavailable), `LEGACY_CLI_READ_ONLY` (ForgeLoop <= 1.3), and `INCOMPATIBLE` (fail closed). See [docs/PROTOCOL_COMPATIBILITY.md](docs/PROTOCOL_COMPATIBILITY.md) for the full matrix.
 
 The visual direction is a premium, modern, minimal dark developer interface focused on clarity rather than decorative effects.
 
@@ -49,7 +56,7 @@ The demo is a real ForgeLoop project fixture: every `.forgeloop/` artifact valid
 | TASK-001 | Complete successful lifecycle |
 | TASK-002 | Verification/review in progress |
 | TASK-003 | Active execution |
-| TASK-004 | Failure, recovery and cross-harness continuity |
+| TASK-004 | Durable recovery (resume required) and cross-harness continuity |
 | TASK-005 | Planned performance work |
 | TASK-006 | Security policy and successful completion |
 

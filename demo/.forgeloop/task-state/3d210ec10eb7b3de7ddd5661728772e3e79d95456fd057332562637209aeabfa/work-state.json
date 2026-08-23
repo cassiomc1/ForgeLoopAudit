@@ -11,7 +11,7 @@
   "phase": "BLOCKED",
   "selectedGuides": [
     "accessibility",
-    "testing"
+    "test"
   ],
   "requiredGates": [
     "accessibility-audit"
@@ -28,17 +28,25 @@
   ],
   "checks": [
     {
+      "schemaVersion": 1,
+      "protocolVersion": 1,
       "id": "keyboard-navigation",
+      "kind": "audit",
       "requirement": "All interactive controls are reachable by keyboard",
       "status": "failed",
       "evidenceKind": "BLOCKED",
+      "source": "audit:keyboard-navigation",
       "timestamp": "2026-08-06T10:40:00.000Z"
     },
     {
+      "schemaVersion": 1,
+      "protocolVersion": 1,
       "id": "screen-reader-labels",
+      "kind": "audit",
       "requirement": "Dynamic regions expose accessible names",
       "status": "passed",
       "evidenceKind": "OBSERVED",
+      "source": "axe scan",
       "timestamp": "2026-08-06T10:38:00.000Z"
     }
   ],
@@ -56,11 +64,26 @@
       "detail": "2 keyboard navigation findings block completion"
     }
   ],
+  "verificationEvidence": [],
   "evidenceCoverage": [
     {
-      "status": "COVERED"
+      "schemaVersion": 1,
+      "protocolVersion": 1,
+      "requirement": "Every interactive control is reachable by keyboard",
+      "requiredEvidence": [
+        "Every interactive control is reachable by keyboard"
+      ],
+      "observedEvidence": [],
+      "status": "BLOCKED"
     },
     {
+      "schemaVersion": 1,
+      "protocolVersion": 1,
+      "requirement": "Focus order matches visual order",
+      "requiredEvidence": [
+        "Focus order matches visual order"
+      ],
+      "observedEvidence": [],
       "status": "BLOCKED"
     }
   ],

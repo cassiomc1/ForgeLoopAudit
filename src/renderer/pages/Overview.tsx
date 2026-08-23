@@ -162,6 +162,40 @@ export function Overview({ snapshot, watcherStatus: _watcherStatus, onTaskSelect
                 </span>
                 <span className="text-forge-text-primary">{snapshot.observations.continuity.present}/{snapshot.observations.taskCount}</span>
               </div>
+              <div className="flex items-center justify-between text-sm pt-2 border-t border-forge-border-subtle/50">
+                <span className="text-forge-text-secondary flex items-center gap-2">
+                  <span className={cn('w-1.5 h-1.5 rounded-full', snapshot.observations.ownership.inconsistentCount > 0 ? 'bg-forge-danger' : 'bg-forge-success')} />
+                  Active ownership
+                </span>
+                <span className="text-forge-text-primary">{snapshot.observations.ownership.activeCount}</span>
+              </div>
+              {snapshot.observations.ownership.recoveredResumeRequiredCount > 0 && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-forge-text-secondary flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-forge-warning" />
+                    Recovered — resume required
+                  </span>
+                  <span className="text-forge-warning">{snapshot.observations.ownership.recoveredResumeRequiredCount}</span>
+                </div>
+              )}
+              {snapshot.observations.ownership.inconsistentCount > 0 && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-forge-text-secondary flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-forge-danger" />
+                    Ownership inconsistent
+                  </span>
+                  <span className="text-forge-danger">{snapshot.observations.ownership.inconsistentCount}</span>
+                </div>
+              )}
+              {snapshot.observations.ownership.unavailableCount > 0 && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-forge-text-secondary flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-forge-text-muted" />
+                    Ownership unavailable
+                  </span>
+                  <span className="text-forge-text-muted">{snapshot.observations.ownership.unavailableCount}</span>
+                </div>
+              )}
             </div>
           </div>
 

@@ -9,7 +9,7 @@
   "primary": "implementation",
   "guides": [
     "security",
-    "testing"
+    "test"
   ],
   "reasons": {
     "implementation": [

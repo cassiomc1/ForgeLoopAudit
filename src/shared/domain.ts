@@ -49,6 +49,12 @@ export type PhaseState = 'completed' | 'current' | 'pending' | 'blocked' | 'fail
 
 export type ProjectKind = 'PROJECT' | 'DEMO';
 
+export type ForgeLoopCompatibilityMode =
+  | 'INTEGRATION_V1'
+  | 'LEGACY_CLI_READ_ONLY'
+  | 'ARTIFACT_ONLY'
+  | 'INCOMPATIBLE';
+
 export interface ProjectDetectionResult {
   projectRoot: string;
   forgeLoopRoot: string;
@@ -58,6 +64,7 @@ export interface ProjectDetectionResult {
   compatible: boolean;
   warnings: string[];
   projectKind: ProjectKind;
+  compatibilityMode?: ForgeLoopCompatibilityMode;
 }
 
 export interface ProjectSummary {
@@ -73,6 +80,7 @@ export interface ProtocolSummary {
   packageVersion?: string;
   compatible: boolean;
   compatibilitySource?: 'PROTOCOL_INFO' | 'ARTIFACT_ONLY';
+  compatibilityMode?: ForgeLoopCompatibilityMode;
 }
 
 export interface BlockerSummary {
@@ -156,7 +164,75 @@ export interface ContinuitySummary {
   reconciliationRequired?: never;
 }
 
-export interface ContinuityWorkItem { id: string; summary: string; }
+export type ContinuityWorkItem = { id: string; summary: string };
+
+export const FORGELOOP_CLAIM_STATES = [
+  'ACTIVE',
+  'RELEASED_BY_COMPLETION',
+  'RELEASED_BY_RECOVERY',
+  'INCONSISTENT',
+] as const;
+
+export type ForgeLoopClaimState = (typeof FORGELOOP_CLAIM_STATES)[number];
+
+export type ForgeLoopClaimStateView = ForgeLoopClaimState | 'UNKNOWN';
+
+export function parseClaimState(value: unknown): ForgeLoopClaimStateView {
+  return typeof value === 'string' && (FORGELOOP_CLAIM_STATES as readonly string[]).includes(value)
+    ? (value as ForgeLoopClaimState)
+    : 'UNKNOWN';
+}
+
+export function safeStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry): entry is string => typeof entry === 'string');
+}
+
+export interface TaskOwnershipSummary {
+  claimState: ForgeLoopClaimStateView;
+  mutationAllowed: boolean | null;
+  ownershipValid: boolean | null;
+  historicalWriteClaims: string[];
+  effectiveWriteClaims: string[];
+  reasonCodes: string[];
+  source: 'FORGELOOP_INTEGRATION' | 'UNAVAILABLE';
+}
+
+export interface TaskRecoverySummary {
+  status: 'RECOVERED' | 'NONE' | 'UNKNOWN';
+  recoveryId?: string;
+  recoveredAt?: string;
+  classificationAtRecovery?: string;
+  releasedClaims: string[];
+  reasonCodes: string[];
+  previousPhase?: string;
+  previousRevision?: number;
+  authorityKind?: 'CALLER_ACKNOWLEDGED' | 'HOST_ATTESTED';
+  grantRef?: string;
+  resumeRequired: boolean;
+  source: 'FORGELOOP_INTEGRATION' | 'RAW_ARTIFACT' | 'UNAVAILABLE';
+}
+
+export type TaskOperationalState =
+  | 'ACTIVE'
+  | 'RECOVERY_RESUME_REQUIRED'
+  | 'COMPLETED_RELEASED'
+  | 'BLOCKED'
+  | 'OWNERSHIP_INCONSISTENT'
+  | 'READ_ONLY_UNKNOWN';
+
+export interface ForgeLoopIntegrationCapabilitiesSummary {
+  available: boolean;
+  integrationApiVersion?: number;
+  protocolVersion?: number;
+  executorParity?: boolean;
+  taskClaimRecovery?: {
+    version: number;
+    durableRecoveryState: boolean;
+    explicitResume: boolean;
+    validatedClaimProjection: boolean;
+  };
+}
 
 export interface TaskSummary {
   taskId: string;
@@ -177,7 +253,13 @@ export interface TaskSummary {
   lastUpdated?: string;
   nextAction?: NextActionSummary;
   continuity?: ContinuitySummary;
+  /** @deprecated Historical raw artifact field. Never represents active ownership; use `ownership.effectiveWriteClaims`. */
   writeClaims?: string[];
+  historicalWriteClaims?: string[];
+  effectiveWriteClaims?: string[];
+  ownership: TaskOwnershipSummary;
+  recovery?: TaskRecoverySummary;
+  operationalState: TaskOperationalState;
   policySnapshot?: Record<string, unknown>;
   artifactErrors?: string[];
   gateErrors?: string[];
@@ -231,6 +313,12 @@ export interface ProjectObservations {
   evidence: Pick<EvidenceCoverageSummary, 'covered' | 'partial' | 'notVerified' | 'blocked'>;
   continuity: { present: number; missing: number };
   artifactValidationErrors: number;
+  ownership: {
+    activeCount: number;
+    recoveredResumeRequiredCount: number;
+    inconsistentCount: number;
+    unavailableCount: number;
+  };
 }
 
 export interface ProjectSnapshot {
@@ -242,6 +330,7 @@ export interface ProjectSnapshot {
   activeTaskId?: string;
   sessions: SessionSummary[];
   policy?: PolicySummary;
+  diagnostics?: string[];
   updatedAt: string;
 }
 
@@ -319,6 +408,7 @@ export type AllowedArtifact =
   | 'preflight.json'
   | 'work-state.json'
   | 'continuity.json'
+  | 'recovery.json'
   | 'execution-receipt.json'
   | 'policy-snapshot.json'
   | 'events.ndjson'
@@ -327,6 +417,34 @@ export type AllowedArtifact =
 export interface RawArtifactRequest {
   taskId: string;
   artifact: AllowedArtifact;
+}
+
+export interface ExecutionRecord {
+  executionId: string;
+  taskId: string;
+  checkId: string;
+  requirement: string;
+  verificationCycle: number;
+  kind: string;
+  argv: string[];
+  cwd: string;
+  resolution: Record<string, unknown>;
+  dispatch?: Record<string, unknown>;
+  startedAt: string;
+  finishedAt: string;
+  status: 'passed' | 'failed';
+  exitCode: number | null;
+  durationMs?: number;
+  termination?: string;
+  signal?: string | null;
+  stdoutSha256?: string;
+  stderrSha256?: string;
+}
+
+export interface ExecutionPage {
+  executions: ExecutionRecord[];
+  invalidCount: number;
+  hasMore: boolean;
 }
 
 export interface WatcherStatus {

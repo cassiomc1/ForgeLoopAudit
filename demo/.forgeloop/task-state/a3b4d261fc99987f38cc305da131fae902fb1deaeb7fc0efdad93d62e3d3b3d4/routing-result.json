@@ -8,8 +8,8 @@
   },
   "primary": "implementation",
   "guides": [
-    "testing",
-    "clean-code"
+    "test",
+    "clean"
   ],
   "reasons": {
     "implementation": [
