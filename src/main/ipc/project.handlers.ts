@@ -8,6 +8,7 @@ import { createProjectSnapshotBuilder, normalizePolicyStatus, type ProjectSnapsh
 import { createProjectDetector, createProjectReader, type ProjectReader } from '@main/core/project/project-reader';
 import { ForgeCli } from '@main/core/cli/forge-cli';
 import { createProjectWatcher } from '@main/watcher/project-watcher';
+import { createExecutionReader, type ExecutionReader } from '@main/core/executions/execution-reader';
 import { createTaskIndexer, createTaskSnapshotBuilder, createGateReader, type TaskIndexer, type TaskSnapshotBuilder } from '@main/core/tasks/task-index';
 import { createEventLedgerReader, type EventLedgerReader } from '@main/core/events/ledger-reader';
 import { createForgeLoopIntegration, type ForgeLoopIntegrationAdapter } from '@main/core/integration/forgeloop-integration';
@@ -32,6 +33,7 @@ let currentProjectReader: ProjectReader | null = null;
 let currentTaskIndexer: TaskIndexer | null = null;
 let currentTaskSnapshotBuilder: TaskSnapshotBuilder | null = null;
 let currentEventReader: EventLedgerReader | null = null;
+let currentExecutionReader: ExecutionReader | null = null;
 let currentForgeCli: ForgeCli | null = null;
 let currentIntegration: ForgeLoopIntegrationAdapter | null = null;
 let currentCompatibilityMode: string | null = null;
@@ -45,6 +47,7 @@ const ProjectPathSchema = z.string().min(1).max(4096);
 const EventQuerySchema = z.object({ taskId: TaskIdSchema, cursor: z.string().max(256).optional(), limit: z.number().int().min(1).max(500).optional() });
 const RecentProjectSchema = z.object({ path: z.string().min(1).max(4096), name: z.string().max(300), lastOpenedAt: z.string().max(100), kind: z.enum(['PROJECT', 'DEMO']).optional() });
 const RawArtifactSchema = z.object({ taskId: TaskIdSchema, artifact: z.enum(['task.json', 'contract.json', 'routing-result.json', 'preflight.json', 'work-state.json', 'continuity.json', 'recovery.json', 'execution-receipt.json', 'policy-snapshot.json', 'events.ndjson']) });
+const ExecutionQuerySchema = z.object({ taskId: TaskIdSchema, limit: z.number().int().min(1).max(100).optional() });
 
 function assertTrustedSender(event: Electron.IpcMainInvokeEvent): void {
   if (!currentMainWindow || event.sender.id !== currentMainWindow.webContents.id) throw ForgeLoopStudioError.unknown('Untrusted IPC sender');
@@ -195,6 +198,19 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
     return typeof content === 'string' ? content : JSON.stringify(content, null, 2);
   });
 
+  ipcMain.handle(IPC_CHANNELS.GET_TASK_EXECUTIONS, async (event, taskId: string, limit?: number) => {
+    assertTrustedSender(event);
+    const query = ExecutionQuerySchema.parse({ taskId, limit });
+    if (!currentTaskIndexer || !currentExecutionReader) {
+      throw ForgeLoopStudioError.unknown('No project open');
+    }
+    const task = currentTaskIndexer.listTasks().find((t) => t.taskId === query.taskId || t.taskKey === query.taskId);
+    if (!task) {
+      throw ForgeLoopStudioError.artifactUnreadable(query.taskId, 'Task not found');
+    }
+    return currentExecutionReader.readExecutions(task.taskKey, { limit: query.limit });
+  });
+
   ipcMain.handle(IPC_CHANNELS.GET_RECENT_PROJECTS, async (event): Promise<RecentProject[]> => {
     assertTrustedSender(event);
     return store.get('recentProjects') || [];
@@ -292,6 +308,7 @@ async function openProject(projectRoot: string, projectKind: ProjectKind = 'PROJ
   const gateReader = createGateReader(pathBoundary, protocolSchemas);
   currentTaskIndexer = createTaskIndexer(pathBoundary, currentProjectReader);
   currentEventReader = taskEventReader;
+  currentExecutionReader = createExecutionReader(pathBoundary, protocolSchemas);
   currentTaskSnapshotBuilder = createTaskSnapshotBuilder(pathBoundary, taskEventReader, gateReader);
 
   const compatibilityContext: ProjectCompatibilityContext = {
@@ -368,6 +385,7 @@ function closeProject(): void {
   currentTaskIndexer = null;
   currentTaskSnapshotBuilder = null;
   currentEventReader = null;
+  currentExecutionReader = null;
   currentForgeCli = null;
   currentIntegration = null;
   currentCompatibilityMode = null;

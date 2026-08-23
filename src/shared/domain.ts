@@ -419,6 +419,34 @@ export interface RawArtifactRequest {
   artifact: AllowedArtifact;
 }
 
+export interface ExecutionRecord {
+  executionId: string;
+  taskId: string;
+  checkId: string;
+  requirement: string;
+  verificationCycle: number;
+  kind: string;
+  argv: string[];
+  cwd: string;
+  resolution: Record<string, unknown>;
+  dispatch?: Record<string, unknown>;
+  startedAt: string;
+  finishedAt: string;
+  status: 'passed' | 'failed';
+  exitCode: number | null;
+  durationMs?: number;
+  termination?: string;
+  signal?: string | null;
+  stdoutSha256?: string;
+  stderrSha256?: string;
+}
+
+export interface ExecutionPage {
+  executions: ExecutionRecord[];
+  invalidCount: number;
+  hasMore: boolean;
+}
+
 export interface WatcherStatus {
   active: boolean;
   lastEventAt?: string;
