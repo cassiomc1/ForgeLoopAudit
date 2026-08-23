@@ -95,4 +95,18 @@ describe('core/executions/execution-reader', () => {
   it('rejects path escape attempts through the task key', () => {
     expect(() => reader().readExecutions('../../escape')).toThrow();
   });
+
+  it('rejects a symlinked executions directory', () => {
+    const key = 'c'.repeat(64);
+    mkdirSync(join(root, '.forgeloop', 'task-state', key), { recursive: true });
+    symlinkSync('/etc', join(root, '.forgeloop', 'task-state', key, 'executions'));
+    expect(() => reader().readExecutions(key)).toThrow(/Path traversal|symbolic link/i);
+  });
+
+  it('rejects when the executions path resolves to a regular file instead of a directory', () => {
+    const key = 'd'.repeat(64);
+    mkdirSync(join(root, '.forgeloop', 'task-state', key), { recursive: true });
+    writeFileSync(join(root, '.forgeloop', 'task-state', key, 'executions'), 'not a directory');
+    expect(() => reader().readExecutions(key)).toThrow();
+  });
 });
