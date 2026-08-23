@@ -15,7 +15,7 @@ describe('trusted schema provenance', () => {
     };
 
     expect(manifest.forgeLoopPackageVersion).toBe('1.5.0');
-    expect(manifest.forgeLoopGitCommit).toBe('6a6843041ccbdf85794c01f4adfb3a2e07fa74ff');
+    expect(manifest.forgeLoopGitCommit).toBe('e938fa68f96b1daa19df97fd5f4c9a77ea928e0a');
     expect(manifest.protocolVersion).toBe(1);
 
     for (const [name, entry] of Object.entries(manifest.schemas)) {

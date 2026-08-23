@@ -1,6 +1,7 @@
 import { PathBoundary } from '@main/security/path-boundary';
 import { basename, join, resolve, sep } from 'path';
 import { lstatSync, readFileSync, realpathSync } from 'fs';
+import { ForgeLoopStudioError } from '@shared/errors';
 import type {
   ProjectSnapshot,
   ProjectSummary,
@@ -15,13 +16,13 @@ import type {
 import { ProjectReader } from './project-reader';
 import { ForgeCli, type CliResult } from '@main/core/cli/forge-cli';
 import { LegacyCliReadAdapter } from '@main/core/integration/legacy-cli-read-adapter';
-import { buildTaskSummary, buildRecoverySummary } from '@main/core/tasks/task-reader';
-import { resolveOperationalState, selectActiveTaskId } from '@main/core/tasks/operational-state';
+import { runStudioReadCommand } from '@main/core/integration/studio-read-commands';
+import { buildTaskSummary } from '@main/core/tasks/task-reader';
+import { createCanonicalTaskReadService, type CanonicalTaskReadService } from '@main/core/tasks/canonical-task-read-service';
+import { selectActiveTaskId } from '@main/core/tasks/operational-state';
 import { checkProtocolCompatibility } from '@main/core/protocol/compatibility';
 import { compareAuthoritativeFacts } from '@main/core/protocol/semantic-parity';
 import { discoverCanonicalTasks, type CanonicalTaskDiscoveryResult } from '@main/core/integration/task-projection';
-import { runStudioReadCommand } from '@main/core/integration/studio-read-commands';
-import { normalizeOwnership } from '@main/core/tasks/ownership-projection';
 import type { ForgeLoopIntegrationAdapter } from '@main/core/integration/forgeloop-integration';
 
 export interface ProjectCompatibilityContext {
@@ -48,13 +49,57 @@ export class ProjectSnapshotBuilder {
 
   async build(): Promise<ProjectSnapshot> {
     const config = this.projectReader.readConfig();
-    const taskKeys = this.projectReader.listTaskKeys();
+    const fsTaskKeys = this.projectReader.listTaskKeys();
     const diagnostics: string[] = [];
+    const integrationMode = Boolean(this.integration && this.compatibilityContext?.compatibilityMode === 'INTEGRATION_V1');
 
     let canonicalDiscovery: CanonicalTaskDiscoveryResult | null = null;
-    if (this.integration && this.compatibilityContext?.compatibilityMode === 'INTEGRATION_V1') {
-      canonicalDiscovery = await discoverCanonicalTasks(this.integration, this.pathBoundary.getProjectRoot(), taskKeys);
+    if (this.integration && integrationMode) {
+      canonicalDiscovery = await discoverCanonicalTasks(this.integration, this.pathBoundary.getProjectRoot(), fsTaskKeys);
       diagnostics.push(...canonicalDiscovery.diagnostics);
+    }
+
+    // In INTEGRATION_V1 the canonical `project/tasks` resource drives semantic
+    // task existence. The filesystem only locates artifacts and produces
+    // diagnostics; extra namespaces are never promoted into tasks.
+    let workItems: Array<{ taskId: string | null; taskKey: string }>;
+    if (integrationMode) {
+      if (!canonicalDiscovery || canonicalDiscovery.source !== 'FORGELOOP_INTEGRATION') {
+        throw ForgeLoopStudioError.unknown(
+          'Canonical task discovery unavailable; refusing filesystem fallback in INTEGRATION_V1',
+          'project/tasks could not be read for this project',
+        );
+      }
+      const namespaceByTaskId = new Map<string, string>();
+      for (const key of fsTaskKeys) {
+        try {
+          const descriptor = this.projectReader.readTaskDescriptor(key);
+          if (typeof descriptor.taskId === 'string' && descriptor.taskId) {
+            namespaceByTaskId.set(descriptor.taskId, key);
+          } else {
+            diagnostics.push(`filesystem namespace ${key} has no readable taskId`);
+          }
+        } catch (error) {
+          diagnostics.push(`corrupt task namespace ${key}: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
+      workItems = [];
+      for (const canonical of canonicalDiscovery.tasks) {
+        const key = namespaceByTaskId.get(canonical.taskId);
+        if (!key) {
+          diagnostics.push(`canonical task ${canonical.taskId} has no readable filesystem namespace`);
+          continue;
+        }
+        workItems.push({ taskId: canonical.taskId, taskKey: key });
+      }
+      const canonicalIds = new Set(canonicalDiscovery.tasks.map((task) => task.taskId));
+      for (const [taskId, key] of namespaceByTaskId) {
+        if (!canonicalIds.has(taskId)) {
+          diagnostics.push(`filesystem namespace ${key} (${taskId}) is not a canonical task; not promoted`);
+        }
+      }
+    } else {
+      workItems = fsTaskKeys.map((taskKey) => ({ taskId: null as string | null, taskKey }));
     }
 
     const protocolSummary: ProtocolSummary = checkProtocolCompatibility({
@@ -78,48 +123,22 @@ export class ProjectSnapshotBuilder {
     let activeTaskId: string | undefined;
     const authoritativeStatuses: string[] = [];
 
-    for (let offset = 0; offset < taskKeys.length; offset += 4) {
-      const batch = await Promise.all(taskKeys.slice(offset, offset + 4).map(async (taskKey) => {
+    for (let offset = 0; offset < workItems.length; offset += 4) {
+      const batch = await Promise.all(workItems.slice(offset, offset + 4).map(async (item) => {
+        const taskKey = item.taskKey;
         try {
+          if (item.taskId !== null && integrationMode && this.integration) {
+            // Canonical path: the shared read service owns all semantic facts.
+            const read = await this.canonicalTasks().readTask(item.taskId, taskKey);
+            return { taskSummary: read.summary, status: extractHealthStatus(read.status) };
+          }
           const artifacts = this.projectReader.readTaskSummaryArtifacts(taskKey);
           const taskId = String((artifacts['task.json'] as Record<string, unknown>)?.taskId || taskKey);
           const cliUnavailable = { success: false } as CliResult<Record<string, unknown>>;
-          const wantsCanonicalRuntime = Boolean(this.integration && this.compatibilityContext?.compatibilityMode === 'INTEGRATION_V1');
-          let nextResult: CliResult<Record<string, unknown>>;
-          let statusResult: CliResult<Record<string, unknown>>;
-          if (wantsCanonicalRuntime && this.integration) {
-            const projectRoot = this.pathBoundary.getProjectRoot();
-            const [nextOutcome, canonicalStatus] = await Promise.all([
-              runStudioReadCommand<Record<string, unknown>>(this.integration, projectRoot, 'next', { taskId }),
-              this.integration.readTaskStatus(projectRoot, taskId).catch(() => null),
-            ]);
-            nextResult = nextOutcome.kind === 'DOMAIN_OUTCOME'
-              ? { success: true, data: nextOutcome.data ?? undefined, exitCode: nextOutcome.exitCode }
-              : cliUnavailable;
-            statusResult = canonicalStatus
-              ? ({ success: true, data: canonicalStatus } as CliResult<Record<string, unknown>>)
-              : cliUnavailable;
-          } else {
-            nextResult = this.cliEnabled ? await this.legacyCli.next(taskId) : cliUnavailable;
-            statusResult = this.cliEnabled ? await this.legacyCli.status(taskId) : cliUnavailable;
-          }
-          const canonicalOwnership = wantsCanonicalRuntime && this.integration
-            ? await this.integration.readTaskOwnership(this.pathBoundary.getProjectRoot(), taskId).catch(() => null)
-            : null;
+          const nextResult = this.cliEnabled ? await this.legacyCli.next(taskId) : cliUnavailable;
+          const statusResult = this.cliEnabled ? await this.legacyCli.status(taskId) : cliUnavailable;
           const status = extractHealthStatus(statusResult.data);
           const taskSummary = buildTaskSummary(taskKey, artifacts as any, nextResult.success ? nextResult.data as Record<string, unknown> : undefined);
-          const ownershipSummary = normalizeOwnership(canonicalOwnership);
-          taskSummary.ownership = ownershipSummary;
-          taskSummary.historicalWriteClaims = ownershipSummary.historicalWriteClaims;
-          taskSummary.effectiveWriteClaims = ownershipSummary.effectiveWriteClaims;
-          taskSummary.recovery = buildRecoverySummary(
-            artifacts['recovery.json'] as Record<string, unknown> | undefined,
-            ownershipSummary,
-          );
-          taskSummary.operationalState = resolveOperationalState({
-            phase: taskSummary.phase,
-            ownership: ownershipSummary,
-          });
           const parity = statusResult.success
             ? compareAuthoritativeFacts(
               { phase: taskSummary.phase },
@@ -145,17 +164,8 @@ export class ProjectSnapshotBuilder {
 
     activeTaskId = selectActiveTaskId(tasks);
 
-    if (canonicalDiscovery && canonicalDiscovery.source === 'FORGELOOP_INTEGRATION') {
-      const builtTaskIds = new Set(tasks.map((task) => task.taskId));
-      for (const canonical of canonicalDiscovery.tasks) {
-        if (!builtTaskIds.has(canonical.taskId)) {
-          diagnostics.push(`canonical task ${canonical.taskId} has no readable filesystem namespace`);
-        }
-      }
-    }
-
     const policy = await this.buildPolicy();
-    const health = this.buildHealth(protocolSummary, authoritativeStatuses);
+    const health = this.buildHealth(protocolSummary, authoritativeStatuses, tasks);
     const observations = this.buildObservations(tasks);
 
     return {
@@ -170,6 +180,20 @@ export class ProjectSnapshotBuilder {
       diagnostics: diagnostics.length > 0 ? diagnostics : undefined,
       updatedAt: new Date().toISOString(),
     };
+  }
+
+  private canonicalTaskService: CanonicalTaskReadService | null = null;
+
+  private canonicalTasks(): CanonicalTaskReadService {
+    if (!this.integration) throw new Error('canonical task service requires the ForgeLoop integration');
+    if (!this.canonicalTaskService) {
+      this.canonicalTaskService = createCanonicalTaskReadService({
+        projectRoot: this.pathBoundary.getProjectRoot(),
+        projectReader: this.projectReader,
+        integration: this.integration,
+      });
+    }
+    return this.canonicalTaskService;
   }
 
   private buildSessions(): SessionSummary[] {
@@ -189,14 +213,28 @@ export class ProjectSnapshotBuilder {
     });
   }
 
-  private buildHealth(protocol: ProtocolSummary, authoritativeStatuses: string[]): ProjectHealth {
+  private buildHealth(protocol: ProtocolSummary, authoritativeStatuses: string[], tasks: TaskSummary[]): ProjectHealth {
     const knownStatuses = authoritativeStatuses.filter(isHealthStatus);
+    // Precedence: protocol invalid > canonical ownership inconsistency >
+    // status aggregate. A task with invalid ownership can never coexist with
+    // a healthy project report.
+    const ownershipInconsistent = tasks.some(
+      (task) => task.ownership.claimState === 'INCONSISTENT' || task.ownership.ownershipValid === false,
+    );
     const status = !protocol.compatible
       ? 'INVALID'
-      : knownStatuses.length > 0
-        ? knownStatuses.sort((a, b) => HEALTH_PRECEDENCE.indexOf(a) - HEALTH_PRECEDENCE.indexOf(b))[0]
-        : 'UNKNOWN';
-    const source = !protocol.compatible ? 'ARTIFACT_VALIDATION' : knownStatuses.length > 0 ? 'FORGELOOP_STATUS_AGGREGATE' : 'UNKNOWN';
+      : ownershipInconsistent
+        ? 'INCONSISTENT'
+        : knownStatuses.length > 0
+          ? knownStatuses.sort((a, b) => HEALTH_PRECEDENCE.indexOf(a) - HEALTH_PRECEDENCE.indexOf(b))[0]
+          : 'UNKNOWN';
+    const source = !protocol.compatible
+      ? 'ARTIFACT_VALIDATION'
+      : ownershipInconsistent
+        ? 'FORGELOOP_OWNERSHIP'
+        : knownStatuses.length > 0
+          ? 'FORGELOOP_STATUS_AGGREGATE'
+          : 'UNKNOWN';
 
     return {
       status,
@@ -232,11 +270,25 @@ export class ProjectSnapshotBuilder {
     const rules = policy['rules.json'];
     const config = this.projectReader.readConfig();
     const ruleCount = rules && typeof rules === 'object' && Array.isArray((rules as Record<string, unknown>).rules) ? ((rules as Record<string, unknown>).rules as unknown[]).length : undefined;
-    const cliStatus = this.cliEnabled
-      ? await this.legacyCli.policyStatus<Record<string, unknown>>()
-      : { success: false as const };
     const complianceMode = typeof (config as unknown as Record<string, unknown>).complianceMode === 'string' ? String((config as unknown as Record<string, unknown>).complianceMode) : 'Unknown';
-    if (cliStatus.success) return normalizePolicyStatus(cliStatus.data, complianceMode, 'POLICY_STATUS');
+
+    if (this.integration && this.compatibilityContext?.compatibilityMode === 'INTEGRATION_V1') {
+      // Canonical path: policy status comes from the bundled Integration API,
+      // never from the external CLI.
+      const outcome = await runStudioReadCommand<Record<string, unknown>>(
+        this.integration,
+        this.pathBoundary.getProjectRoot(),
+        'policy-status',
+      );
+      if (outcome.kind === 'DOMAIN_OUTCOME' && outcome.data) {
+        return normalizePolicyStatus(outcome.data, complianceMode, 'POLICY_STATUS');
+      }
+    } else {
+      const cliStatus = this.cliEnabled
+        ? await this.legacyCli.policyStatus<Record<string, unknown>>()
+        : { success: false as const };
+      if (cliStatus.success) return normalizePolicyStatus(cliStatus.data, complianceMode, 'POLICY_STATUS');
+    }
     return {
       overallStatus: 'unknown',
       complianceMode,

@@ -1,6 +1,7 @@
 import { existsSync, lstatSync, readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { PathBoundary } from '@main/security/path-boundary';
+import { ForgeLoopStudioError } from '@shared/errors';
 import { SchemaValidator } from '@main/core/protocol/validator';
 import { parseJsonSafely, RESOURCE_LIMITS } from '@main/security/resource-limits';
 import type { ExecutionPage, ExecutionRecord } from '@shared/domain';
@@ -40,7 +41,15 @@ export class ExecutionReader {
       return { executions: [], invalidCount: 0, hasMore: false };
     }
 
-    const names = readdirSync(executionsDir)
+    // The executions directory itself must be a real directory inside the
+    // project boundary — never a symlink and never a regular file.
+    const dirStat = lstatSync(executionsDir);
+    if (!dirStat.isDirectory() || dirStat.isSymbolicLink()) {
+      throw ForgeLoopStudioError.pathBoundaryViolation(executionsDir, this.pathBoundary.getProjectRoot());
+    }
+    const validatedExecutionsDir = this.pathBoundary.validatePath(executionsDir);
+
+    const names = readdirSync(validatedExecutionsDir)
       .filter((name) => EXECUTION_FILE_PATTERN.test(name))
       .sort();
 
@@ -53,14 +62,15 @@ export class ExecutionReader {
         hasMore = true;
         break;
       }
-      const filePath = join(executionsDir, name);
+      const candidate = join(validatedExecutionsDir, name);
       try {
-        const stat = lstatSync(filePath);
+        const stat = lstatSync(candidate);
         if (!stat.isFile() || stat.isSymbolicLink() || stat.size > RESOURCE_LIMITS.JSON_MAX_SIZE_BYTES) {
           invalidCount += 1;
           continue;
         }
-        const parsed = parseJsonSafely<Record<string, unknown>>(readFileSync(filePath, 'utf8'));
+        const validatedFile = this.pathBoundary.validatePath(candidate);
+        const parsed = parseJsonSafely<Record<string, unknown>>(readFileSync(validatedFile, 'utf8'));
         const validation = this.validator.validate('execution.schema.json', parsed);
         if (!validation.valid) {
           invalidCount += 1;
