@@ -22,7 +22,7 @@ interface FixtureMetadata {
 }
 
 async function canonicalClaimState(fixtureRoot: string): Promise<string | null> {
-  const list = await readForgeLoopIntegrationResource('project/tasks', { projectPath: fixtureRoot });
+  const list = (await readForgeLoopIntegrationResource('project/tasks', { projectPath: fixtureRoot })) as { data: { tasks: Array<{ taskId: string }> } };
   const taskId = list.data.tasks[0]?.taskId;
   if (!taskId) return null;
   const ownership = await readForgeLoopIntegrationResource('task/ownership', { projectPath: fixtureRoot, taskId });

@@ -49,7 +49,12 @@ try {
   const bridgeType = result.bridgeType;
   if (title !== 'ForgeLoop Studio') throw new Error(`Unexpected packaged window title: ${title}`);
   if (bridgeType !== 'object') throw new Error(`Preload bridge unavailable: ${bridgeType}`);
-  console.log(`Packaged smoke passed elapsedMs=${Math.round(performance.now() - startedAt)} title=${title} bridge=${bridgeType}`);
+  // The packaged app must load the bundled @cassiomc1/forgeloop Integration
+  // API from its own node_modules — no global ForgeLoop CLI required.
+  if (result.forgeLoopPackageVersion !== '1.5.0') {
+    throw new Error(`Bundled ForgeLoop Integration API not loadable in packaged runtime: ${JSON.stringify(result)}`);
+  }
+  console.log(`Packaged smoke passed elapsedMs=${Math.round(performance.now() - startedAt)} title=${title} bridge=${bridgeType} forgeLoopIntegration=${result.forgeLoopPackageVersion}`);
 } catch (error) {
   console.error(`Packaged smoke failed elapsedMs=${Math.round(performance.now() - startedAt)} pid=${child?.pid ?? 'unknown'} exitCode=${child?.exitCode ?? 'unknown'} signal=${child?.signalCode ?? 'unknown'}`);
   console.error(error instanceof Error ? error.stack : String(error));

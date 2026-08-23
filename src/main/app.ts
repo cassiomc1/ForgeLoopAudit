@@ -38,9 +38,17 @@ function createWindow(): BrowserWindow {
     window.show();
     const smokeFile = process.env.FORGELOOP_STUDIO_SMOKE_FILE;
     if (smokeFile) {
-      void window.webContents.executeJavaScript('typeof window.forgeLoopStudio').then((bridgeType) => {
-        writeFileSync(smokeFile, JSON.stringify({ title: window.getTitle(), bridgeType }));
-      });
+      void (async () => {
+        let forgeLoopPackageVersion: string | null = null;
+        try {
+          const { createForgeLoopIntegration } = await import('./core/integration/forgeloop-integration');
+          forgeLoopPackageVersion = (await createForgeLoopIntegration()).getPackageVersion();
+        } catch (error) {
+          console.error('Bundled ForgeLoop Integration API unavailable:', error);
+        }
+        const bridgeType = await window.webContents.executeJavaScript('typeof window.forgeLoopStudio');
+        writeFileSync(smokeFile, JSON.stringify({ title: window.getTitle(), bridgeType, forgeLoopPackageVersion }));
+      })();
     }
     if (isDevelopment) {
       window.webContents.openDevTools({ mode: 'detach' });

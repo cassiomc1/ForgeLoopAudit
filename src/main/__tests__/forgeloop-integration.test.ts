@@ -1,16 +1,16 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync } from 'fs';
+import { mkdtempSync, rmSync, readFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { createForgeLoopIntegration } from '@main/core/integration/forgeloop-integration';
+import { createForgeLoopIntegration, FORGELOOP_PACKAGE_VERSION } from '@main/core/integration/forgeloop-integration';
 import { ForgeLoopStudioError } from '@shared/errors';
 
 describe('core/integration/forgeloop-integration', () => {
-  let adapter: ReturnType<typeof createForgeLoopIntegration>;
+  let adapter: Awaited<ReturnType<typeof createForgeLoopIntegration>>;
   let scratchDir: string;
 
-  beforeEach(() => {
-    adapter = createForgeLoopIntegration();
+  beforeEach(async () => {
+    adapter = await createForgeLoopIntegration();
     scratchDir = mkdtempSync(join(tmpdir(), 'forgeloop-integration-test-'));
   });
 
@@ -21,6 +21,15 @@ describe('core/integration/forgeloop-integration', () => {
   describe('package identity', () => {
     it('exposes the bundled ForgeLoop package version', () => {
       expect(adapter.getPackageVersion()).toBe('1.5.0');
+    });
+
+    it('keeps the version constant synchronized with the installed dependency pin', () => {
+      const installed = JSON.parse(
+        readFileSync(join(process.cwd(), 'node_modules', '@cassiomc1', 'forgeloop', 'package.json'), 'utf8'),
+      ) as { version: string };
+      expect(installed.version).toBe(FORGELOOP_PACKAGE_VERSION);
+      const dependencySpec = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8')).dependencies as Record<string, string>;
+      expect(dependencySpec).toHaveProperty('@cassiomc1/forgeloop');
     });
   });
 

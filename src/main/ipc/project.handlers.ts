@@ -278,7 +278,7 @@ async function openProject(projectRoot: string, projectKind: ProjectKind = 'PROJ
   const fixtureCliDisabled = isFixtureProjectMode();
   currentForgeCli = new ForgeCli(projectRoot, fixtureCliDisabled ? '__fixture_cli_unavailable__' : 'forgeloop');
 
-  const integration = createForgeLoopIntegration();
+  const integration = await createForgeLoopIntegration();
   let canonicalProtocolInfo: ReturnType<typeof normalizeCanonicalProtocolInfo> = null;
   try {
     canonicalProtocolInfo = normalizeCanonicalProtocolInfo(await integration.readProtocolInfo(projectRoot));
