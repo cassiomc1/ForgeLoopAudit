@@ -18,6 +18,7 @@ import { buildTaskSummary } from '@main/core/tasks/task-reader';
 import { checkProtocolCompatibility } from '@main/core/protocol/compatibility';
 import { compareAuthoritativeFacts } from '@main/core/protocol/semantic-parity';
 import { discoverCanonicalTasks, type CanonicalTaskDiscoveryResult } from '@main/core/integration/task-projection';
+import { normalizeOwnership } from '@main/core/tasks/ownership-projection';
 import type { ForgeLoopIntegrationAdapter } from '@main/core/integration/forgeloop-integration';
 
 export interface ProjectCompatibilityContext {
@@ -75,11 +76,19 @@ export class ProjectSnapshotBuilder {
         try {
           const artifacts = this.projectReader.readTaskSummaryArtifacts(taskKey);
           const taskId = String((artifacts['task.json'] as Record<string, unknown>)?.taskId || taskKey);
-          const [nextResult, statusResult] = this.cliEnabled
-            ? await Promise.all([this.forgeCli.next(taskId), this.forgeCli.status(taskId)])
-            : [{ success: false } as const, { success: false } as const];
+          const [nextResult, statusResult, canonicalOwnership] = await Promise.all([
+            this.cliEnabled ? this.forgeCli.next(taskId) : Promise.resolve({ success: false } as const),
+            this.cliEnabled ? this.forgeCli.status(taskId) : Promise.resolve({ success: false } as const),
+            this.integration && this.compatibilityContext?.compatibilityMode === 'INTEGRATION_V1'
+              ? this.integration.readTaskOwnership(this.pathBoundary.getProjectRoot(), taskId).catch(() => null)
+              : Promise.resolve(null),
+          ]);
           const status = extractHealthStatus(statusResult.data);
           const taskSummary = buildTaskSummary(taskKey, artifacts as any, nextResult.success ? nextResult.data as Record<string, unknown> : undefined);
+          const ownershipSummary = normalizeOwnership(canonicalOwnership);
+          taskSummary.ownership = ownershipSummary;
+          taskSummary.historicalWriteClaims = ownershipSummary.historicalWriteClaims;
+          taskSummary.effectiveWriteClaims = ownershipSummary.effectiveWriteClaims;
           const parity = statusResult.success
             ? compareAuthoritativeFacts(
               { phase: taskSummary.phase },
