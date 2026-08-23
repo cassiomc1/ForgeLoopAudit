@@ -99,8 +99,18 @@ describe('core/executions/execution-reader', () => {
   it('rejects a symlinked executions directory', () => {
     const key = 'c'.repeat(64);
     mkdirSync(join(root, '.forgeloop', 'task-state', key), { recursive: true });
-    symlinkSync('/etc', join(root, '.forgeloop', 'task-state', key, 'executions'));
-    expect(() => reader().readExecutions(key)).toThrow(/Path traversal|symbolic link/i);
+    // Real directory outside the project boundary; junction keeps this
+    // portable across Windows (no admin rights) and POSIX.
+    const outsideTarget = mkdtempSync(join(tmpdir(), 'exec-outside-'));
+    const linkPath = join(root, '.forgeloop', 'task-state', key, 'executions');
+    if (process.platform === 'win32') symlinkSync(outsideTarget, linkPath, 'junction');
+    else symlinkSync(outsideTarget, linkPath);
+    try {
+      expect(() => reader().readExecutions(key)).toThrow(/Path traversal|symbolic link/i);
+    } finally {
+      rmSync(linkPath, { force: true });
+      rmSync(outsideTarget, { recursive: true, force: true });
+    }
   });
 
   it('rejects when the executions path resolves to a regular file instead of a directory', () => {
