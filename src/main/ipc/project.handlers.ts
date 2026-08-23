@@ -1,7 +1,7 @@
 import { app, ipcMain, dialog, BrowserWindow } from 'electron';
 import { PathBoundary } from '@main/security/path-boundary';
 import { ForgeLoopStudioError } from '@shared/errors';
-import type { ProjectDetectionResult, ProjectKind, RecentProject, StudioError } from '@shared/domain';
+import type { ProjectDetectionResult, ProjectKind, RecentProject, StudioError, ForgeLoopCompatibilityMode } from '@shared/domain';
 import { resolveRecentProjectKind } from './project-kind';
 import { IPC_CHANNELS } from '@shared/ipc';
 import { createProjectSnapshotBuilder, normalizePolicyStatus, type ProjectSnapshotBuilder, type ProjectCompatibilityContext } from '@main/core/project/project-snapshot';
@@ -257,7 +257,7 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
 
   ipcMain.handle(IPC_CHANNELS.GET_DIAGNOSTICS, async (event) => {
     assertTrustedSender(event);
-    return buildStudioDiagnostics({ studioVersion: app.getVersion(), forgeLoopCompatibilityMode: currentForgeCli ? 'CLI_ENHANCED' : 'ARTIFACT_ONLY' });
+    return buildStudioDiagnostics({ studioVersion: app.getVersion(), forgeLoopCompatibilityMode: (currentCompatibilityMode as ForgeLoopCompatibilityMode) ?? 'ARTIFACT_ONLY' });
   });
 
 }

@@ -10,3 +10,20 @@ describe('local diagnostics', () => {
     expect(diagnostics).not.toHaveProperty('projectPath');
   });
 });
+
+describe('compatibility mode reporting', () => {
+  it.each([
+    ['INTEGRATION_V1', 'INTEGRATION_V1'],
+    ['ARTIFACT_ONLY', 'ARTIFACT_ONLY'],
+    ['LEGACY_CLI_READ_ONLY', 'LEGACY_CLI_READ_ONLY'],
+    ['INCOMPATIBLE', 'INCOMPATIBLE'],
+  ] as const)('reports %s verbatim as the compatibility mode', (mode, expected) => {
+    const diagnostics = buildStudioDiagnostics({ studioVersion: 'test', watcherStatus: 'active', forgeLoopCompatibilityMode: mode });
+    expect(diagnostics.forgeLoopCompatibilityMode).toBe(expected);
+  });
+
+  it('defaults to ARTIFACT_ONLY when no mode was negotiated', () => {
+    const diagnostics = buildStudioDiagnostics({ studioVersion: 'test', watcherStatus: 'active' });
+    expect(diagnostics.forgeLoopCompatibilityMode).toBe('ARTIFACT_ONLY');
+  });
+});
