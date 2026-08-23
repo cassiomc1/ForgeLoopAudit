@@ -165,7 +165,7 @@ export class ProjectSnapshotBuilder {
     activeTaskId = selectActiveTaskId(tasks);
 
     const policy = await this.buildPolicy();
-    const health = this.buildHealth(protocolSummary, authoritativeStatuses);
+    const health = this.buildHealth(protocolSummary, authoritativeStatuses, tasks);
     const observations = this.buildObservations(tasks);
 
     return {
@@ -213,14 +213,28 @@ export class ProjectSnapshotBuilder {
     });
   }
 
-  private buildHealth(protocol: ProtocolSummary, authoritativeStatuses: string[]): ProjectHealth {
+  private buildHealth(protocol: ProtocolSummary, authoritativeStatuses: string[], tasks: TaskSummary[]): ProjectHealth {
     const knownStatuses = authoritativeStatuses.filter(isHealthStatus);
+    // Precedence: protocol invalid > canonical ownership inconsistency >
+    // status aggregate. A task with invalid ownership can never coexist with
+    // a healthy project report.
+    const ownershipInconsistent = tasks.some(
+      (task) => task.ownership.claimState === 'INCONSISTENT' || task.ownership.ownershipValid === false,
+    );
     const status = !protocol.compatible
       ? 'INVALID'
-      : knownStatuses.length > 0
-        ? knownStatuses.sort((a, b) => HEALTH_PRECEDENCE.indexOf(a) - HEALTH_PRECEDENCE.indexOf(b))[0]
-        : 'UNKNOWN';
-    const source = !protocol.compatible ? 'ARTIFACT_VALIDATION' : knownStatuses.length > 0 ? 'FORGELOOP_STATUS_AGGREGATE' : 'UNKNOWN';
+      : ownershipInconsistent
+        ? 'INCONSISTENT'
+        : knownStatuses.length > 0
+          ? knownStatuses.sort((a, b) => HEALTH_PRECEDENCE.indexOf(a) - HEALTH_PRECEDENCE.indexOf(b))[0]
+          : 'UNKNOWN';
+    const source = !protocol.compatible
+      ? 'ARTIFACT_VALIDATION'
+      : ownershipInconsistent
+        ? 'FORGELOOP_OWNERSHIP'
+        : knownStatuses.length > 0
+          ? 'FORGELOOP_STATUS_AGGREGATE'
+          : 'UNKNOWN';
 
     return {
       status,
