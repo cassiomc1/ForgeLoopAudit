@@ -17,6 +17,8 @@ import { ForgeCli } from '@main/core/cli/forge-cli';
 import { buildTaskSummary } from '@main/core/tasks/task-reader';
 import { checkProtocolCompatibility } from '@main/core/protocol/compatibility';
 import { compareAuthoritativeFacts } from '@main/core/protocol/semantic-parity';
+import { discoverCanonicalTasks, type CanonicalTaskDiscoveryResult } from '@main/core/integration/task-projection';
+import type { ForgeLoopIntegrationAdapter } from '@main/core/integration/forgeloop-integration';
 
 export interface ProjectCompatibilityContext {
   source: 'PROTOCOL_INFO' | 'ARTIFACT_ONLY';
@@ -32,12 +34,20 @@ export class ProjectSnapshotBuilder {
     private readonly projectReader: ProjectReader,
     private readonly forgeCli: ForgeCli,
     private readonly compatibilityContext?: ProjectCompatibilityContext,
-    private readonly cliEnabled = true
+    private readonly cliEnabled = true,
+    private readonly integration?: ForgeLoopIntegrationAdapter
   ) {}
 
   async build(): Promise<ProjectSnapshot> {
     const config = this.projectReader.readConfig();
     const taskKeys = this.projectReader.listTaskKeys();
+    const diagnostics: string[] = [];
+
+    let canonicalDiscovery: CanonicalTaskDiscoveryResult | null = null;
+    if (this.integration && this.compatibilityContext?.compatibilityMode === 'INTEGRATION_V1') {
+      canonicalDiscovery = await discoverCanonicalTasks(this.integration, this.pathBoundary.getProjectRoot(), taskKeys);
+      diagnostics.push(...canonicalDiscovery.diagnostics);
+    }
 
     const protocolSummary: ProtocolSummary = checkProtocolCompatibility({
       protocolVersion: this.compatibilityContext?.protocolVersion ?? config.protocolVersion,
@@ -82,6 +92,7 @@ export class ProjectSnapshotBuilder {
           return { taskSummary, status: statusResult.success ? status : undefined };
         } catch (error) {
           console.warn(`Failed to build summary for task ${taskKey}:`, error);
+          diagnostics.push(`corrupt task namespace ${taskKey}: ${error instanceof Error ? error.message : String(error)}`);
           return null;
         }
       }));
@@ -90,6 +101,15 @@ export class ProjectSnapshotBuilder {
         tasks.push(result.taskSummary);
         if (result.status) authoritativeStatuses.push(result.status);
         if (!activeTaskId && result.taskSummary.phase !== 'COMPLETE' && result.taskSummary.phase !== 'BLOCKED') activeTaskId = result.taskSummary.taskId;
+      }
+    }
+
+    if (canonicalDiscovery && canonicalDiscovery.source === 'FORGELOOP_INTEGRATION') {
+      const builtTaskIds = new Set(tasks.map((task) => task.taskId));
+      for (const canonical of canonicalDiscovery.tasks) {
+        if (!builtTaskIds.has(canonical.taskId)) {
+          diagnostics.push(`canonical task ${canonical.taskId} has no readable filesystem namespace`);
+        }
       }
     }
 
@@ -106,6 +126,7 @@ export class ProjectSnapshotBuilder {
       activeTaskId,
       sessions,
       policy,
+      diagnostics: diagnostics.length > 0 ? diagnostics : undefined,
       updatedAt: new Date().toISOString(),
     };
   }
@@ -302,7 +323,8 @@ export function createProjectSnapshotBuilder(
   projectReader: ProjectReader,
   forgeCli: ForgeCli,
   compatibilityContext?: ProjectCompatibilityContext,
-  cliEnabled = true
+  cliEnabled = true,
+  integration?: ForgeLoopIntegrationAdapter
 ): ProjectSnapshotBuilder {
-  return new ProjectSnapshotBuilder(pathBoundary, projectReader, forgeCli, compatibilityContext, cliEnabled);
+  return new ProjectSnapshotBuilder(pathBoundary, projectReader, forgeCli, compatibilityContext, cliEnabled, integration);
 }

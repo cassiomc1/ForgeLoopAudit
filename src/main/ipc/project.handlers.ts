@@ -289,7 +289,8 @@ async function openProject(projectRoot: string, projectKind: ProjectKind = 'PROJ
     currentProjectReader,
     currentForgeCli,
     compatibilityContext,
-    !fixtureCliDisabled
+    !fixtureCliDisabled,
+    integration
   );
 
   currentWatcher = createProjectWatcher(

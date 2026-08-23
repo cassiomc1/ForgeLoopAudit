@@ -330,6 +330,7 @@ export interface ProjectSnapshot {
   activeTaskId?: string;
   sessions: SessionSummary[];
   policy?: PolicySummary;
+  diagnostics?: string[];
   updatedAt: string;
 }
 
