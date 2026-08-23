@@ -10,6 +10,8 @@ import { ForgeCli } from '@main/core/cli/forge-cli';
 import { createProjectWatcher } from '@main/watcher/project-watcher';
 import { createTaskIndexer, createTaskSnapshotBuilder, createGateReader, type TaskIndexer, type TaskSnapshotBuilder } from '@main/core/tasks/task-index';
 import { createEventLedgerReader, type EventLedgerReader } from '@main/core/events/ledger-reader';
+import { createForgeLoopIntegration } from '@main/core/integration/forgeloop-integration';
+import { normalizeCanonicalProtocolInfo, negotiateCompatibilityMode } from '@main/core/protocol/protocol-capabilities';
 import Store from 'electron-store';
 import { z } from 'zod';
 import { basename } from 'path';
@@ -244,16 +246,30 @@ async function openProject(projectRoot: string, projectKind: ProjectKind = 'PROJ
   currentProjectReader = createProjectReader(pathBoundary, protocolSchemas);
   const fixtureCliDisabled = isFixtureProjectMode();
   currentForgeCli = new ForgeCli(projectRoot, fixtureCliDisabled ? '__fixture_cli_unavailable__' : 'forgeloop');
-  const protocolInfo = await currentForgeCli.protocolInfo<{ protocolVersion: number; schemaVersion: number; packageVersion?: string }>();
-  if (protocolInfo.success && protocolInfo.data) {
-    if (protocolInfo.data.protocolVersion !== detectionResult.protocolVersion || protocolInfo.data.schemaVersion !== detectionResult.schemaVersion) {
-      throw ForgeLoopStudioError.protocolUnsupported(protocolInfo.data.protocolVersion, projectRoot);
-    }
-    detectionResult.forgeLoopVersion = protocolInfo.data.packageVersion;
-    detectionResult.warnings = [...detectionResult.warnings, 'Compatibility verified by forgeloop protocol-info.'];
-  } else {
-    detectionResult.warnings = [...detectionResult.warnings, 'ForgeLoop CLI unavailable; compatibility is artifact-only.'];
+
+  const integration = createForgeLoopIntegration();
+  let canonicalProtocolInfo: ReturnType<typeof normalizeCanonicalProtocolInfo> = null;
+  try {
+    canonicalProtocolInfo = normalizeCanonicalProtocolInfo(await integration.readProtocolInfo(projectRoot));
+  } catch {
+    canonicalProtocolInfo = null;
   }
+  const capabilities = integration.getCapabilities();
+  const negotiation = negotiateCompatibilityMode({ protocolInfo: canonicalProtocolInfo, capabilities });
+  if (negotiation.mode === 'INCOMPATIBLE') {
+    throw ForgeLoopStudioError.protocolUnsupported(
+      canonicalProtocolInfo?.protocolVersion ?? detectionResult.protocolVersion,
+      projectRoot,
+    );
+  }
+  detectionResult.forgeLoopVersion = canonicalProtocolInfo?.packageVersion ?? detectionResult.forgeLoopVersion;
+  detectionResult.compatibilityMode = negotiation.mode;
+  detectionResult.warnings = [
+    ...detectionResult.warnings,
+    negotiation.mode === 'INTEGRATION_V1'
+      ? 'Compatibility negotiated through ForgeLoop Integration API v1.'
+      : `Degraded compatibility mode: ${negotiation.mode}${negotiation.reason ? ` (${negotiation.reason})` : ''}.`,
+  ];
 
   const taskEventReader = createEventLedgerReader(pathBoundary, protocolSchemas);
   const gateReader = createGateReader(pathBoundary, protocolSchemas);
@@ -262,10 +278,11 @@ async function openProject(projectRoot: string, projectKind: ProjectKind = 'PROJ
   currentTaskSnapshotBuilder = createTaskSnapshotBuilder(pathBoundary, taskEventReader, gateReader);
 
   const compatibilityContext: ProjectCompatibilityContext = {
-    source: protocolInfo.success ? 'PROTOCOL_INFO' : 'ARTIFACT_ONLY',
-    protocolVersion: protocolInfo.data?.protocolVersion ?? detectionResult.protocolVersion,
-    schemaVersion: protocolInfo.data?.schemaVersion ?? detectionResult.schemaVersion,
-    packageVersion: protocolInfo.data?.packageVersion,
+    source: canonicalProtocolInfo ? 'PROTOCOL_INFO' : 'ARTIFACT_ONLY',
+    protocolVersion: canonicalProtocolInfo?.protocolVersion ?? detectionResult.protocolVersion,
+    schemaVersion: canonicalProtocolInfo?.schemaVersion ?? detectionResult.schemaVersion,
+    packageVersion: canonicalProtocolInfo?.packageVersion ?? undefined,
+    compatibilityMode: negotiation.mode,
   };
   currentSnapshotBuilder = createProjectSnapshotBuilder(
     pathBoundary,

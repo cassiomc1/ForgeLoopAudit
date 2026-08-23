@@ -10,6 +10,7 @@ import type {
   PolicySummary,
   ProjectHealth,
   ProjectObservations,
+  ForgeLoopCompatibilityMode,
 } from '@shared/domain';
 import { ProjectReader } from './project-reader';
 import { ForgeCli } from '@main/core/cli/forge-cli';
@@ -22,6 +23,7 @@ export interface ProjectCompatibilityContext {
   protocolVersion: number;
   schemaVersion: number;
   packageVersion?: string;
+  compatibilityMode?: ForgeLoopCompatibilityMode;
 }
 
 export class ProjectSnapshotBuilder {
@@ -44,6 +46,7 @@ export class ProjectSnapshotBuilder {
       compatible: true,
     });
     protocolSummary.compatibilitySource = this.compatibilityContext?.source || 'ARTIFACT_ONLY';
+    protocolSummary.compatibilityMode = this.compatibilityContext?.compatibilityMode;
 
     const projectSummary: ProjectSummary = {
       name: config.projectName || basename(this.pathBoundary.getProjectRoot()) || 'Unknown Project',

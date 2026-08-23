@@ -49,6 +49,12 @@ export type PhaseState = 'completed' | 'current' | 'pending' | 'blocked' | 'fail
 
 export type ProjectKind = 'PROJECT' | 'DEMO';
 
+export type ForgeLoopCompatibilityMode =
+  | 'INTEGRATION_V1'
+  | 'LEGACY_CLI_READ_ONLY'
+  | 'ARTIFACT_ONLY'
+  | 'INCOMPATIBLE';
+
 export interface ProjectDetectionResult {
   projectRoot: string;
   forgeLoopRoot: string;
@@ -58,6 +64,7 @@ export interface ProjectDetectionResult {
   compatible: boolean;
   warnings: string[];
   projectKind: ProjectKind;
+  compatibilityMode?: ForgeLoopCompatibilityMode;
 }
 
 export interface ProjectSummary {
@@ -73,6 +80,7 @@ export interface ProtocolSummary {
   packageVersion?: string;
   compatible: boolean;
   compatibilitySource?: 'PROTOCOL_INFO' | 'ARTIFACT_ONLY';
+  compatibilityMode?: ForgeLoopCompatibilityMode;
 }
 
 export interface BlockerSummary {
