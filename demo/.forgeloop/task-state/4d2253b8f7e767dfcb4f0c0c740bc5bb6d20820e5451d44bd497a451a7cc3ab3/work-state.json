@@ -10,7 +10,7 @@
   },
   "phase": "VERIFYING",
   "selectedGuides": [
-    "testing",
+    "test",
     "design"
   ],
   "requiredGates": [
@@ -33,40 +33,94 @@
   ],
   "checks": [
     {
+      "schemaVersion": 1,
+      "protocolVersion": 1,
       "id": "cart-unit-tests",
+      "kind": "command",
       "requirement": "Cart unit tests pass",
       "status": "passed",
       "evidenceKind": "OBSERVED",
-      "timestamp": "2026-08-04T10:20:00.000Z"
+      "source": "vitest run",
+      "exitCode": 0,
+      "timestamp": "2026-08-04T10:20:00.000Z",
+      "provenance": "FORGELOOP_EXECUTED"
     },
     {
+      "schemaVersion": 1,
+      "protocolVersion": 1,
       "id": "corrupt-cart-hydration",
+      "kind": "command",
       "requirement": "Corrupted persisted carts are discarded safely",
       "status": "failed",
       "evidenceKind": "NOT_VERIFIED",
+      "source": "manual observation",
       "timestamp": "2026-08-04T10:55:00.000Z"
     },
     {
+      "schemaVersion": 1,
+      "protocolVersion": 1,
       "id": "typecheck",
+      "kind": "command",
       "requirement": "TypeScript compiles without errors",
       "status": "passed",
       "evidenceKind": "OBSERVED",
-      "timestamp": "2026-08-04T10:58:00.000Z"
+      "source": "tsc --noEmit",
+      "exitCode": 0,
+      "timestamp": "2026-08-04T10:58:00.000Z",
+      "provenance": "FORGELOOP_EXECUTED"
     }
   ],
   "failures": [],
   "blockers": [],
+  "verificationEvidence": [],
   "evidenceCoverage": [
     {
+      "schemaVersion": 1,
+      "protocolVersion": 1,
+      "requirement": "Cart survives a simulated restart",
+      "requiredEvidence": [
+        "Cart survives a simulated restart"
+      ],
+      "observedEvidence": [
+        "Cart survives a simulated restart"
+      ],
       "status": "COVERED"
     },
     {
+      "schemaVersion": 1,
+      "protocolVersion": 1,
+      "requirement": "Corrupted carts are dropped with a warning",
+      "requiredEvidence": [
+        "Corrupted carts are dropped with a warning"
+      ],
+      "observedEvidence": [
+        "Corrupted carts are dropped with a warning"
+      ],
+      "details": {
+        "readinessStatus": "PARTIAL"
+      },
       "status": "PARTIAL"
     },
     {
+      "schemaVersion": 1,
+      "protocolVersion": 1,
+      "requirement": "Cart unit tests pass (8 cases)",
+      "requiredEvidence": [
+        "Cart unit tests pass (8 cases)"
+      ],
+      "observedEvidence": [
+        "Cart unit tests pass (8 cases)"
+      ],
       "status": "COVERED"
     },
     {
+      "schemaVersion": 1,
+      "protocolVersion": 1,
+      "requirement": "Hydration edge case regression test exists",
+      "requiredEvidence": [
+        "Hydration edge case regression test exists"
+      ],
+      "observedEvidence": [],
       "status": "NOT_VERIFIED"
     }
   ],

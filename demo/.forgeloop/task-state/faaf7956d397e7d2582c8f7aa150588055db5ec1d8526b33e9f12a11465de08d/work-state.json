@@ -28,34 +28,84 @@
   "pendingSteps": [],
   "checks": [
     {
+      "schemaVersion": 1,
+      "protocolVersion": 1,
       "id": "security-scan",
+      "kind": "command",
       "requirement": "Dependency and flow scan reports no critical findings",
       "status": "passed",
       "evidenceKind": "OBSERVED",
-      "timestamp": "2026-08-07T14:40:00.000Z"
+      "source": "node tests/security-scan.mjs",
+      "exitCode": 0,
+      "timestamp": "2026-08-07T14:40:00.000Z",
+      "executionRef": "executions/exec-security-scan.json",
+      "provenance": "FORGELOOP_EXECUTED"
     },
     {
+      "schemaVersion": 1,
+      "protocolVersion": 1,
       "id": "secret-scan",
+      "kind": "command",
       "requirement": "No secrets committed in checkout flow",
       "status": "passed",
       "evidenceKind": "OBSERVED",
-      "timestamp": "2026-08-07T14:45:00.000Z"
+      "source": "node tests/secret-scan.mjs",
+      "exitCode": 0,
+      "timestamp": "2026-08-07T14:45:00.000Z",
+      "executionRef": "executions/exec-secret-scan.json",
+      "provenance": "FORGELOOP_EXECUTED"
     }
   ],
   "failures": [],
   "blockers": [],
+  "verificationEvidence": [
+    {
+      "id": "verif-security-cycle-1",
+      "summary": "Security review sign-off recorded during verification cycle 1.",
+      "status": "OBSERVED",
+      "timestamp": "2026-08-07T14:55:00.000Z"
+    }
+  ],
   "evidenceCoverage": [
     {
+      "schemaVersion": 1,
+      "protocolVersion": 1,
+      "requirement": "No critical or high findings remain untriaged",
+      "requiredEvidence": [
+        "No critical or high findings remain untriaged"
+      ],
+      "observedEvidence": [
+        "No critical or high findings remain untriaged"
+      ],
       "status": "COVERED"
     },
     {
+      "schemaVersion": 1,
+      "protocolVersion": 1,
+      "requirement": "Security scan reports no critical findings",
+      "requiredEvidence": [
+        "Security scan reports no critical findings"
+      ],
+      "observedEvidence": [
+        "Security scan reports no critical findings"
+      ],
       "status": "COVERED"
     },
     {
+      "schemaVersion": 1,
+      "protocolVersion": 1,
+      "requirement": "Checkout flow reviewed against the threat model",
+      "requiredEvidence": [
+        "Checkout flow reviewed against the threat model"
+      ],
+      "observedEvidence": [
+        "Checkout flow reviewed against the threat model"
+      ],
       "status": "COVERED"
     }
   ],
   "lastUpdated": "2026-08-07T15:00:00.000Z",
+  "verificationCycle": 1,
   "publicationStatus": "committed",
   "revision": 2
 }

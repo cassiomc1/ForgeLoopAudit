@@ -30,12 +30,11 @@
     "src/catalog.ts"
   ],
   "inspectFirst": [
-    "src/catalog.ts",
     "src/catalog.ts"
   ],
   "currentFocus": {
     "id": "fix-focus-trap",
     "summary": "Replace pagination div with a real button and restore filter focus flow"
   },
-  "resumeNote": "Blocked by accessibility gate. harness-a recorded findings; harness-b resumes in CORRECTING after the focus-trap fix."
+  "resumeNote": "Recovered from a stale claim lock after the harness-a → harness-b handoff; mutations stay blocked until an authorized harness performs task-resume."
 }

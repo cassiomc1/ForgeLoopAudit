@@ -43,7 +43,7 @@ export const DEMO_SCENARIOS: readonly DemoScenario[] = [
     taskId: 'TASK-004',
     expectedPhase: 'BLOCKED',
     label: 'Recovery and continuity',
-    summary: 'Intentionally blocked by an accessibility gate to demonstrate diagnosis, recovery routing, and cross-harness continuity.',
+    summary: 'Intentionally blocked by an accessibility gate to demonstrate durable recovery (released-by-recovery, resume required) and cross-harness continuity.',
   },
   {
     taskId: 'TASK-005',
