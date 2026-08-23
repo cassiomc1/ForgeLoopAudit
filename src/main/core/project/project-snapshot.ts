@@ -19,6 +19,7 @@ import { resolveOperationalState, selectActiveTaskId } from '@main/core/tasks/op
 import { checkProtocolCompatibility } from '@main/core/protocol/compatibility';
 import { compareAuthoritativeFacts } from '@main/core/protocol/semantic-parity';
 import { discoverCanonicalTasks, type CanonicalTaskDiscoveryResult } from '@main/core/integration/task-projection';
+import { runStudioReadCommand } from '@main/core/integration/studio-read-commands';
 import { normalizeOwnership } from '@main/core/tasks/ownership-projection';
 import type { ForgeLoopIntegrationAdapter } from '@main/core/integration/forgeloop-integration';
 
@@ -78,14 +79,28 @@ export class ProjectSnapshotBuilder {
           const artifacts = this.projectReader.readTaskSummaryArtifacts(taskKey);
           const taskId = String((artifacts['task.json'] as Record<string, unknown>)?.taskId || taskKey);
           const cliUnavailable = { success: false } as CliResult<Record<string, unknown>>;
-          const wantsCanonicalOwnership = Boolean(this.integration && this.compatibilityContext?.compatibilityMode === 'INTEGRATION_V1');
-          const [nextResult, statusResult, canonicalOwnership] = await Promise.all([
-            this.cliEnabled ? this.forgeCli.next(taskId) : Promise.resolve(cliUnavailable),
-            this.cliEnabled ? this.forgeCli.status(taskId) : Promise.resolve(cliUnavailable),
-            wantsCanonicalOwnership && this.integration
-              ? this.integration.readTaskOwnership(this.pathBoundary.getProjectRoot(), taskId).catch(() => null)
-              : Promise.resolve(null),
-          ]);
+          const wantsCanonicalRuntime = Boolean(this.integration && this.compatibilityContext?.compatibilityMode === 'INTEGRATION_V1');
+          let nextResult: CliResult<Record<string, unknown>>;
+          let statusResult: CliResult<Record<string, unknown>>;
+          if (wantsCanonicalRuntime && this.integration) {
+            const projectRoot = this.pathBoundary.getProjectRoot();
+            const [nextOutcome, canonicalStatus] = await Promise.all([
+              runStudioReadCommand<Record<string, unknown>>(this.integration, projectRoot, 'next', { taskId }),
+              this.integration.readTaskStatus(projectRoot, taskId).catch(() => null),
+            ]);
+            nextResult = nextOutcome.kind === 'DOMAIN_OUTCOME'
+              ? { success: true, data: nextOutcome.data ?? undefined, exitCode: nextOutcome.exitCode }
+              : cliUnavailable;
+            statusResult = canonicalStatus
+              ? ({ success: true, data: canonicalStatus } as CliResult<Record<string, unknown>>)
+              : cliUnavailable;
+          } else {
+            nextResult = this.cliEnabled ? await this.forgeCli.next(taskId) : cliUnavailable;
+            statusResult = this.cliEnabled ? await this.forgeCli.status(taskId) : cliUnavailable;
+          }
+          const canonicalOwnership = wantsCanonicalRuntime && this.integration
+            ? await this.integration.readTaskOwnership(this.pathBoundary.getProjectRoot(), taskId).catch(() => null)
+            : null;
           const status = extractHealthStatus(statusResult.data);
           const taskSummary = buildTaskSummary(taskKey, artifacts as any, nextResult.success ? nextResult.data as Record<string, unknown> : undefined);
           const ownershipSummary = normalizeOwnership(canonicalOwnership);

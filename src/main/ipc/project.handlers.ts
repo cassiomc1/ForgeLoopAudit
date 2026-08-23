@@ -10,8 +10,9 @@ import { ForgeCli } from '@main/core/cli/forge-cli';
 import { createProjectWatcher } from '@main/watcher/project-watcher';
 import { createTaskIndexer, createTaskSnapshotBuilder, createGateReader, type TaskIndexer, type TaskSnapshotBuilder } from '@main/core/tasks/task-index';
 import { createEventLedgerReader, type EventLedgerReader } from '@main/core/events/ledger-reader';
-import { createForgeLoopIntegration } from '@main/core/integration/forgeloop-integration';
+import { createForgeLoopIntegration, type ForgeLoopIntegrationAdapter } from '@main/core/integration/forgeloop-integration';
 import { normalizeCanonicalProtocolInfo, negotiateCompatibilityMode } from '@main/core/protocol/protocol-capabilities';
+import { runStudioReadCommand } from '@main/core/integration/studio-read-commands';
 import Store from 'electron-store';
 import { z } from 'zod';
 import { basename } from 'path';
@@ -32,6 +33,8 @@ let currentTaskIndexer: TaskIndexer | null = null;
 let currentTaskSnapshotBuilder: TaskSnapshotBuilder | null = null;
 let currentEventReader: EventLedgerReader | null = null;
 let currentForgeCli: ForgeCli | null = null;
+let currentIntegration: ForgeLoopIntegrationAdapter | null = null;
+let currentCompatibilityMode: string | null = null;
 let currentWatcher: ReturnType<typeof createProjectWatcher> | null = null;
 let currentSnapshotBuilder: ProjectSnapshotBuilder | null = null;
 let currentMainWindow: BrowserWindow | null = null;
@@ -107,7 +110,7 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
     }
 
     const artifacts = currentProjectReader!.readTaskSummaryArtifacts(task.taskKey);
-    const nextResult = await currentForgeCli!.next(taskId);
+    const nextResult = await readNextAction(taskId);
     const { summary, events } = currentTaskSnapshotBuilder.buildSnapshot(task.taskKey, artifacts, nextResult.success ? nextResult.data : undefined);
 
     return {
@@ -128,10 +131,22 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
     const safeTaskId = taskId === undefined ? undefined : TaskIdSchema.parse(taskId);
     if (!currentForgeCli || !currentProjectReader) throw ForgeLoopStudioError.unknown('No project open');
     if (isFixtureProjectMode()) return null;
-    const result = await currentForgeCli.policyStatus<Record<string, unknown>>(safeTaskId);
-    if (!result.success) return null;
+    let policyResult: { success: boolean; data?: Record<string, unknown> };
+    if (currentIntegration && currentCompatibilityMode === 'INTEGRATION_V1' && getCurrentProjectRoot()) {
+      const outcome = await runStudioReadCommand<Record<string, unknown>>(
+        currentIntegration,
+        getCurrentProjectRoot()!,
+        'policy-status',
+        safeTaskId ? { taskId: safeTaskId } : {},
+      );
+      policyResult = outcome.kind === 'DOMAIN_OUTCOME' ? { success: true, data: outcome.data ?? undefined } : { success: false };
+    } else {
+      const cliStatus = await currentForgeCli.policyStatus<Record<string, unknown>>(safeTaskId);
+      policyResult = cliStatus;
+    }
+    if (!policyResult.success) return null;
     const config = currentProjectReader.readConfig();
-    return normalizePolicyStatus(result.data, typeof config.complianceMode === 'string' ? config.complianceMode : 'Unknown', 'POLICY_STATUS');
+    return normalizePolicyStatus(policyResult.data, typeof config.complianceMode === 'string' ? config.complianceMode : 'Unknown', 'POLICY_STATUS');
   });
 
   ipcMain.handle(IPC_CHANNELS.GET_TASK_EVENTS, async (event, taskId: string, cursor?: string, limit?: number): Promise<any> => {
@@ -262,6 +277,8 @@ async function openProject(projectRoot: string, projectKind: ProjectKind = 'PROJ
       projectRoot,
     );
   }
+  currentIntegration = integration;
+  currentCompatibilityMode = negotiation.mode;
   detectionResult.forgeLoopVersion = canonicalProtocolInfo?.packageVersion ?? detectionResult.forgeLoopVersion;
   detectionResult.compatibilityMode = negotiation.mode;
   detectionResult.warnings = [
@@ -324,6 +341,15 @@ function isFixtureProjectMode(): boolean {
   return resolveFixtureProjectMode(app.isPackaged, process.env);
 }
 
+async function readNextAction(taskId: string): Promise<{ success: boolean; data?: Record<string, unknown> }> {
+  if (currentIntegration && currentCompatibilityMode === 'INTEGRATION_V1' && getCurrentProjectRoot()) {
+    const outcome = await runStudioReadCommand<Record<string, unknown>>(currentIntegration, getCurrentProjectRoot()!, 'next', { taskId });
+    if (outcome.kind === 'DOMAIN_OUTCOME') return { success: true, data: outcome.data ?? undefined };
+    return { success: false };
+  }
+  return currentForgeCli ? currentForgeCli.next(taskId) : { success: false };
+}
+
 export async function openProjectForAutomation(projectRoot: string): Promise<ProjectDetectionResult> {
   return openProject(projectRoot);
 }
@@ -343,6 +369,8 @@ function closeProject(): void {
   currentTaskSnapshotBuilder = null;
   currentEventReader = null;
   currentForgeCli = null;
+  currentIntegration = null;
+  currentCompatibilityMode = null;
   currentSnapshotBuilder = null;
 }
 
