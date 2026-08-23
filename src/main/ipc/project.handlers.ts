@@ -400,6 +400,11 @@ function handleWatcherEvent(event: any): void {
     timestamp: new Date().toISOString(),
   });
 
+  // Execution provenance is loaded lazily per task; a lightweight
+  // notification is enough. Only recovery/artifact changes rebuild the full
+  // snapshot, and the scheduled flag coalesces bursts into one rebuild.
+  if (event.type === 'execution-changed') return;
+
   if (currentSnapshotBuilder && !snapshotRefreshScheduled) {
     snapshotRefreshScheduled = true;
     setTimeout(() => { snapshotRefreshScheduled = false; if (!currentSnapshotBuilder) return; currentSnapshotBuilder.build().then((snapshot) => {
