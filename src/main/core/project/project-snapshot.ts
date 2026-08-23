@@ -14,7 +14,7 @@ import type {
 } from '@shared/domain';
 import { ProjectReader } from './project-reader';
 import { ForgeCli, type CliResult } from '@main/core/cli/forge-cli';
-import { buildTaskSummary } from '@main/core/tasks/task-reader';
+import { buildTaskSummary, buildRecoverySummary } from '@main/core/tasks/task-reader';
 import { checkProtocolCompatibility } from '@main/core/protocol/compatibility';
 import { compareAuthoritativeFacts } from '@main/core/protocol/semantic-parity';
 import { discoverCanonicalTasks, type CanonicalTaskDiscoveryResult } from '@main/core/integration/task-projection';
@@ -91,6 +91,10 @@ export class ProjectSnapshotBuilder {
           taskSummary.ownership = ownershipSummary;
           taskSummary.historicalWriteClaims = ownershipSummary.historicalWriteClaims;
           taskSummary.effectiveWriteClaims = ownershipSummary.effectiveWriteClaims;
+          taskSummary.recovery = buildRecoverySummary(
+            artifacts['recovery.json'] as Record<string, unknown> | undefined,
+            ownershipSummary,
+          );
           const parity = statusResult.success
             ? compareAuthoritativeFacts(
               { phase: taskSummary.phase },

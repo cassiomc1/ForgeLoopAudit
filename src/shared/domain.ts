@@ -408,6 +408,7 @@ export type AllowedArtifact =
   | 'preflight.json'
   | 'work-state.json'
   | 'continuity.json'
+  | 'recovery.json'
   | 'execution-receipt.json'
   | 'policy-snapshot.json'
   | 'events.ndjson'

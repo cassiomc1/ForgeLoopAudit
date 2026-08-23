@@ -41,7 +41,7 @@ const TaskIdSchema = z.string().min(1).max(200);
 const ProjectPathSchema = z.string().min(1).max(4096);
 const EventQuerySchema = z.object({ taskId: TaskIdSchema, cursor: z.string().max(256).optional(), limit: z.number().int().min(1).max(500).optional() });
 const RecentProjectSchema = z.object({ path: z.string().min(1).max(4096), name: z.string().max(300), lastOpenedAt: z.string().max(100), kind: z.enum(['PROJECT', 'DEMO']).optional() });
-const RawArtifactSchema = z.object({ taskId: TaskIdSchema, artifact: z.enum(['task.json', 'contract.json', 'routing-result.json', 'preflight.json', 'work-state.json', 'continuity.json', 'execution-receipt.json', 'policy-snapshot.json', 'events.ndjson']) });
+const RawArtifactSchema = z.object({ taskId: TaskIdSchema, artifact: z.enum(['task.json', 'contract.json', 'routing-result.json', 'preflight.json', 'work-state.json', 'continuity.json', 'recovery.json', 'execution-receipt.json', 'policy-snapshot.json', 'events.ndjson']) });
 
 function assertTrustedSender(event: Electron.IpcMainInvokeEvent): void {
   if (!currentMainWindow || event.sender.id !== currentMainWindow.webContents.id) throw ForgeLoopStudioError.unknown('Untrusted IPC sender');
