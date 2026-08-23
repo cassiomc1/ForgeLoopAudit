@@ -8,7 +8,6 @@ export default defineConfig({
     include: ['src/**/*.test.ts', 'src/**/*.spec.ts'],
     coverage: {
       provider: 'v8',
-      all: false,
       include: ['src/**/*.ts'],
       exclude: [
         'src/**/*.test.ts',
@@ -23,6 +22,10 @@ export default defineConfig({
         // Process/filesystem adapters are covered by native smoke/E2E gates; their
         // entry points are intentionally excluded from the global unit threshold.
         '**/src/main/core/cli/forge-cli.ts',
+        // Electron-coupled IPC handler registries are exercised by the
+        // electron/packaged smoke and Playwright E2E gates instead of unit tests.
+        '**/src/main/ipc/project.handlers.ts',
+        '**/src/main/ipc/window.handlers.ts',
         '**/src/main/core/diagnostics/diagnostics.ts',
         '**/src/main/core/events/ledger-reader.ts',
         '**/src/main/core/project/project-reader.ts',
