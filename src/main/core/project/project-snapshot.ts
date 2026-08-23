@@ -16,6 +16,7 @@ import type {
 import { ProjectReader } from './project-reader';
 import { ForgeCli, type CliResult } from '@main/core/cli/forge-cli';
 import { LegacyCliReadAdapter } from '@main/core/integration/legacy-cli-read-adapter';
+import { runStudioReadCommand } from '@main/core/integration/studio-read-commands';
 import { buildTaskSummary } from '@main/core/tasks/task-reader';
 import { createCanonicalTaskReadService, type CanonicalTaskReadService } from '@main/core/tasks/canonical-task-read-service';
 import { selectActiveTaskId } from '@main/core/tasks/operational-state';
@@ -255,11 +256,25 @@ export class ProjectSnapshotBuilder {
     const rules = policy['rules.json'];
     const config = this.projectReader.readConfig();
     const ruleCount = rules && typeof rules === 'object' && Array.isArray((rules as Record<string, unknown>).rules) ? ((rules as Record<string, unknown>).rules as unknown[]).length : undefined;
-    const cliStatus = this.cliEnabled
-      ? await this.legacyCli.policyStatus<Record<string, unknown>>()
-      : { success: false as const };
     const complianceMode = typeof (config as unknown as Record<string, unknown>).complianceMode === 'string' ? String((config as unknown as Record<string, unknown>).complianceMode) : 'Unknown';
-    if (cliStatus.success) return normalizePolicyStatus(cliStatus.data, complianceMode, 'POLICY_STATUS');
+
+    if (this.integration && this.compatibilityContext?.compatibilityMode === 'INTEGRATION_V1') {
+      // Canonical path: policy status comes from the bundled Integration API,
+      // never from the external CLI.
+      const outcome = await runStudioReadCommand<Record<string, unknown>>(
+        this.integration,
+        this.pathBoundary.getProjectRoot(),
+        'policy-status',
+      );
+      if (outcome.kind === 'DOMAIN_OUTCOME' && outcome.data) {
+        return normalizePolicyStatus(outcome.data, complianceMode, 'POLICY_STATUS');
+      }
+    } else {
+      const cliStatus = this.cliEnabled
+        ? await this.legacyCli.policyStatus<Record<string, unknown>>()
+        : { success: false as const };
+      if (cliStatus.success) return normalizePolicyStatus(cliStatus.data, complianceMode, 'POLICY_STATUS');
+    }
     return {
       overallStatus: 'unknown',
       complianceMode,
