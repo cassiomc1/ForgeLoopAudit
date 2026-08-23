@@ -51,7 +51,6 @@ export type ProjectKind = 'PROJECT' | 'DEMO';
 
 export type ForgeLoopCompatibilityMode =
   | 'INTEGRATION_V1'
-  | 'LEGACY_CLI_READ_ONLY'
   | 'ARTIFACT_ONLY'
   | 'INCOMPATIBLE';
 

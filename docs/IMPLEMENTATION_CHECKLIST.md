@@ -20,7 +20,7 @@
 - [x] Negotiate ForgeLoop 1.5 capabilities through the bundled Integration API (`@cassiomc1/forgeloop/integration`).
 - [x] Read `protocol/info` via the canonical resource (`compatibility.schemaVersion`, no top-level `schemaVersion`).
 - [x] Validate protocol v1 / schema v1 compatibility and fail closed on capability drift.
-- [x] Select compatibility mode (`INTEGRATION_V1`, `LEGACY_CLI_READ_ONLY`, `ARTIFACT_ONLY`, `INCOMPATIBLE`).
+- [x] Select compatibility mode (`INTEGRATION_V1`, `ARTIFACT_ONLY`, `INCOMPATIBLE`) — no inferred legacy mode.
 - [ ] Create protocol adapter registry.
 - [ ] Read project configuration.
 - [ ] Index task directories.

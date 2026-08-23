@@ -8,7 +8,7 @@ ForgeLoop Studio supports protocol version 1 and schema version 1 from the pinne
 |---|---|---|
 | ForgeLoop 1.5 / protocol 1 | Integration API v1 valid (`INTEGRATION_V1`) | Full read-only support: canonical task discovery, canonical ownership, recovery semantics |
 | ForgeLoop 1.5 / protocol 1 | Integration unavailable | Degraded mode (`ARTIFACT_ONLY`): visual reading + schema validation; canonical ownership is unavailable and shown as `OWNERSHIP UNAVAILABLE` |
-| ForgeLoop 1.3 / protocol 1 | Legacy CLI supported | Legacy read-only mode; ownership is never inferred from raw artifacts or the legacy CLI |
+| ForgeLoop 1.3 / protocol 1 | Integration API not applicable | `ARTIFACT_ONLY`: visual reading + schema validation; canonical ownership is never inferred from raw artifacts or the legacy CLI |
 | Unknown protocol | any | Rejected with an explicit incompatibility error |
 | Incompatible schema | any | Rejected with an explicit incompatibility error |
 | Invalid ownership (e.g. `claimState=INCONSISTENT`) | API v1 | Project opens read-only with a prominent ownership inconsistency state |
@@ -23,7 +23,7 @@ Semantic facts come exclusively from the bundled `@cassiomc1/forgeloop/integrati
 
 The Studio never reimplements ForgeLoop rules (claim release, recovery validation, locks, CAS, transactions, migration). Direct `.forgeloop/` artifact reading remains available for detail views, previews, validation and diagnostics only; it never determines current owner, effective claims, `mutationAllowed`, or recovery validity.
 
-Capability negotiation selects one of four compatibility modes: `INTEGRATION_V1`, `LEGACY_CLI_READ_ONLY`, `ARTIFACT_ONLY`, or `INCOMPATIBLE`. Any capability drift (Integration API version, executor parity, `taskClaimRecovery` feature flags, missing resources) fails closed to `INCOMPATIBLE`.
+Capability negotiation selects one of three compatibility modes: `INTEGRATION_V1`, `ARTIFACT_ONLY`, or `INCOMPATIBLE`. Any capability drift (Integration API version, executor parity, `taskClaimRecovery` feature flags, missing resources) fails closed to `INCOMPATIBLE`. There is no selectable legacy mode: ForgeLoop 1.3 projects carry no explicit legacy marker in their artifacts, so the Studio never infers one — it degrades to `ARTIFACT_ONLY` instead of pretending to provide canonical semantics.
 
 ## Trusted schemas
 
