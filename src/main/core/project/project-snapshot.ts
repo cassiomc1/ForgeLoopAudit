@@ -15,6 +15,7 @@ import type {
 import { ProjectReader } from './project-reader';
 import { ForgeCli, type CliResult } from '@main/core/cli/forge-cli';
 import { buildTaskSummary, buildRecoverySummary } from '@main/core/tasks/task-reader';
+import { resolveOperationalState, selectActiveTaskId } from '@main/core/tasks/operational-state';
 import { checkProtocolCompatibility } from '@main/core/protocol/compatibility';
 import { compareAuthoritativeFacts } from '@main/core/protocol/semantic-parity';
 import { discoverCanonicalTasks, type CanonicalTaskDiscoveryResult } from '@main/core/integration/task-projection';
@@ -95,6 +96,10 @@ export class ProjectSnapshotBuilder {
             artifacts['recovery.json'] as Record<string, unknown> | undefined,
             ownershipSummary,
           );
+          taskSummary.operationalState = resolveOperationalState({
+            phase: taskSummary.phase,
+            ownership: ownershipSummary,
+          });
           const parity = statusResult.success
             ? compareAuthoritativeFacts(
               { phase: taskSummary.phase },
@@ -115,9 +120,10 @@ export class ProjectSnapshotBuilder {
         if (!result) continue;
         tasks.push(result.taskSummary);
         if (result.status) authoritativeStatuses.push(result.status);
-        if (!activeTaskId && result.taskSummary.phase !== 'COMPLETE' && result.taskSummary.phase !== 'BLOCKED') activeTaskId = result.taskSummary.taskId;
       }
     }
+
+    activeTaskId = selectActiveTaskId(tasks);
 
     if (canonicalDiscovery && canonicalDiscovery.source === 'FORGELOOP_INTEGRATION') {
       const builtTaskIds = new Set(tasks.map((task) => task.taskId));
