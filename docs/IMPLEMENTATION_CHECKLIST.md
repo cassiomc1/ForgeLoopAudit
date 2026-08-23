@@ -35,6 +35,10 @@
 - [x] Parse execution provenance (`executions/exec-*.json`, bounded, schema-validated, lazy per task).
 - [x] Read `recovery.json` raw artifact with symlink rejection and trusted `task-recovery.schema.json` validation.
 - [x] Project canonical ownership (`claimState`, `mutationAllowed`, `ownershipValid`, historical vs effective claims) from `task/ownership`.
+- [x] Canonical `project/tasks` drives task existence in `INTEGRATION_V1`; extra/corrupt filesystem namespaces surface as diagnostics only.
+- [x] Policy status via the Integration API in `INTEGRATION_V1`; no external CLI in the canonical snapshot.
+- [x] Snapshot and GET_TASK share one canonical task read service (single semantic projection).
+- [x] Execution provenance reader validates realpath/symlink on the directory itself and every file.
 - [x] Classify operational state (`ACTIVE`, `RECOVERY_RESUME_REQUIRED`, `COMPLETED_RELEASED`, `BLOCKED`, `OWNERSHIP_INCONSISTENT`, `READ_ONLY_UNKNOWN`).
 - [x] Display ownership/recovery panels and ownership badges; recovered tasks are never shown as active.
 - [x] Present recovery/resume next actions as copy-only text; no mutable command is ever executable.

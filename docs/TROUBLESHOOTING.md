@@ -27,6 +27,10 @@ Run a production build and inspect the renderer console for failed asset URLs, p
 
 Record the artifact name and schema validation error. Invalid or unverified data must remain visibly distinct from a valid protocol state.
 
+## Diagnostics show a compatibility mode
+
+Settings → Diagnostics reports the negotiated `ForgeLoopCompatibilityMode` verbatim (`INTEGRATION_V1`, `ARTIFACT_ONLY` or `INCOMPATIBLE`). There is no CLI-enhanced mode: the bundled Integration API is the only canonical channel.
+
 ## Ownership shows "OWNERSHIP UNAVAILABLE"
 
 Canonical ownership comes exclusively from the bundled ForgeLoop 1.5 Integration API (`task/ownership`). When the Integration API is unavailable, Studio degrades to `ARTIFACT_ONLY` mode: raw artifacts stay readable for inspection but ownership facts are shown as unavailable instead of being guessed from `task.json` or the legacy CLI.
