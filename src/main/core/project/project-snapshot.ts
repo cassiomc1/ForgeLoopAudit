@@ -14,6 +14,7 @@ import type {
 } from '@shared/domain';
 import { ProjectReader } from './project-reader';
 import { ForgeCli, type CliResult } from '@main/core/cli/forge-cli';
+import { LegacyCliReadAdapter } from '@main/core/integration/legacy-cli-read-adapter';
 import { buildTaskSummary, buildRecoverySummary } from '@main/core/tasks/task-reader';
 import { resolveOperationalState, selectActiveTaskId } from '@main/core/tasks/operational-state';
 import { checkProtocolCompatibility } from '@main/core/protocol/compatibility';
@@ -32,14 +33,18 @@ export interface ProjectCompatibilityContext {
 }
 
 export class ProjectSnapshotBuilder {
+  private readonly legacyCli: LegacyCliReadAdapter;
+
   constructor(
     private readonly pathBoundary: PathBoundary,
     private readonly projectReader: ProjectReader,
-    private readonly forgeCli: ForgeCli,
+    forgeCli: ForgeCli,
     private readonly compatibilityContext?: ProjectCompatibilityContext,
     private readonly cliEnabled = true,
     private readonly integration?: ForgeLoopIntegrationAdapter
-  ) {}
+  ) {
+    this.legacyCli = new LegacyCliReadAdapter(forgeCli);
+  }
 
   async build(): Promise<ProjectSnapshot> {
     const config = this.projectReader.readConfig();
@@ -95,8 +100,8 @@ export class ProjectSnapshotBuilder {
               ? ({ success: true, data: canonicalStatus } as CliResult<Record<string, unknown>>)
               : cliUnavailable;
           } else {
-            nextResult = this.cliEnabled ? await this.forgeCli.next(taskId) : cliUnavailable;
-            statusResult = this.cliEnabled ? await this.forgeCli.status(taskId) : cliUnavailable;
+            nextResult = this.cliEnabled ? await this.legacyCli.next(taskId) : cliUnavailable;
+            statusResult = this.cliEnabled ? await this.legacyCli.status(taskId) : cliUnavailable;
           }
           const canonicalOwnership = wantsCanonicalRuntime && this.integration
             ? await this.integration.readTaskOwnership(this.pathBoundary.getProjectRoot(), taskId).catch(() => null)
@@ -228,7 +233,7 @@ export class ProjectSnapshotBuilder {
     const config = this.projectReader.readConfig();
     const ruleCount = rules && typeof rules === 'object' && Array.isArray((rules as Record<string, unknown>).rules) ? ((rules as Record<string, unknown>).rules as unknown[]).length : undefined;
     const cliStatus = this.cliEnabled
-      ? await this.forgeCli.policyStatus<Record<string, unknown>>()
+      ? await this.legacyCli.policyStatus<Record<string, unknown>>()
       : { success: false as const };
     const complianceMode = typeof (config as unknown as Record<string, unknown>).complianceMode === 'string' ? String((config as unknown as Record<string, unknown>).complianceMode) : 'Unknown';
     if (cliStatus.success) return normalizePolicyStatus(cliStatus.data, complianceMode, 'POLICY_STATUS');
