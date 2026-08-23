@@ -8,6 +8,7 @@ import { Flow } from './pages/Flow';
 import { Contract } from './pages/Contract';
 import { Evidence } from './pages/Evidence';
 import { Events } from './pages/Events';
+import { Executions } from './pages/Executions';
 import { Continuity } from './pages/Continuity';
 import { Policy } from './pages/Policy';
 import { Settings } from './pages/Settings';
@@ -21,6 +22,7 @@ export const NAV_ITEMS = [
   { id: 'contract', label: 'Contract', icon: 'file-text' },
   { id: 'evidence', label: 'Evidence', icon: 'clipboard-check' },
   { id: 'events', label: 'Events', icon: 'history' },
+  { id: 'executions', label: 'Executions', icon: 'terminal' },
   { id: 'continuity', label: 'Continuity', icon: 'repeat' },
   { id: 'policy', label: 'Policy', icon: 'shield' },
   { id: 'settings', label: 'Settings', icon: 'settings' },
@@ -194,6 +196,8 @@ export function App() {
         return <Evidence snapshot={snapshot} selectedTaskId={selectedTaskId} onSelectedTaskChange={setSelectedTaskId} />;
       case 'events':
         return <Events snapshot={snapshot} selectedTaskId={selectedTaskId} onSelectedTaskChange={setSelectedTaskId} />;
+      case 'executions':
+        return <Executions snapshot={snapshot} selectedTaskId={selectedTaskId} onSelectedTaskChange={setSelectedTaskId} />;
       case 'continuity':
         return <Continuity snapshot={snapshot} selectedTaskId={selectedTaskId} onSelectedTaskChange={setSelectedTaskId} />;
       case 'policy':
