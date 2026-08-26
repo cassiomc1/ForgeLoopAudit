@@ -96,7 +96,7 @@ test('fixture project flows through the functional v0.1 renderer surfaces', asyn
       await window.getByLabel('Main navigation').getByRole('button', { name: page[0], exact: true }).click();
       await expect(window.locator('h1').filter({ hasText: page[1] })).toBeVisible({ timeout: 5000 });
     }
-    await window.getByRole('button', { name: 'Events', exact: true }).click();
+    await window.getByLabel('Main navigation').getByRole('button', { name: 'Events', exact: true }).click();
     await expect(window.locator('h1').filter({ hasText: 'Event Ledger' })).toBeVisible({ timeout: 5000 });
     await window.getByRole('button', { name: 'Validate ledger', exact: true }).click();
     await expect(window.locator('body')).toContainText('Page schema: VALID');
