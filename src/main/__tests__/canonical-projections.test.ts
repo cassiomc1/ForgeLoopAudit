@@ -47,10 +47,15 @@ describe('canonical read-only projection services', () => {
     ]);
 
     expect(view).toMatchObject({ available: true, source: 'FORGELOOP_INTEGRATION', feature: 'reflect' });
-    expect(view.data).toEqual({ command: 'reflect' });
+    expect(view.data).toMatchObject({ status: 'UNKNOWN', verificationCycles: null });
+    expect(view.result).toEqual(view.data);
     expect(history.feature).toBe('history');
     expect(trace.feature).toBe('trace');
     expect(inspection.feature).toBe('inspect');
+    // verify normalization preserves allowlisted command boundary but normalizes payload shapes
+    expect(history.data).toMatchObject({ historyQuality: { level: 'UNKNOWN' } });
+    expect(trace.data).toMatchObject({ diagnostics: expect.any(Object) });
+    expect(inspection.data).toMatchObject({ ok: null });
     expect(integration.executeReadOnly).toHaveBeenCalledWith('/project', 'reflect', { taskId: 'TASK-001' });
   });
 
