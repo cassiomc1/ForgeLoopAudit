@@ -130,7 +130,12 @@ export interface CanonicalActionsService {
 
 export function createCanonicalActionsService(options: {
   integration: ForgeLoopIntegrationAdapter;
-  featureSupport?: { durableActions?: boolean; approvals?: boolean; capabilityPolicy?: boolean };
+  featureSupport?: {
+    durableActions?: boolean;
+    approvals?: boolean;
+    capabilityPolicy?: boolean;
+    trajectoryMetrics?: boolean;
+  };
 }): CanonicalActionsService {
   const { integration, featureSupport } = options;
 
@@ -164,18 +169,21 @@ export function createCanonicalActionsService(options: {
         };
       }
 
+      const approvalsSupported = featureSupport?.approvals !== false && Boolean(integration.readTaskApprovals);
+      const metricsSupported = featureSupport?.trajectoryMetrics === true && Boolean(integration.readTaskMetrics);
+
       const actionsPromise = integration.readTaskActions(projectRoot, taskId);
-      const approvalsPromise = featureSupport?.approvals === false || !integration.readTaskApprovals
-        ? Promise.resolve<Record<string, unknown>>({ approvals: [] })
-        : integration.readTaskApprovals(projectRoot, taskId);
-      const metricsPromise = integration.readTaskMetrics
-        ? integration.readTaskMetrics(projectRoot, taskId)
-        : Promise.resolve(null);
+      const approvalsPromise = approvalsSupported
+        ? integration.readTaskApprovals!(projectRoot, taskId)
+        : null;
+      const metricsPromise = metricsSupported
+        ? integration.readTaskMetrics!(projectRoot, taskId)
+        : null;
 
       const [actionsResult, approvalsResult, metricsResult] = await Promise.allSettled([
         actionsPromise,
-        approvalsPromise,
-        metricsPromise,
+        approvalsPromise ? approvalsPromise : Promise.resolve(null),
+        metricsPromise ? metricsPromise : Promise.resolve(null),
       ]);
 
       if (actionsResult.status === 'rejected') {
@@ -195,29 +203,31 @@ export function createCanonicalActionsService(options: {
 
       const warnings: CanonicalProjectionError[] = [];
       let approvals: DurableApprovalView[] = [];
-      let approvalsAvailable = true;
+      let approvalsAvailable = approvalsSupported;
 
-      if (approvalsResult.status === 'fulfilled') {
-        approvals = listFromResource(approvalsResult.value, 'approvals').map(approvalValue);
-      } else {
-        approvalsAvailable = false;
-        const err = approvalsResult.reason;
-        warnings.push(projectionError('E_CANONICAL_APPROVALS_UNAVAILABLE', err instanceof Error ? err.message : String(err)));
+      if (approvalsSupported) {
+        if (approvalsResult.status === 'fulfilled') {
+          approvals = listFromResource(approvalsResult.value, 'approvals').map(approvalValue);
+        } else {
+          approvalsAvailable = false;
+          const err = approvalsResult.reason;
+          warnings.push(projectionError('E_CANONICAL_APPROVALS_UNAVAILABLE', err instanceof Error ? err.message : String(err)));
+        }
       }
 
       let readiness: ActionReadinessSummary | null = null;
-      let readinessAvailable = true;
+      let readinessAvailable = false;
 
-      if (metricsResult.status === 'fulfilled') {
-        const metrics = isRecord(metricsResult.value) ? metricsResult.value : null;
-        readiness = mapReadiness(metrics);
-        if (metricsResult.value === null) {
+      if (metricsSupported) {
+        if (metricsResult.status === 'fulfilled') {
+          const metrics = isRecord(metricsResult.value) ? metricsResult.value : null;
+          readiness = mapReadiness(metrics);
+          readinessAvailable = readiness !== null;
+        } else {
           readinessAvailable = false;
+          const err = metricsResult.reason;
+          warnings.push(projectionError('E_CANONICAL_METRICS_UNAVAILABLE', err instanceof Error ? err.message : String(err)));
         }
-      } else {
-        readinessAvailable = false;
-        const err = metricsResult.reason;
-        warnings.push(projectionError('E_CANONICAL_METRICS_UNAVAILABLE', err instanceof Error ? err.message : String(err)));
       }
 
       return {
