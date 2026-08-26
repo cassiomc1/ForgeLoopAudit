@@ -126,15 +126,67 @@ describe('canonical read-only projection services', () => {
       readTaskApprovals: undefined,
       readTaskMetrics: undefined,
     });
-    const service = createCanonicalActionsService({ integration, featureSupport: { durableActions: true, approvals: false } });
+    const service = createCanonicalActionsService({ integration, featureSupport: { durableActions: true, approvals: false, trajectoryMetrics: false } });
     const view = await service.getActions('/project', 'TASK-001');
 
     expect(view.available).toBe(true);
     expect(view.actions).toHaveLength(1);
     expect(view.approvals).toEqual([]);
-    expect(view.approvalsAvailable).toBe(true);
+    expect(view.approvalsAvailable).toBe(false);
     expect(view.readiness).toBeNull();
     expect(view.readinessAvailable).toBe(false);
+    expect(view.warnings).toEqual([]);
+  });
+
+  it('marks approvalsAvailable true when approvals reader succeeds with empty list', async () => {
+    const integration = adapterWith({
+      readTaskActions: async () => ({ actions: [{ actionId: 'action-1', state: 'PROPOSED' }] }),
+      readTaskApprovals: async () => ({ approvals: [] }),
+    });
+    const service = createCanonicalActionsService({
+      integration,
+      featureSupport: { durableActions: true, approvals: true, trajectoryMetrics: false },
+    });
+    const view = await service.getActions('/project', 'TASK-001');
+
+    expect(view.available).toBe(true);
+    expect(view.approvalsAvailable).toBe(true);
+    expect(view.approvals).toEqual([]);
+    expect(view.warnings).toEqual([]);
+  });
+
+  it('does not invoke readTaskMetrics when trajectoryMetrics is not negotiated', async () => {
+    const readTaskMetrics = vi.fn().mockResolvedValue({ actions: { total: 1 } });
+    const integration = adapterWith({
+      readTaskActions: async () => ({ actions: [{ actionId: 'action-1', state: 'PROPOSED' }] }),
+      readTaskMetrics,
+    });
+    const service = createCanonicalActionsService({
+      integration,
+      featureSupport: { durableActions: true, approvals: true, trajectoryMetrics: false },
+    });
+    const view = await service.getActions('/project', 'TASK-001');
+
+    expect(readTaskMetrics).not.toHaveBeenCalled();
+    expect(view.readinessAvailable).toBe(false);
+    expect(view.readiness).toBeNull();
+    expect(view.warnings).toEqual([]);
+  });
+
+  it('sets readinessAvailable false when metrics projection is missing actions data', async () => {
+    const integration = adapterWith({
+      readTaskActions: async () => ({ actions: [{ actionId: 'action-1', state: 'PROPOSED' }] }),
+      readTaskMetrics: async () => ({ timing: { wallClockMs: 100 } }),
+    });
+    const service = createCanonicalActionsService({
+      integration,
+      featureSupport: { durableActions: true, approvals: true, trajectoryMetrics: true },
+    });
+    const view = await service.getActions('/project', 'TASK-001');
+
+    expect(view.readiness).toBeNull();
+    expect(view.readinessAvailable).toBe(false);
+    expect(view.warnings).toEqual([]);
   });
 
   it('isolates approval reader failures and keeps primary actions visible with warning', async () => {

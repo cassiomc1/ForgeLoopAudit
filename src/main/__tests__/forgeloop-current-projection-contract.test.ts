@@ -135,7 +135,7 @@ describe('real vendored ForgeLoop projection contract', () => {
       // Verify canonical actions service
       const actionsService = createCanonicalActionsService({
         integration: adapter,
-        featureSupport: { durableActions: true, approvals: true, capabilityPolicy: true },
+        featureSupport: { durableActions: true, approvals: true, capabilityPolicy: true, trajectoryMetrics: true },
       });
       const actionsView = await actionsService.getActions(DEMO_ROOT, 'TASK-002');
       expect(actionsView.available).toBe(true);
