@@ -177,12 +177,13 @@ export interface ContinuitySummary {
 }
 
 export interface DiagnosticContextSummary {
+  present: boolean;
   activeFailureSignatures: string[];
   activeFailedRequirements: string[];
+  openHypotheses: string[];
+  latestIntervention: string | null;
+  nextExperiment: string | null;
   doNotRepeat: Array<{ id?: string; summary: string; reason?: string }>;
-  verificationCycle?: number;
-  guidance?: string[];
-  stall?: boolean;
 }
 
 export type CanonicalProjectionSource = 'FORGELOOP_INTEGRATION' | 'UNAVAILABLE';
@@ -202,10 +203,157 @@ export interface CanonicalProjectionView<T = Record<string, unknown>> {
   error: CanonicalProjectionError | null;
 }
 
-export type TaskHistoryView = CanonicalProjectionView<Record<string, unknown>>;
-export type TaskTraceView = CanonicalProjectionView<Record<string, unknown>>;
-export type TaskReflectionView = CanonicalProjectionView<Record<string, unknown>>;
-export type TaskInspectionView = CanonicalProjectionView<Record<string, unknown>>;
+export interface CanonicalTaskProjectionViewModel {
+  id: string | null;
+  phase: string | null;
+  status: string | null;
+  revision: number | null;
+  verificationCycle: number | null;
+  present: boolean;
+}
+
+export interface CanonicalHistorySummaryViewModel {
+  eventCount: number | null;
+  totalEventCount: number | null;
+  checkAttemptCount: number | null;
+  failedAttemptCount: number | null;
+  diagnosticCaseCount: number | null;
+  interventionCount: number | null;
+}
+
+export interface CanonicalHistoryQualityViewModel {
+  level: 'COMPLETE' | 'PARTIAL' | 'MINIMAL' | 'UNKNOWN';
+  reasons: string[];
+}
+
+export interface CanonicalHistoryViewModel {
+  task: CanonicalTaskProjectionViewModel;
+  summary: CanonicalHistorySummaryViewModel;
+  historyQuality: CanonicalHistoryQualityViewModel;
+}
+
+export interface CanonicalFailureSurfaceViewModel {
+  verificationCycle: number | null;
+  surface: string[];
+  size: number | null;
+}
+
+export interface CanonicalFailureSignatureViewModel {
+  signature: string | null;
+  cycles: number[];
+  requirements: string[];
+}
+
+export interface CanonicalDiagnosticCaseViewModel {
+  sequence: number | null;
+  at: string | null;
+  verificationCycle: number | null;
+  diagnosticRevision: number | null;
+  failureClass: string | null;
+  hypothesisIds: string[];
+  nextSafeAction: string | null;
+  diagnosticFingerprint: string | null;
+}
+
+export type TraceInterventionKind =
+  | 'CODE_CHANGE'
+  | 'CONFIG_CHANGE'
+  | 'TEST_CHANGE'
+  | 'INSTRUMENTATION'
+  | 'DOCUMENTATION'
+  | 'UNKNOWN';
+
+export interface TraceInterventionViewModel {
+  id: string | null;
+  kind: TraceInterventionKind;
+  statement: string | null;
+  hypothesisRefs: string[];
+  reversible: boolean | null;
+}
+
+export interface CanonicalTraceInterventionViewModel {
+  sequence: number | null;
+  at: string | null;
+  verificationCycle: number | null;
+  intervention: TraceInterventionViewModel;
+}
+
+export interface CanonicalHypothesisDispositionViewModel {
+  sequence: number | null;
+  at: string | null;
+  verificationCycle: number | null;
+  hypothesisRef: string | null;
+  status: string | null;
+}
+
+export interface CanonicalTraceDiagnosticsViewModel {
+  cases: CanonicalDiagnosticCaseViewModel[];
+  interventions: CanonicalTraceInterventionViewModel[];
+  dispositions: CanonicalHypothesisDispositionViewModel[];
+}
+
+export interface CanonicalTraceActionsViewModel {
+  total: number | null;
+  ambiguous: number | null;
+}
+
+export interface CanonicalTraceViewModel {
+  task: CanonicalTaskProjectionViewModel;
+  failureSurfaces: CanonicalFailureSurfaceViewModel[];
+  failureSignatures: CanonicalFailureSignatureViewModel[];
+  diagnostics: CanonicalTraceDiagnosticsViewModel;
+  actions: CanonicalTraceActionsViewModel;
+}
+
+export interface CanonicalHypothesisSummaryViewModel {
+  created: number | null;
+  supported: number | null;
+  weakened: number | null;
+  falsified: number | null;
+  superseded: number | null;
+  unresolved: number | null;
+  open: number | null;
+}
+
+export interface CanonicalReflectionStallAnalysisViewModel {
+  latestNoGain: boolean | null;
+  consecutiveNoGainCycles: number | null;
+  sameStrategyAsPrevious: boolean | null;
+  sameFailureSurfaceAsPrevious: boolean | null;
+  sameFailureSignaturesAsPrevious: boolean | null;
+}
+
+export interface CanonicalReflectionInformationGainViewModel {
+  cyclesWithoutEffectiveGain: number[];
+}
+
+export interface CanonicalReflectionViewModel {
+  status: 'ADVANCING' | 'WATCH' | 'STALLED' | 'UNKNOWN';
+  verificationCycles: number | null;
+  hypotheses: CanonicalHypothesisSummaryViewModel;
+  stallAnalysis: CanonicalReflectionStallAnalysisViewModel;
+  informationGain: CanonicalReflectionInformationGainViewModel;
+  recommendedProtocolAction: string | null;
+}
+
+export interface CanonicalInspectionViewModel {
+  ok: boolean | null;
+  task: {
+    id: string | null;
+    phase: string | null;
+  };
+  progress: {
+    status: string | null;
+  };
+  next: {
+    command: string | null;
+  };
+}
+
+export type TaskHistoryView = CanonicalProjectionView<CanonicalHistoryViewModel>;
+export type TaskTraceView = CanonicalProjectionView<CanonicalTraceViewModel>;
+export type TaskReflectionView = CanonicalProjectionView<CanonicalReflectionViewModel>;
+export type TaskInspectionView = CanonicalProjectionView<CanonicalInspectionViewModel>;
 
 export type DurableActionState =
   | 'PROPOSED'

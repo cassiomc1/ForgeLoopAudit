@@ -138,6 +138,41 @@ describe('task-reader', () => {
       expect(result.continuity?.knownIssues).toEqual([{ id: 'issue-1', summary: 'Missing dependency' }]);
     });
 
+    it('preserves canonical diagnostic-context fields needed by diagnostics', () => {
+      const artifacts: RawTaskArtifacts = {
+        'continuity.json': {
+          continuity: {
+            taskId: 'TASK-002',
+            phase: 'VERIFYING',
+          },
+          diagnosticContext: {
+            present: true,
+            activeFailureSignatures: ['sig-1'],
+            activeFailedRequirements: ['Corrupted persisted carts are discarded safely'],
+            openHypotheses: ['h-cart-parser'],
+            latestIntervention: 'intervention-cart-guard',
+            nextExperiment: 'Run verification cycle 2',
+            doNotRepeat: ['repeat-semantic-fingerprint'],
+          },
+        },
+      };
+
+      const result = buildTaskSummary('task-key', artifacts);
+
+      expect(result.continuity?.diagnosticContext).toEqual({
+        present: true,
+        activeFailureSignatures: ['sig-1'],
+        activeFailedRequirements: ['Corrupted persisted carts are discarded safely'],
+        openHypotheses: ['h-cart-parser'],
+        latestIntervention: 'intervention-cart-guard',
+        nextExperiment: 'Run verification cycle 2',
+        doNotRepeat: [{ summary: 'repeat-semantic-fingerprint' }],
+      });
+      expect(result.continuity?.diagnosticContext).not.toHaveProperty('verificationCycle');
+      expect(result.continuity?.diagnosticContext).not.toHaveProperty('guidance');
+      expect(result.continuity?.diagnosticContext).not.toHaveProperty('stall');
+    });
+
     it('should build nextAction from nextResult', () => {
       const artifacts: RawTaskArtifacts = {};
       const nextResult = {

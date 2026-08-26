@@ -31,7 +31,7 @@ test('Open Demo Project action opens the bundled ForgeShop project end-to-end', 
     await expect(banner).toContainText('errors are still real');
 
     // Banner persists on other pages while the demo is open.
-    await window.getByRole('button', { name: 'Tasks', exact: true }).click();
+    await window.getByLabel('Main navigation').getByRole('button', { name: 'Tasks', exact: true }).click();
     await expect(window.locator('h1').filter({ hasText: 'Tasks' })).toBeVisible({ timeout: 5000 });
     await expect(banner).toBeVisible();
 
@@ -49,14 +49,14 @@ test('Open Demo Project action opens the bundled ForgeShop project end-to-end', 
     await expect(window.locator('h1').filter({ hasText: 'Lifecycle Flow' })).toBeVisible({ timeout: 5000 });
     await expect(window.getByRole('combobox')).toHaveValue('TASK-004');
 
-    await window.getByRole('button', { name: 'Continuity', exact: true }).click();
+    await window.getByLabel('Main navigation').getByRole('button', { name: 'Continuity', exact: true }).click();
     await expect(window.locator('h1').filter({ hasText: 'Continuity' })).toBeVisible({ timeout: 5000 });
 
-    await window.getByRole('button', { name: 'Policy', exact: true }).click();
+    await window.getByLabel('Main navigation').getByRole('button', { name: 'Policy', exact: true }).click();
     await expect(window.locator('h1').filter({ hasText: 'Policy' })).toBeVisible({ timeout: 5000 });
 
     // The visible Studio version must come from the runtime, matching package.json.
-    await window.getByRole('button', { name: 'Settings', exact: true }).click();
+    await window.getByLabel('Main navigation').getByRole('button', { name: 'Settings', exact: true }).click();
     await expect(window.locator('body')).toContainText(`ForgeLoop Studio v${packageVersion}`);
   } finally {
     await app.close();
