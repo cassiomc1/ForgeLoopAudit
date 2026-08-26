@@ -79,8 +79,14 @@ function normalizeInterventionKind(value: unknown): TraceInterventionKind {
     case 'CODE_CHANGE':
     case 'CONFIG_CHANGE':
     case 'TEST_CHANGE':
+    case 'FIXTURE_CHANGE':
+    case 'ENVIRONMENT_CHANGE':
+    case 'DEPENDENCY_CHANGE':
+    case 'ROLLBACK':
+    case 'ISOLATION':
     case 'INSTRUMENTATION':
-    case 'DOCUMENTATION':
+    case 'NO_MUTATION_EXPERIMENT':
+    case 'OTHER':
       return value;
     default:
       return 'UNKNOWN';

@@ -80,6 +80,13 @@ export function Actions({ snapshot, selectedTaskId, refreshToken = 0, onSelected
                 <span>Trusted readiness is calculated by ForgeLoop: <strong className="text-forge-text-primary">{view.readiness?.satisfied ?? 'Unknown'}</strong></span>
                 <span>Source: <strong className="text-forge-text-primary">{view.source}</strong></span>
               </div>
+              {view.warnings && view.warnings.length > 0 && (
+                <div className="border border-forge-warning/40 bg-forge-warning/10 rounded-8 p-3 text-xs text-forge-warning space-y-1">
+                  {view.warnings.map((w) => (
+                    <p key={w.code}>{w.message}</p>
+                  ))}
+                </div>
+              )}
               {view.actions.some((action) => action.state === 'COMMIT_UNKNOWN') && <div className="border border-forge-danger/40 bg-forge-danger/10 rounded-10 p-4 text-sm text-forge-danger flex items-start gap-3"><AlertTriangle className="w-5 h-5 shrink-0" /><div><strong>COMMIT_UNKNOWN requires external reconciliation.</strong><p className="mt-1 text-xs">This Studio only displays the canonical state. No retry, reconcile, approval, or authority action is exposed here.</p></div></div>}
               <div className="grid grid-cols-1 xl:grid-cols-[1.3fr_1fr] gap-6">
                 <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-10 overflow-hidden">
@@ -90,7 +97,7 @@ export function Actions({ snapshot, selectedTaskId, refreshToken = 0, onSelected
               </div>
               <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-10 overflow-hidden">
                 <div className="px-4 py-3 border-b border-forge-border-subtle"><h2 className="text-sm font-semibold text-forge-text-primary">Approvals</h2></div>
-                {view.approvals.length === 0 ? <p className="p-5 text-sm text-forge-text-muted">No canonical approvals recorded for this task.</p> : <div className="divide-y divide-forge-border-subtle/50">{view.approvals.map((approval) => <div key={approval.approvalId} className="px-4 py-3 flex flex-wrap items-center gap-3"><span className="font-mono text-xs text-forge-text-primary">{approval.approvalId}</span><ApprovalBadge status={approval.status} /><span className="text-xs text-forge-text-muted">{approval.actionId || 'Action unknown'}</span><span className="text-xs text-forge-text-muted">{approval.capability || 'Capability unknown'}</span><span className="text-xs text-forge-text-secondary ml-auto">{approval.reason || 'No reason recorded'}</span></div>)}</div>}
+                {view.approvalsAvailable === false ? <p className="p-5 text-sm text-forge-text-muted">Canonical approvals are unavailable for this task.</p> : view.approvals.length === 0 ? <p className="p-5 text-sm text-forge-text-muted">No canonical approvals recorded for this task.</p> : <div className="divide-y divide-forge-border-subtle/50">{view.approvals.map((approval) => <div key={approval.approvalId} className="px-4 py-3 flex flex-wrap items-center gap-3"><span className="font-mono text-xs text-forge-text-primary">{approval.approvalId}</span><ApprovalBadge status={approval.status} /><span className="text-xs text-forge-text-muted">{approval.actionId || 'Action unknown'}</span><span className="text-xs text-forge-text-muted">{approval.capability || 'Capability unknown'}</span><span className="text-xs text-forge-text-secondary ml-auto">{approval.reason || 'No reason recorded'}</span></div>)}</div>}
               </div>
             </>
           )}

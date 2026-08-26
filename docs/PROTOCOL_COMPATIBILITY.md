@@ -4,15 +4,23 @@ ForgeLoop Studio supports protocol version 1 and schema version 1 from the pinne
 
 ## Compatibility matrix
 
-| Project | Integration API | Result |
+| Project / Build | Integration API | Result |
 |---|---|---|
-| ForgeLoop 1.6 / protocol 1 | Integration API v1 valid (`INTEGRATION_V1`) | Full read-only support: canonical task discovery, ownership, recovery, observability, durable actions, approvals, capability policy and trajectory projections |
-| ForgeLoop 1.6 / protocol 1 | Optional capability absent | The affected Diagnostics, Actions, Policy or trajectory panel is explicitly unavailable; core protocol compatibility remains intact |
-| ForgeLoop 1.6 / protocol 1 | Integration unavailable | Degraded mode (`ARTIFACT_ONLY`): visual reading + schema validation; canonical ownership and optional canonical projections are unavailable |
-| ForgeLoop 1.3 / protocol 1 | Integration API not applicable | `ARTIFACT_ONLY`: visual reading + schema validation; canonical ownership is never inferred from raw artifacts or the legacy CLI |
-| Unknown protocol | any | Rejected with an explicit incompatibility error |
-| Incompatible schema | any | Rejected with an explicit incompatibility error |
+| Pinned ForgeLoop build (`1.6.0 @ 1eb8088...`) | Integration API v1 valid (`INTEGRATION_V1`) | Full tested Studio capability set: canonical task discovery, ownership, recovery, observability, durable actions, approvals, capability policy and trajectory projections |
+| Other protocol-v1 / Integration API v1 build | Required core capabilities present; optional capability absent | Core support is negotiated from required capabilities; optional panels (Diagnostics, Actions, Approvals, Policy, Trajectory) are enabled only when their individual capability contracts are advertised; affected feature unavailable |
+| Any protocol-v1 build | Missing CORE required resources or capability drift | Rejected with `INCOMPATIBLE` (fails closed; missing core resources, unsupported recovery contract, or broken executor parity) |
+| Protocol-v1 project | Integration API unavailable | Degraded mode (`ARTIFACT_ONLY`): visual reading + schema validation; canonical ownership and optional canonical projections are unavailable |
+| ForgeLoop 1.3 / legacy protocol 1 | Integration API not applicable | `ARTIFACT_ONLY`: visual reading + schema validation; canonical ownership is never inferred from raw artifacts or the legacy CLI |
+| Unknown protocol version | any | Rejected with an explicit incompatibility error (`INCOMPATIBLE`) |
+| Incompatible schema version | any | Rejected with an explicit incompatibility error (`INCOMPATIBLE`) |
 | Invalid ownership (e.g. `claimState=INCONSISTENT`) | API v1 | Project opens read-only with a prominent ownership inconsistency state |
+
+### Capability degradation vs incompatibility
+
+Studio explicitly distinguishes core compatibility from additive optional features:
+
+- **Missing CORE required resources or contract drift &rarr; `INCOMPATIBLE`**: Core resources (`protocol/info`, `project/tasks`, `task/status`, `task/ownership`, `task/contract`, `task/continuity`), Integration API version mismatch, broken executor parity, or incomplete `taskClaimRecovery` fail closed to `INCOMPATIBLE`.
+- **Missing OPTIONAL resources or feature contracts &rarr; Affected feature unavailable**: Optional resources (`task/actions`, `task/action`, `task/approvals`, `task/metrics`, `task/evaluations`, `project/capability-policy`) or observability command restrictions degrade individual panels/views gracefully without compromising core protocol compatibility.
 
 ## Authority boundary
 

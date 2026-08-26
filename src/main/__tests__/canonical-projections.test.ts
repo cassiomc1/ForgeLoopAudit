@@ -132,7 +132,76 @@ describe('canonical read-only projection services', () => {
     expect(view.available).toBe(true);
     expect(view.actions).toHaveLength(1);
     expect(view.approvals).toEqual([]);
+    expect(view.approvalsAvailable).toBe(true);
     expect(view.readiness).toBeNull();
+    expect(view.readinessAvailable).toBe(false);
+  });
+
+  it('isolates approval reader failures and keeps primary actions visible with warning', async () => {
+    const integration = adapterWith({
+      readTaskActions: async () => ({ actions: [{ actionId: 'action-1', state: 'PROPOSED' }] }),
+      readTaskApprovals: vi.fn().mockRejectedValue(new Error('approval read network failure')),
+      readTaskMetrics: async () => ({ actions: { total: 1, trustedSatisfied: 1 } }),
+    });
+    const service = createCanonicalActionsService({ integration, featureSupport: allFeatures });
+    const view = await service.getActions('/project', 'TASK-001');
+
+    expect(view.available).toBe(true);
+    expect(view.actions).toHaveLength(1);
+    expect(view.approvals).toEqual([]);
+    expect(view.approvalsAvailable).toBe(false);
+    expect(view.readiness).toMatchObject({ satisfied: 1 });
+    expect(view.readinessAvailable).toBe(true);
+    expect(view.error).toBeNull();
+    expect(view.warnings).toEqual([
+      {
+        code: 'E_CANONICAL_APPROVALS_UNAVAILABLE',
+        message: 'approval read network failure',
+      },
+    ]);
+  });
+
+  it('isolates metrics reader failures and keeps primary actions visible with warning', async () => {
+    const integration = adapterWith({
+      readTaskActions: async () => ({ actions: [{ actionId: 'action-1', state: 'PROPOSED' }] }),
+      readTaskApprovals: async () => ({ approvals: [{ approvalId: 'app-1', status: 'PENDING' }] }),
+      readTaskMetrics: vi.fn().mockRejectedValue(new Error('metrics timeout')),
+    });
+    const service = createCanonicalActionsService({ integration, featureSupport: allFeatures });
+    const view = await service.getActions('/project', 'TASK-001');
+
+    expect(view.available).toBe(true);
+    expect(view.actions).toHaveLength(1);
+    expect(view.approvals).toHaveLength(1);
+    expect(view.approvalsAvailable).toBe(true);
+    expect(view.readiness).toBeNull();
+    expect(view.readinessAvailable).toBe(false);
+    expect(view.error).toBeNull();
+    expect(view.warnings).toEqual([
+      {
+        code: 'E_CANONICAL_METRICS_UNAVAILABLE',
+        message: 'metrics timeout',
+      },
+    ]);
+  });
+
+  it('fails closed when primary actions read fails', async () => {
+    const integration = adapterWith({
+      readTaskActions: vi.fn().mockRejectedValue(new Error('actions disk error')),
+      readTaskApprovals: async () => ({ approvals: [{ approvalId: 'app-1', status: 'PENDING' }] }),
+      readTaskMetrics: async () => ({ actions: { total: 1 } }),
+    });
+    const service = createCanonicalActionsService({ integration, featureSupport: allFeatures });
+    const view = await service.getActions('/project', 'TASK-001');
+
+    expect(view.available).toBe(false);
+    expect(view.source).toBe('UNAVAILABLE');
+    expect(view.actions).toEqual([]);
+    expect(view.approvals).toEqual([]);
+    expect(view.error).toEqual({
+      code: 'E_CANONICAL_ACTIONS_INVOCATION',
+      message: 'actions disk error',
+    });
   });
 
   it('gates action detail and approval reads without guessing missing data', async () => {

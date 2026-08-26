@@ -259,8 +259,14 @@ export type TraceInterventionKind =
   | 'CODE_CHANGE'
   | 'CONFIG_CHANGE'
   | 'TEST_CHANGE'
+  | 'FIXTURE_CHANGE'
+  | 'ENVIRONMENT_CHANGE'
+  | 'DEPENDENCY_CHANGE'
+  | 'ROLLBACK'
+  | 'ISOLATION'
   | 'INSTRUMENTATION'
-  | 'DOCUMENTATION'
+  | 'NO_MUTATION_EXPERIMENT'
+  | 'OTHER'
   | 'UNKNOWN';
 
 export interface TraceInterventionViewModel {
@@ -428,8 +434,11 @@ export interface TaskActionsView {
   source: CanonicalProjectionSource;
   actions: DurableActionView[];
   approvals: DurableApprovalView[];
+  approvalsAvailable?: boolean;
+  readinessAvailable?: boolean;
   readiness: ActionReadinessSummary | null;
   error: CanonicalProjectionError | null;
+  warnings?: CanonicalProjectionError[];
 }
 
 export interface CapabilityPolicyRuleView {

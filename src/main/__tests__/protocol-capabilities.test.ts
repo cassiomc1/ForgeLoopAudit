@@ -306,4 +306,93 @@ describe('compatibility version axes', () => {
     expect(support.observability).toBe(false);
     expect(support.trajectoryMetrics).toBe(false);
   });
+
+  describe('trajectory feature contract negotiation', () => {
+    it('degrades trajectory metrics and evaluations when trajectoryEvaluation feature is missing', () => {
+      const capabilities = currentCapabilities({
+        features: {
+          taskClaimRecovery: currentCapabilities().features.taskClaimRecovery,
+          durableActions: currentCapabilities().features.durableActions,
+        },
+      });
+      const support = deriveFeatureSupport(capabilities);
+      expect(support.trajectoryMetrics).toBe(false);
+      expect(support.trajectoryEvaluations).toBe(false);
+    });
+
+    it('degrades when readOnlyMetrics is false', () => {
+      const capabilities = currentCapabilities({
+        features: {
+          ...currentCapabilities().features,
+          trajectoryEvaluation: {
+            version: 1,
+            readOnlyMetrics: false,
+            projectLocalReference: true,
+          },
+        },
+      });
+      const support = deriveFeatureSupport(capabilities);
+      expect(support.trajectoryMetrics).toBe(false);
+      expect(support.trajectoryEvaluations).toBe(false);
+    });
+
+    it('degrades when projectLocalReference is false', () => {
+      const capabilities = currentCapabilities({
+        features: {
+          ...currentCapabilities().features,
+          trajectoryEvaluation: {
+            version: 1,
+            readOnlyMetrics: true,
+            projectLocalReference: false,
+          },
+        },
+      });
+      const support = deriveFeatureSupport(capabilities);
+      expect(support.trajectoryMetrics).toBe(false);
+      expect(support.trajectoryEvaluations).toBe(false);
+    });
+
+    it('degrades when trajectoryEvaluation version is not exactly 1 (e.g., version 2)', () => {
+      const capabilities = currentCapabilities({
+        features: {
+          ...currentCapabilities().features,
+          trajectoryEvaluation: {
+            version: 2,
+            readOnlyMetrics: true,
+            projectLocalReference: true,
+          },
+        },
+      });
+      const support = deriveFeatureSupport(capabilities);
+      expect(support.trajectoryMetrics).toBe(false);
+      expect(support.trajectoryEvaluations).toBe(false);
+    });
+
+    it('degrades trajectoryMetrics independently when task/metrics resource is absent', () => {
+      const capabilities = currentCapabilities({
+        resources: currentCapabilities().resources.filter((r) => r !== 'task/metrics'),
+      });
+      const support = deriveFeatureSupport(capabilities);
+      expect(support.trajectoryMetrics).toBe(false);
+      expect(support.trajectoryEvaluations).toBe(true);
+    });
+
+    it('degrades trajectoryEvaluations independently when task/evaluations resource is absent', () => {
+      const capabilities = currentCapabilities({
+        resources: currentCapabilities().resources.filter((r) => r !== 'task/evaluations'),
+      });
+      const support = deriveFeatureSupport(capabilities);
+      expect(support.trajectoryMetrics).toBe(true);
+      expect(support.trajectoryEvaluations).toBe(false);
+    });
+
+    it('degrades trajectoryMetrics when metrics command is missing', () => {
+      const capabilities = currentCapabilities({
+        commands: currentCapabilities().commands?.filter((c) => c.name !== 'metrics'),
+      });
+      const support = deriveFeatureSupport(capabilities);
+      expect(support.trajectoryMetrics).toBe(false);
+      expect(support.trajectoryEvaluations).toBe(true);
+    });
+  });
 });

@@ -1,5 +1,7 @@
 import type { ForgeLoopIntegrationAdapter } from './forgeloop-integration';
 import type {
+  ActionReadinessSummary,
+  CanonicalProjectionError,
   CapabilityPolicyView,
   DurableActionEffectClass,
   DurableActionState,
@@ -99,7 +101,7 @@ function listFromResource(data: unknown, key: string): unknown[] {
   return [];
 }
 
-function projectionError(code: string, message: string) {
+function projectionError(code: string, message: string): CanonicalProjectionError {
   return { code, message };
 }
 
@@ -140,38 +142,95 @@ export function createCanonicalActionsService(options: {
           source: 'UNAVAILABLE',
           actions: [],
           approvals: [],
+          approvalsAvailable: false,
+          readinessAvailable: false,
           readiness: null,
           error: projectionError('E_FEATURE_UNAVAILABLE', 'Not available with the bundled ForgeLoop capability set.'),
+          warnings: [],
         };
       }
-      try {
-        if (!integration.readTaskActions) throw new Error('Canonical durable-action resources are not available.');
-        const [actionsData, approvalsData, metricsData] = await Promise.all([
-          integration.readTaskActions(projectRoot, taskId),
-          featureSupport?.approvals === false || !integration.readTaskApprovals
-            ? Promise.resolve<Record<string, unknown>>({ approvals: [] })
-            : integration.readTaskApprovals(projectRoot, taskId),
-          integration.readTaskMetrics ? integration.readTaskMetrics(projectRoot, taskId).catch(() => null) : Promise.resolve(null),
-        ]);
-        const metrics = isRecord(metricsData) ? metricsData : null;
-        return {
-          available: true,
-          source: 'FORGELOOP_INTEGRATION',
-          actions: listFromResource(actionsData, 'actions').map(actionValue),
-          approvals: listFromResource(approvalsData, 'approvals').map(approvalValue),
-          readiness: mapReadiness(metrics),
-          error: null,
-        };
-      } catch (error) {
+
+      if (!integration.readTaskActions) {
         return {
           available: false,
           source: 'UNAVAILABLE',
           actions: [],
           approvals: [],
+          approvalsAvailable: false,
+          readinessAvailable: false,
           readiness: null,
-          error: projectionError('E_CANONICAL_ACTIONS_INVOCATION', error instanceof Error ? error.message : String(error)),
+          error: projectionError('E_CANONICAL_ACTIONS_INVOCATION', 'Canonical durable-action resources are not available.'),
+          warnings: [],
         };
       }
+
+      const actionsPromise = integration.readTaskActions(projectRoot, taskId);
+      const approvalsPromise = featureSupport?.approvals === false || !integration.readTaskApprovals
+        ? Promise.resolve<Record<string, unknown>>({ approvals: [] })
+        : integration.readTaskApprovals(projectRoot, taskId);
+      const metricsPromise = integration.readTaskMetrics
+        ? integration.readTaskMetrics(projectRoot, taskId)
+        : Promise.resolve(null);
+
+      const [actionsResult, approvalsResult, metricsResult] = await Promise.allSettled([
+        actionsPromise,
+        approvalsPromise,
+        metricsPromise,
+      ]);
+
+      if (actionsResult.status === 'rejected') {
+        const error = actionsResult.reason;
+        return {
+          available: false,
+          source: 'UNAVAILABLE',
+          actions: [],
+          approvals: [],
+          approvalsAvailable: false,
+          readinessAvailable: false,
+          readiness: null,
+          error: projectionError('E_CANONICAL_ACTIONS_INVOCATION', error instanceof Error ? error.message : String(error)),
+          warnings: [],
+        };
+      }
+
+      const warnings: CanonicalProjectionError[] = [];
+      let approvals: DurableApprovalView[] = [];
+      let approvalsAvailable = true;
+
+      if (approvalsResult.status === 'fulfilled') {
+        approvals = listFromResource(approvalsResult.value, 'approvals').map(approvalValue);
+      } else {
+        approvalsAvailable = false;
+        const err = approvalsResult.reason;
+        warnings.push(projectionError('E_CANONICAL_APPROVALS_UNAVAILABLE', err instanceof Error ? err.message : String(err)));
+      }
+
+      let readiness: ActionReadinessSummary | null = null;
+      let readinessAvailable = true;
+
+      if (metricsResult.status === 'fulfilled') {
+        const metrics = isRecord(metricsResult.value) ? metricsResult.value : null;
+        readiness = mapReadiness(metrics);
+        if (metricsResult.value === null) {
+          readinessAvailable = false;
+        }
+      } else {
+        readinessAvailable = false;
+        const err = metricsResult.reason;
+        warnings.push(projectionError('E_CANONICAL_METRICS_UNAVAILABLE', err instanceof Error ? err.message : String(err)));
+      }
+
+      return {
+        available: true,
+        source: 'FORGELOOP_INTEGRATION',
+        actions: listFromResource(actionsResult.value, 'actions').map(actionValue),
+        approvals,
+        approvalsAvailable,
+        readinessAvailable,
+        readiness,
+        error: null,
+        warnings,
+      };
     },
 
     async getAction(projectRoot, taskId, actionId): Promise<DurableActionView | null> {
