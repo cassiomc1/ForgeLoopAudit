@@ -28,6 +28,7 @@ if (!existsSync(bundledDemoConfig)) {
   throw new Error(`Bundled demo project missing from packaged resources: ${bundledDemoConfig}`);
 }
 JSON.parse(readFileSync(bundledDemoConfig, 'utf8'));
+const expectedForgeLoopVersion = JSON.parse(readFileSync(join(process.cwd(), 'schemas', 'provenance.json'), 'utf8')).forgeLoopPackageVersion;
 console.log(`Bundled demo project present at ${join(resourcesDir, 'demo')}`);
 
 const startedAt = performance.now();
@@ -51,7 +52,7 @@ try {
   if (bridgeType !== 'object') throw new Error(`Preload bridge unavailable: ${bridgeType}`);
   // The packaged app must load the bundled @cassiomc1/forgeloop Integration
   // API from its own node_modules — no global ForgeLoop CLI required.
-  if (result.forgeLoopPackageVersion !== '1.5.0') {
+  if (result.forgeLoopPackageVersion !== expectedForgeLoopVersion) {
     throw new Error(`Bundled ForgeLoop Integration API not loadable in packaged runtime: ${JSON.stringify(result)}`);
   }
   console.log(`Packaged smoke passed elapsedMs=${Math.round(performance.now() - startedAt)} title=${title} bridge=${bridgeType} forgeLoopIntegration=${result.forgeLoopPackageVersion}`);

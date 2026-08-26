@@ -1,5 +1,5 @@
 import { PHASE_ORDER } from '@shared/domain';
-import type { TaskSummary, ForgeLoopPhase, EvidenceCoverageSummary, BlockerSummary, FailureSummary, CheckSummary, GateSummary, NextActionSummary, ContinuitySummary, ContinuityWorkItem, TaskOwnershipSummary, TaskRecoverySummary } from '@shared/domain';
+import type { TaskSummary, ForgeLoopPhase, EvidenceCoverageSummary, BlockerSummary, FailureSummary, CheckSummary, GateSummary, NextActionSummary, ContinuitySummary, ContinuityWorkItem, TaskOwnershipSummary, TaskRecoverySummary, DiagnosticContextSummary } from '@shared/domain';
 import type { AllowedArtifact } from '@shared/domain';
 
 export interface RawTaskArtifacts {
@@ -188,21 +188,55 @@ function parseWorkItems(value: unknown): ContinuityWorkItem[] {
   return Array.isArray(value) ? value.filter((item): item is Record<string, unknown> => !!item && typeof item === 'object').map((item) => ({ id: safeString(item, 'id') || 'unknown', summary: safeString(item, 'summary') || 'Unknown work item' })) : [];
 }
 
-function buildContinuity(continuity: Record<string, unknown> | undefined): ContinuitySummary | undefined {
+function buildDiagnosticContext(value: unknown): DiagnosticContextSummary | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const context = value as Record<string, unknown>;
+  const readStrings = (key: string): string[] => Array.isArray(context[key])
+    ? (context[key] as unknown[]).filter((entry): entry is string => typeof entry === 'string')
+    : [];
+  const rawDoNotRepeat = Array.isArray(context.doNotRepeat) ? context.doNotRepeat : [];
+  return {
+    activeFailureSignatures: readStrings('activeFailureSignatures'),
+    activeFailedRequirements: readStrings('activeFailedRequirements'),
+    doNotRepeat: rawDoNotRepeat.map((entry) => {
+      if (typeof entry === 'string') return { summary: entry };
+      if (entry && typeof entry === 'object') {
+        const record = entry as Record<string, unknown>;
+        return {
+          id: safeString(record, 'id'),
+          summary: safeString(record, 'summary') || safeString(record, 'fingerprint') || 'Repeated intervention',
+          reason: safeString(record, 'reason'),
+        };
+      }
+      return { summary: String(entry) };
+    }),
+    verificationCycle: safeNumber(context, 'verificationCycle'),
+    guidance: readStrings('guidance'),
+    stall: context.stall === true,
+  };
+}
+
+export function buildContinuity(continuity: Record<string, unknown> | undefined): ContinuitySummary | undefined {
   if (!continuity) return undefined;
 
+  const canonicalContinuity = continuity.continuity && typeof continuity.continuity === 'object' && !Array.isArray(continuity.continuity)
+    ? continuity.continuity as Record<string, unknown>
+    : continuity;
+  const diagnosticContext = buildDiagnosticContext(continuity.diagnosticContext ?? canonicalContinuity.diagnosticContext);
+
   return {
-    taskId: safeString(continuity, 'taskId'),
-    phase: safeString(continuity, 'phase'),
-    updatedAt: safeString(continuity, 'updatedAt'),
-    currentFocus: continuity.currentFocus,
-    remainingWork: parseWorkItems(continuity.remainingWork),
-    knownIssues: parseWorkItems(continuity.knownIssues),
-    changedAreas: safeStringArray(continuity, 'changedAreas'),
-    inspectFirst: safeStringArray(continuity, 'inspectFirst'),
-    resumeNote: safeString(continuity, 'resumeNote'),
-    repositoryFingerprint: continuity.repositoryFingerprint,
-    verificationCycle: safeNumber(continuity, 'verificationCycle'),
+    taskId: safeString(canonicalContinuity, 'taskId'),
+    phase: safeString(canonicalContinuity, 'phase'),
+    updatedAt: safeString(canonicalContinuity, 'updatedAt'),
+    currentFocus: canonicalContinuity.currentFocus,
+    remainingWork: parseWorkItems(canonicalContinuity.remainingWork),
+    knownIssues: parseWorkItems(canonicalContinuity.knownIssues),
+    changedAreas: safeStringArray(canonicalContinuity, 'changedAreas'),
+    inspectFirst: safeStringArray(canonicalContinuity, 'inspectFirst'),
+    resumeNote: safeString(canonicalContinuity, 'resumeNote'),
+    repositoryFingerprint: canonicalContinuity.repositoryFingerprint,
+    verificationCycle: safeNumber(canonicalContinuity, 'verificationCycle'),
+    diagnosticContext,
   };
 }
 
@@ -259,7 +293,8 @@ export function buildRecoverySummary(
 export function buildTaskSummary(
   taskKey: string,
   artifacts: RawTaskArtifacts,
-  nextResult?: Record<string, unknown>
+  nextResult?: Record<string, unknown>,
+  canonicalContinuity?: Record<string, unknown>,
 ): TaskSummary {
   const taskJson = artifacts['task.json'];
   const workState = artifacts['work-state.json'];
@@ -276,7 +311,7 @@ export function buildTaskSummary(
   const checks = buildChecks(workState);
   const gates = buildGates(workState, preflight);
   const nextAction = buildNextAction(workState, nextResult);
-  const continuitySummary = buildContinuity(continuity);
+  const continuitySummary = buildContinuity(canonicalContinuity ?? continuity);
 
   return {
     taskId,

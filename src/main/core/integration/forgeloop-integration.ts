@@ -1,21 +1,22 @@
 import { ForgeLoopStudioError } from '@shared/errors';
+import provenance from '../../../../schemas/provenance.json';
 import type {
   CanonicalOwnershipResource,
   CanonicalTaskList,
   ForgeLoopCapabilitiesSummary,
   ForgeLoopReadOnlyResult,
+  ForgeLoopResourceReadOptions,
 } from './types';
 
 export * from './types';
 
 /**
- * Version of the pinned @cassiomc1/forgeloop dependency providing the
- * Integration API. Kept as a build-time constant because the package's own
- * version probe relies on `import.meta.url`, which cannot survive the
- * Studio's CJS main-process bundle. Synchronized with the exact dependency
- * pin in package.json by forgeloop-integration.test.ts.
+ * Generated schema provenance is the fallback identity for diagnostics and
+ * tests. Runtime calls still ask the loaded ESM integration module for its
+ * package version so a package drift cannot be hidden by a stale literal.
  */
-export const FORGELOOP_PACKAGE_VERSION = '1.5.0';
+export const FORGELOOP_PACKAGE_VERSION = provenance.forgeLoopPackageVersion;
+export const FORGELOOP_UPSTREAM_COMMIT = provenance.forgeLoopGitCommit;
 
 /**
  * Commands the Studio may invoke through the canonical read runtime beyond
@@ -23,7 +24,21 @@ export const FORGELOOP_PACKAGE_VERSION = '1.5.0';
  * inside ForgeLoop; the guard re-verifies at invocation time.
  */
 export const STUDIO_READ_ONLY_COMMANDS = Object.freeze(
-  new Set(['next', 'progress', 'audit', 'report', 'policy-status', 'validate-state', 'validate-receipt']),
+  new Set([
+    'next',
+    'progress',
+    'audit',
+    'report',
+    'policy-status',
+    'validate-state',
+    'validate-receipt',
+    'history',
+    'trace',
+    'reflect',
+    'inspect',
+    'metrics',
+    'action-show',
+  ]),
 );
 
 const REQUIRED_RESOURCES = [
@@ -44,6 +59,13 @@ export interface ForgeLoopIntegrationAdapter {
   readTaskOwnership(projectRoot: string, taskId: string): Promise<CanonicalOwnershipResource>;
   readTaskContract(projectRoot: string, taskId: string): Promise<Record<string, unknown>>;
   readTaskContinuity(projectRoot: string, taskId: string): Promise<Record<string, unknown>>;
+  /** Optional in test/legacy adapters; present when the negotiated feature is advertised. */
+  readTaskActions?: (projectRoot: string, taskId: string) => Promise<Record<string, unknown>>;
+  readTaskAction?: (projectRoot: string, taskId: string, actionId: string) => Promise<Record<string, unknown>>;
+  readTaskApprovals?: (projectRoot: string, taskId: string) => Promise<Record<string, unknown>>;
+  readTaskMetrics?: (projectRoot: string, taskId: string) => Promise<Record<string, unknown>>;
+  readTaskEvaluations?: (projectRoot: string, taskId: string) => Promise<Record<string, unknown>>;
+  readCapabilityPolicy?: (projectRoot: string) => Promise<Record<string, unknown> | null>;
   executeReadOnly<T = Record<string, unknown>>(
     projectRoot: string,
     command: string,
@@ -58,6 +80,7 @@ function assertReadProjectRoot(projectRoot: string): void {
 }
 
 interface ForgeLoopIntegrationModule {
+  getForgeLoopPackageVersion(): string;
   executeForgeLoopCommand(options: { command: string; projectPath?: string; input?: Record<string, unknown> }): Promise<ForgeLoopReadOnlyResult<unknown>>;
   getForgeLoopCapabilities(options?: { packageVersion?: string | null }): {
     packageVersion: string | null;
@@ -71,6 +94,16 @@ interface ForgeLoopIntegrationModule {
         explicitResume: boolean;
         validatedClaimProjection: boolean;
       };
+      durableActions?: {
+        version: number;
+        readOnlyResources: boolean;
+        externalExecutionOverMcp: boolean;
+      };
+      trajectoryEvaluation?: {
+        version: number;
+        readOnlyMetrics: boolean;
+        projectLocalReference: boolean;
+      };
     };
     commands: Array<Record<string, unknown>>;
     resources: Array<{ name: string }>;
@@ -82,7 +115,7 @@ interface ForgeLoopIntegrationModule {
   };
   readForgeLoopIntegrationResource<T = Record<string, unknown>>(
     uri: string,
-    options?: { projectPath?: string; packageRoot?: string; packageVersion?: string | null; taskId?: string | null },
+    options?: ForgeLoopResourceReadOptions,
   ): Promise<{ uri: string; taskId?: string | null; data: T }>;
 }
 
@@ -107,13 +140,16 @@ export function createForgeLoopIntegration(): Promise<ForgeLoopIntegrationAdapte
 function buildAdapter(fl: ForgeLoopIntegrationModule): ForgeLoopIntegrationAdapter {
   return {
     getPackageVersion(): string {
-      return FORGELOOP_PACKAGE_VERSION;
+      return fl.getForgeLoopPackageVersion();
     },
 
     getCapabilities(): ForgeLoopCapabilitiesSummary {
-      const raw = fl.getForgeLoopCapabilities({ packageVersion: FORGELOOP_PACKAGE_VERSION });
+      const packageVersion = fl.getForgeLoopPackageVersion();
+      const raw = fl.getForgeLoopCapabilities({ packageVersion });
+      const durableActions = raw.features.durableActions;
+      const trajectoryEvaluation = raw.features.trajectoryEvaluation;
       return {
-        packageVersion: FORGELOOP_PACKAGE_VERSION,
+        packageVersion,
         protocolVersion: raw.protocolVersion,
         integrationApiVersion: raw.integrationApiVersion,
         executorParity: raw.executorParity === true,
@@ -124,14 +160,35 @@ function buildAdapter(fl: ForgeLoopIntegrationModule): ForgeLoopIntegrationAdapt
             explicitResume: raw.features.taskClaimRecovery.explicitResume === true,
             validatedClaimProjection: raw.features.taskClaimRecovery.validatedClaimProjection === true,
           },
+          ...(durableActions ? {
+            durableActions: {
+              version: durableActions.version,
+              readOnlyResources: durableActions.readOnlyResources === true,
+              externalExecutionOverMcp: durableActions.externalExecutionOverMcp === true,
+            },
+          } : {}),
+          ...(trajectoryEvaluation ? {
+            trajectoryEvaluation: {
+              version: trajectoryEvaluation.version,
+              readOnlyMetrics: trajectoryEvaluation.readOnlyMetrics === true,
+              projectLocalReference: trajectoryEvaluation.projectLocalReference === true,
+            },
+          } : {}),
         },
         resources: raw.resources.map((resource) => resource.name),
+        commands: raw.commands.map((command) => ({
+          name: typeof command.name === 'string' ? command.name : '',
+          baseRiskClass: typeof command.baseRiskClass === 'string' ? command.baseRiskClass : undefined,
+          mayExecuteExternalProcess: command.mayExecuteExternalProcess === true,
+          mutatesProtocol: command.mutatesProtocol === true
+            || (typeof command.mutation === 'string' && command.mutation !== 'READ_ONLY'),
+        })).filter((command) => command.name.length > 0),
       };
     },
 
     async readProtocolInfo(projectRoot: string): Promise<Record<string, unknown>> {
       assertReadProjectRoot(projectRoot);
-      return readResource<Record<string, unknown>>(fl, 'protocol/info', { packageVersion: FORGELOOP_PACKAGE_VERSION });
+      return readResource<Record<string, unknown>>(fl, 'protocol/info', { packageVersion: fl.getForgeLoopPackageVersion() });
     },
 
     async listTasks(projectRoot: string): Promise<CanonicalTaskList> {
@@ -157,6 +214,36 @@ function buildAdapter(fl: ForgeLoopIntegrationModule): ForgeLoopIntegrationAdapt
     async readTaskContinuity(projectRoot: string, taskId: string): Promise<Record<string, unknown>> {
       assertReadProjectRoot(projectRoot);
       return readResource<Record<string, unknown>>(fl, 'task/continuity', { projectPath: projectRoot, taskId });
+    },
+
+    async readTaskActions(projectRoot: string, taskId: string): Promise<Record<string, unknown>> {
+      assertReadProjectRoot(projectRoot);
+      return readResource<Record<string, unknown>>(fl, 'task/actions', { projectPath: projectRoot, taskId });
+    },
+
+    async readTaskAction(projectRoot: string, taskId: string, actionId: string): Promise<Record<string, unknown>> {
+      assertReadProjectRoot(projectRoot);
+      return readResource<Record<string, unknown>>(fl, 'task/action', { projectPath: projectRoot, taskId, actionId });
+    },
+
+    async readTaskApprovals(projectRoot: string, taskId: string): Promise<Record<string, unknown>> {
+      assertReadProjectRoot(projectRoot);
+      return readResource<Record<string, unknown>>(fl, 'task/approvals', { projectPath: projectRoot, taskId });
+    },
+
+    async readTaskMetrics(projectRoot: string, taskId: string): Promise<Record<string, unknown>> {
+      assertReadProjectRoot(projectRoot);
+      return readResource<Record<string, unknown>>(fl, 'task/metrics', { projectPath: projectRoot, taskId });
+    },
+
+    async readTaskEvaluations(projectRoot: string, taskId: string): Promise<Record<string, unknown>> {
+      assertReadProjectRoot(projectRoot);
+      return readResource<Record<string, unknown>>(fl, 'task/evaluations', { projectPath: projectRoot, taskId });
+    },
+
+    async readCapabilityPolicy(projectRoot: string): Promise<Record<string, unknown> | null> {
+      assertReadProjectRoot(projectRoot);
+      return readResource<Record<string, unknown> | null>(fl, 'project/capability-policy', { projectPath: projectRoot });
     },
 
     async executeReadOnly<T>(

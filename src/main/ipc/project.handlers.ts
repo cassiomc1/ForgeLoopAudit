@@ -7,13 +7,16 @@ import { IPC_CHANNELS } from '@shared/ipc';
 import { createProjectSnapshotBuilder, normalizePolicyStatus, type ProjectSnapshotBuilder, type ProjectCompatibilityContext } from '@main/core/project/project-snapshot';
 import { createProjectDetector, createProjectReader, type ProjectReader } from '@main/core/project/project-reader';
 import { ForgeCli } from '@main/core/cli/forge-cli';
-import { createProjectWatcher } from '@main/watcher/project-watcher';
+import { createProjectWatcher, type WatcherEvent } from '@main/watcher/project-watcher';
 import { createExecutionReader, type ExecutionReader } from '@main/core/executions/execution-reader';
 import { createTaskIndexer, createTaskSnapshotBuilder, createGateReader, type TaskIndexer, type TaskSnapshotBuilder } from '@main/core/tasks/task-index';
 import { createEventLedgerReader, type EventLedgerReader } from '@main/core/events/ledger-reader';
 import { createForgeLoopIntegration, type ForgeLoopIntegrationAdapter } from '@main/core/integration/forgeloop-integration';
 import { normalizeCanonicalProtocolInfo, negotiateCompatibilityMode } from '@main/core/protocol/protocol-capabilities';
 import { runStudioReadCommand } from '@main/core/integration/studio-read-commands';
+import { createCanonicalObservabilityService, type CanonicalObservabilityService } from '@main/core/integration/canonical-observability';
+import { createCanonicalActionsService, type CanonicalActionsService } from '@main/core/integration/canonical-actions';
+import { createCanonicalTrajectoryService, type CanonicalTrajectoryService } from '@main/core/integration/canonical-trajectory';
 import { createCanonicalTaskReadService, type CanonicalTaskReadService } from '@main/core/tasks/canonical-task-read-service';
 import Store from 'electron-store';
 import { z } from 'zod';
@@ -39,6 +42,9 @@ let currentCanonicalTaskService: CanonicalTaskReadService | null = null;
 let currentForgeCli: ForgeCli | null = null;
 let currentIntegration: ForgeLoopIntegrationAdapter | null = null;
 let currentCompatibilityMode: string | null = null;
+let currentObservability: CanonicalObservabilityService | null = null;
+let currentActions: CanonicalActionsService | null = null;
+let currentTrajectory: CanonicalTrajectoryService | null = null;
 let currentWatcher: ReturnType<typeof createProjectWatcher> | null = null;
 let currentSnapshotBuilder: ProjectSnapshotBuilder | null = null;
 let currentMainWindow: BrowserWindow | null = null;
@@ -49,6 +55,12 @@ const ProjectPathSchema = z.string().min(1).max(4096);
 const EventQuerySchema = z.object({ taskId: TaskIdSchema, cursor: z.string().max(256).optional(), limit: z.number().int().min(1).max(500).optional() });
 const RecentProjectSchema = z.object({ path: z.string().min(1).max(4096), name: z.string().max(300), lastOpenedAt: z.string().max(100), kind: z.enum(['PROJECT', 'DEMO']).optional() });
 const RawArtifactSchema = z.object({ taskId: TaskIdSchema, artifact: z.enum(['task.json', 'contract.json', 'routing-result.json', 'preflight.json', 'work-state.json', 'continuity.json', 'recovery.json', 'execution-receipt.json', 'policy-snapshot.json', 'events.ndjson']) });
+const RawCollectionArtifactSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('action'), taskId: TaskIdSchema, actionId: z.string().regex(/^action-[A-Za-z0-9_-]+$/) }),
+  z.object({ kind: z.literal('approval'), taskId: TaskIdSchema, approvalId: z.string().regex(/^approval-[A-Za-z0-9_-]+$/) }),
+  z.object({ kind: z.literal('evaluation'), taskId: TaskIdSchema, evaluationId: z.string().regex(/^eval-[A-Za-z0-9_-]+$/) }),
+  z.object({ kind: z.literal('capability-policy') }),
+]);
 const ExecutionQuerySchema = z.object({ taskId: TaskIdSchema, limit: z.number().int().min(1).max(100).optional() });
 
 function assertTrustedSender(event: Electron.IpcMainInvokeEvent): void {
@@ -211,6 +223,86 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
     return typeof content === 'string' ? content : JSON.stringify(content, null, 2);
   });
 
+  ipcMain.handle(IPC_CHANNELS.GET_RAW_COLLECTION_ARTIFACT, async (event, request: unknown): Promise<string> => {
+    assertTrustedSender(event);
+    const safeRequest = RawCollectionArtifactSchema.parse(request);
+    if (!currentProjectReader || !currentTaskIndexer) throw ForgeLoopStudioError.unknown('No project open');
+    if (safeRequest.kind === 'capability-policy') return currentProjectReader.readRawCapabilityPolicy();
+    const task = currentTaskIndexer.listTasks().find((entry) => entry.taskId === safeRequest.taskId || entry.taskKey === safeRequest.taskId);
+    if (!task) throw ForgeLoopStudioError.artifactUnreadable(safeRequest.taskId, 'Task not found');
+    return currentProjectReader.readRawCollectionArtifact(task.taskKey, safeRequest);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GET_TASK_HISTORY, async (event, taskId: string) => {
+    assertTrustedSender(event);
+    const safeTaskId = TaskIdSchema.parse(taskId);
+    if (!currentObservability || !getCurrentProjectRoot()) throw ForgeLoopStudioError.unknown('No project open');
+    return currentObservability.getHistory(getCurrentProjectRoot()!, safeTaskId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GET_TASK_TRACE, async (event, taskId: string) => {
+    assertTrustedSender(event);
+    const safeTaskId = TaskIdSchema.parse(taskId);
+    if (!currentObservability || !getCurrentProjectRoot()) throw ForgeLoopStudioError.unknown('No project open');
+    return currentObservability.getTrace(getCurrentProjectRoot()!, safeTaskId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GET_TASK_REFLECTION, async (event, taskId: string) => {
+    assertTrustedSender(event);
+    const safeTaskId = TaskIdSchema.parse(taskId);
+    if (!currentObservability || !getCurrentProjectRoot()) throw ForgeLoopStudioError.unknown('No project open');
+    return currentObservability.getReflection(getCurrentProjectRoot()!, safeTaskId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GET_TASK_INSPECTION, async (event, taskId: string) => {
+    assertTrustedSender(event);
+    const safeTaskId = TaskIdSchema.parse(taskId);
+    if (!currentObservability || !getCurrentProjectRoot()) throw ForgeLoopStudioError.unknown('No project open');
+    return currentObservability.getInspection(getCurrentProjectRoot()!, safeTaskId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GET_TASK_ACTIONS, async (event, taskId: string) => {
+    assertTrustedSender(event);
+    const safeTaskId = TaskIdSchema.parse(taskId);
+    if (!currentActions || !getCurrentProjectRoot()) throw ForgeLoopStudioError.unknown('No project open');
+    return currentActions.getActions(getCurrentProjectRoot()!, safeTaskId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GET_TASK_ACTION, async (event, taskId: string, actionId: string) => {
+    assertTrustedSender(event);
+    const safeTaskId = TaskIdSchema.parse(taskId);
+    const safeActionId = z.string().regex(/^action-[A-Za-z0-9_-]+$/).parse(actionId);
+    if (!currentActions || !getCurrentProjectRoot()) throw ForgeLoopStudioError.unknown('No project open');
+    return currentActions.getAction(getCurrentProjectRoot()!, safeTaskId, safeActionId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GET_TASK_APPROVALS, async (event, taskId: string) => {
+    assertTrustedSender(event);
+    const safeTaskId = TaskIdSchema.parse(taskId);
+    if (!currentActions || !getCurrentProjectRoot()) throw ForgeLoopStudioError.unknown('No project open');
+    return currentActions.getApprovals(getCurrentProjectRoot()!, safeTaskId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GET_TASK_METRICS, async (event, taskId: string) => {
+    assertTrustedSender(event);
+    const safeTaskId = TaskIdSchema.parse(taskId);
+    if (!currentTrajectory || !getCurrentProjectRoot()) throw ForgeLoopStudioError.unknown('No project open');
+    return currentTrajectory.getMetrics(getCurrentProjectRoot()!, safeTaskId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GET_TASK_EVALUATIONS, async (event, taskId: string) => {
+    assertTrustedSender(event);
+    const safeTaskId = TaskIdSchema.parse(taskId);
+    if (!currentTrajectory || !getCurrentProjectRoot()) throw ForgeLoopStudioError.unknown('No project open');
+    return currentTrajectory.getEvaluations(getCurrentProjectRoot()!, safeTaskId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GET_CAPABILITY_POLICY, async (event) => {
+    assertTrustedSender(event);
+    if (!currentActions || !getCurrentProjectRoot()) throw ForgeLoopStudioError.unknown('No project open');
+    return currentActions.getCapabilityPolicy(getCurrentProjectRoot()!);
+  });
+
   ipcMain.handle(IPC_CHANNELS.GET_TASK_EXECUTIONS, async (event, taskId: string, limit?: number) => {
     assertTrustedSender(event);
     const query = ExecutionQuerySchema.parse({ taskId, limit });
@@ -308,6 +400,9 @@ async function openProject(projectRoot: string, projectKind: ProjectKind = 'PROJ
   }
   currentIntegration = integration;
   currentCompatibilityMode = negotiation.mode;
+  currentObservability = createCanonicalObservabilityService({ integration, featureSupport: negotiation.featureSupport });
+  currentActions = createCanonicalActionsService({ integration, featureSupport: negotiation.featureSupport });
+  currentTrajectory = createCanonicalTrajectoryService({ integration, featureSupport: negotiation.featureSupport });
   detectionResult.forgeLoopVersion = canonicalProtocolInfo?.packageVersion ?? detectionResult.forgeLoopVersion;
   detectionResult.compatibilityMode = negotiation.mode;
   detectionResult.warnings = [
@@ -333,6 +428,7 @@ async function openProject(projectRoot: string, projectKind: ProjectKind = 'PROJ
     schemaVersion: canonicalProtocolInfo?.schemaVersion ?? detectionResult.schemaVersion,
     packageVersion: canonicalProtocolInfo?.packageVersion ?? undefined,
     compatibilityMode: negotiation.mode,
+    featureSupport: negotiation.featureSupport,
   };
   currentSnapshotBuilder = createProjectSnapshotBuilder(
     pathBoundary,
@@ -406,21 +502,39 @@ function closeProject(): void {
   currentForgeCli = null;
   currentIntegration = null;
   currentCompatibilityMode = null;
+  currentObservability = null;
+  currentActions = null;
+  currentTrajectory = null;
   currentSnapshotBuilder = null;
 }
 
-function handleWatcherEvent(event: any): void {
+function watcherTaskId(event: WatcherEvent): string | undefined {
+  if (!event.taskKey || !currentProjectReader) return undefined;
+  try {
+    const descriptor = currentProjectReader.readTaskDescriptor(event.taskKey);
+    return typeof descriptor.taskId === 'string' ? descriptor.taskId : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function handleWatcherEvent(event: WatcherEvent): void {
+  const targetedType: 'action-changed' | 'approval-changed' | 'evaluation-changed' | 'capability-policy-changed' | 'task-updated' =
+    event.type === 'action-changed' || event.type === 'approval-changed' || event.type === 'evaluation-changed' || event.type === 'capability-policy-changed'
+      ? event.type
+      : 'task-updated';
   notifyUpdate({
-    type: 'task-updated',
-    taskId: event.taskKey,
+    type: targetedType,
+    taskId: watcherTaskId(event),
     data: event,
+    generation: ++snapshotGeneration,
     timestamp: new Date().toISOString(),
   });
 
   // Execution provenance is loaded lazily per task; a lightweight
   // notification is enough. Only recovery/artifact changes rebuild the full
   // snapshot, and the scheduled flag coalesces bursts into one rebuild.
-  if (event.type === 'execution-changed') return;
+  if (event.type === 'execution-changed' || event.type === 'event-appended' || event.type === 'action-changed' || event.type === 'approval-changed' || event.type === 'evaluation-changed' || event.type === 'capability-policy-changed') return;
 
   if (currentSnapshotBuilder && !snapshotRefreshScheduled) {
     snapshotRefreshScheduled = true;

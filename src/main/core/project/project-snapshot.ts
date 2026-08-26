@@ -12,6 +12,7 @@ import type {
   ProjectHealth,
   ProjectObservations,
   ForgeLoopCompatibilityMode,
+  ForgeLoopFeatureSupport,
 } from '@shared/domain';
 import { ProjectReader } from './project-reader';
 import { ForgeCli, type CliResult } from '@main/core/cli/forge-cli';
@@ -31,6 +32,7 @@ export interface ProjectCompatibilityContext {
   schemaVersion: number;
   packageVersion?: string;
   compatibilityMode?: ForgeLoopCompatibilityMode;
+  featureSupport?: ForgeLoopFeatureSupport;
 }
 
 export class ProjectSnapshotBuilder {
@@ -110,6 +112,7 @@ export class ProjectSnapshotBuilder {
     });
     protocolSummary.compatibilitySource = this.compatibilityContext?.source || 'ARTIFACT_ONLY';
     protocolSummary.compatibilityMode = this.compatibilityContext?.compatibilityMode;
+    protocolSummary.featureSupport = this.compatibilityContext?.featureSupport;
 
     const projectSummary: ProjectSummary = {
       name: config.projectName || basename(this.pathBoundary.getProjectRoot()) || 'Unknown Project',

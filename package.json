@@ -54,7 +54,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@cassiomc1/forgeloop": "file:vendor/cassiomc1-forgeloop-1.5.0.tgz",
+    "@cassiomc1/forgeloop": "file:vendor/cassiomc1-forgeloop-1.6.0-1eb8088.tgz",
     "@radix-ui/react-dropdown-menu": "^2.1.1",
     "@radix-ui/react-scroll-area": "^1.1.0",
     "@radix-ui/react-select": "^2.1.1",

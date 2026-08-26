@@ -38,6 +38,7 @@ const SCHEMA_BY_FILE = {
   'execution-receipt.json': 'execution-receipt.json',
   'session.json': 'session.json',
   'policy-snapshot.json': 'policy-snapshot.json',
+  'capabilities.json': 'policy/capabilities.json',
 };
 
 function canonicalize(value) {
@@ -108,7 +109,7 @@ export function verifyDemoProject(root) {
     const value = JSON.parse(readFileSync(join(forgeLoopRoot, 'sessions', name), 'utf8'));
     assertSchemaValid('session.json', value);
   }
-  for (const [name, artifact] of [['rules.json', 'policy/rules.json'], ['discovery.json', 'policy/discovery.json'], ['baseline.json', 'policy/baseline.json'], ['policy.lock', 'policy/policy.lock']]) {
+  for (const [name, artifact] of [['rules.json', 'policy/rules.json'], ['discovery.json', 'policy/discovery.json'], ['baseline.json', 'policy/baseline.json'], ['policy.lock', 'policy/policy.lock'], ['capabilities.json', 'policy/capabilities.json']]) {
     const value = JSON.parse(readFileSync(join(forgeLoopRoot, 'policy', name), 'utf8'));
     assertSchemaValid(artifact, value);
     represented.add(artifact);
@@ -139,6 +140,14 @@ export function verifyDemoProject(root) {
             const value = JSON.parse(readFileSync(join(taskDir, 'executions', execFile), 'utf8'));
             assertSchemaValid('execution.json', value);
             represented.add('execution.json');
+          }
+        }
+        if (entry.name === 'actions' || entry.name === 'approvals' || entry.name === 'evaluations') {
+          const schemaName = entry.name === 'actions' ? 'action.json' : entry.name === 'approvals' ? 'approval.json' : 'trajectory-evaluation.json';
+          for (const collectionFile of readdirSync(join(taskDir, entry.name)).filter((name) => name.endsWith('.json'))) {
+            const value = JSON.parse(readFileSync(join(taskDir, entry.name, collectionFile), 'utf8'));
+            assertSchemaValid(schemaName, value);
+            represented.add(schemaName);
           }
         }
         continue;
@@ -269,7 +278,7 @@ export function verifyDemoProject(root) {
 }
 
 /**
- * Expected canonical ownership per demo scenario (ForgeLoop 1.5). The
+ * Expected canonical ownership per demo scenario. The
  * recovered scenario stays mutation-blocked until a canonical resume.
  */
 const EXPECTED_OWNERSHIP = {
@@ -328,9 +337,30 @@ export async function verifyCanonicalDemoSemantics(root) {
     }
   }
 
+  const actionData = await readForgeLoopIntegrationResource('task/actions', { projectPath: root, taskId: 'TASK-002' });
+  if (!Array.isArray(actionData.data.actions) || actionData.data.actions.length < 2) {
+    errors.push('TASK-002: canonical task/actions showcase is missing its action projections');
+  }
+  const approvalData = await readForgeLoopIntegrationResource('task/approvals', { projectPath: root, taskId: 'TASK-002' });
+  if (!Array.isArray(approvalData.data.approvals) || approvalData.data.approvals.length < 1) {
+    errors.push('TASK-002: canonical task/approvals showcase is missing its approval projection');
+  }
+  const metricsData = await readForgeLoopIntegrationResource('task/metrics', { projectPath: root, taskId: 'TASK-002' });
+  if (!metricsData.data || typeof metricsData.data !== 'object' || !metricsData.data.actions) {
+    errors.push('TASK-002: canonical task/metrics showcase is missing action metrics');
+  }
+  const evaluationsData = await readForgeLoopIntegrationResource('task/evaluations', { projectPath: root, taskId: 'TASK-002' });
+  if (!Array.isArray(evaluationsData.data.evaluations) || evaluationsData.data.evaluations.length < 1) {
+    errors.push('TASK-002: canonical task/evaluations showcase is missing its evaluation projection');
+  }
+  const capabilityPolicy = await readForgeLoopIntegrationResource('project/capability-policy', { projectPath: root });
+  if (!capabilityPolicy.data || typeof capabilityPolicy.data !== 'object') {
+    errors.push('project/capability-policy showcase is missing');
+  }
+
   return {
     ok: errors.length === 0,
     errors,
-    stats: { tasksChecked: canonicalById.size },
+    stats: { tasksChecked: canonicalById.size, featureShowcaseTask: 'TASK-002' },
   };
 }

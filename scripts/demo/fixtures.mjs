@@ -34,6 +34,18 @@ export function fingerprint(label) {
   return createHash('sha256').update(`${DEMO_PROJECT_ID}:${label}`).digest('hex');
 }
 
+function canonicalize(value) {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonicalize(value[key])]));
+  }
+  return value;
+}
+
+export function canonicalFingerprint(value) {
+  return createHash('sha256').update(JSON.stringify(canonicalize(value))).digest('hex');
+}
+
 export function sha256FileBytes(text) {
   return createHash('sha256').update(text).digest('hex');
 }

@@ -23,7 +23,21 @@ function adapterWith(result: Partial<ForgeLoopReadOnlyResult<Record<string, unkn
 describe('core/integration/studio-read-commands', () => {
   it('allowlists exactly the Studio read-only commands', () => {
     expect([...STUDIO_READ_ONLY_COMMANDS].sort()).toEqual(
-      ['audit', 'next', 'policy-status', 'progress', 'report', 'validate-receipt', 'validate-state'].sort(),
+      [
+        'action-show',
+        'audit',
+        'history',
+        'inspect',
+        'metrics',
+        'next',
+        'policy-status',
+        'progress',
+        'reflect',
+        'report',
+        'trace',
+        'validate-receipt',
+        'validate-state',
+      ].sort(),
     );
     expect(isStudioReadOnlyCommand('next')).toBe(true);
     expect(isStudioReadOnlyCommand('complete')).toBe(false);

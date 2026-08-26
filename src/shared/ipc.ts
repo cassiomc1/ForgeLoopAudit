@@ -7,7 +7,18 @@ import type {
   StudioError,
   RecentProject,
   RawArtifactRequest,
+  RawCollectionArtifactRequest,
   ExecutionPage,
+  TaskHistoryView,
+  TaskTraceView,
+  TaskReflectionView,
+  TaskInspectionView,
+  TaskActionsView,
+  DurableActionView,
+  DurableApprovalView,
+  TrajectoryMetricsView,
+  TrajectoryEvaluationsView,
+  CapabilityPolicyView,
 } from './domain';
 import type { StudioDiagnostics } from './diagnostics';
 
@@ -22,6 +33,17 @@ export interface ForgeLoopStudioAPI {
   validateEventLedger(taskId: string): Promise<NonNullable<EventPage['validation']>>;
   getPolicyStatus(taskId?: string): Promise<PolicySummary | null>;
   getRawArtifact(request: RawArtifactRequest): Promise<string>;
+  getRawCollectionArtifact(request: RawCollectionArtifactRequest): Promise<string>;
+  getTaskHistory(taskId: string): Promise<TaskHistoryView>;
+  getTaskTrace(taskId: string): Promise<TaskTraceView>;
+  getTaskReflection(taskId: string): Promise<TaskReflectionView>;
+  getTaskInspection(taskId: string): Promise<TaskInspectionView>;
+  getTaskActions(taskId: string): Promise<TaskActionsView>;
+  getTaskAction(taskId: string, actionId: string): Promise<DurableActionView | null>;
+  getTaskApprovals(taskId: string): Promise<DurableApprovalView[]>;
+  getTaskMetrics(taskId: string): Promise<TrajectoryMetricsView>;
+  getTaskEvaluations(taskId: string): Promise<TrajectoryEvaluationsView>;
+  getCapabilityPolicy(): Promise<CapabilityPolicyView>;
   getTaskExecutions(taskId: string, limit?: number): Promise<ExecutionPage>;
   getRecentProjects(): Promise<RecentProject[]>;
   addRecentProject(project: RecentProject): Promise<void>;
@@ -38,11 +60,13 @@ export interface ForgeLoopStudioAPI {
 }
 
 export interface ProjectUpdate {
-  type: 'task-added' | 'task-updated' | 'task-removed' | 'project-health-changed' | 'policy-changed' | 'session-changed' | 'snapshot-refreshed' | 'project-opened';
+  type: 'task-added' | 'task-updated' | 'task-removed' | 'project-health-changed' | 'policy-changed' | 'session-changed' | 'action-changed' | 'approval-changed' | 'evaluation-changed' | 'capability-policy-changed' | 'snapshot-refreshed' | 'project-opened' | 'watcher-status' | 'error';
   taskId?: string;
   snapshot?: ProjectSnapshot;
   detection?: ProjectDetectionResult;
+  data?: unknown;
   timestamp: string;
+  generation?: number;
 }
 
 export interface MainToRendererEvents {
@@ -68,6 +92,17 @@ export const IPC_CHANNELS = {
   GET_POLICY_STATUS: 'studio:get-policy-status',
   VALIDATE_EVENT_LEDGER: 'studio:validate-event-ledger',
   GET_RAW_ARTIFACT: 'studio:get-raw-artifact',
+  GET_RAW_COLLECTION_ARTIFACT: 'studio:get-raw-collection-artifact',
+  GET_TASK_HISTORY: 'studio:get-task-history',
+  GET_TASK_TRACE: 'studio:get-task-trace',
+  GET_TASK_REFLECTION: 'studio:get-task-reflection',
+  GET_TASK_INSPECTION: 'studio:get-task-inspection',
+  GET_TASK_ACTIONS: 'studio:get-task-actions',
+  GET_TASK_ACTION: 'studio:get-task-action',
+  GET_TASK_APPROVALS: 'studio:get-task-approvals',
+  GET_TASK_METRICS: 'studio:get-task-metrics',
+  GET_TASK_EVALUATIONS: 'studio:get-task-evaluations',
+  GET_CAPABILITY_POLICY: 'studio:get-capability-policy',
   GET_TASK_EXECUTIONS: 'studio:get-task-executions',
   GET_RECENT_PROJECTS: 'studio:get-recent-projects',
   ADD_RECENT_PROJECT: 'studio:add-recent-project',

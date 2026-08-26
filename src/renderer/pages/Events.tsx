@@ -52,13 +52,19 @@ export function Events({ snapshot, selectedTaskId, onSelectedTaskChange }: Event
     if (filter === 'verification') return event.event.includes('VERIFICATION');
     if (filter === 'lifecycle') return event.event.includes('STARTED') || event.event.includes('COMPLETED') || event.event.includes('VALIDATED');
     if (filter === 'policy') return event.event.includes('POLICY') || event.event.includes('GATE');
+    if (filter === 'diagnosis') return event.event.includes('DIAGNOSTIC') || event.event.includes('HYPOTHESIS') || event.event.includes('INTERVENTION') || event.event.includes('REFLECTION');
+    if (filter === 'actions') return event.event.includes('ACTION');
+    if (filter === 'approvals') return event.event.includes('APPROVAL');
+    if (filter === 'trajectory') return event.event.includes('TRAJECTORY') || event.event.includes('EVALUATION') || event.event.includes('CYCLE');
+    if (filter === 'continuity') return event.event.includes('CONTINUITY') || event.event.includes('RECOVERY') || event.event.includes('SESSION');
     if (filter === 'errors') return event.event.includes('REJECTED') || event.event.includes('BLOCKED') || event.event.includes('FAILED');
     return true;
   });
 
   const getEventColor = (event: string) => {
-    if (event.includes('REJECTED') || event.includes('BLOCKED') || event.includes('FAILED')) return 'text-forge-danger';
+    if (event.includes('REJECTED') || event.includes('BLOCKED') || event.includes('FAILED') || event.includes('COMMIT_UNKNOWN')) return 'text-forge-danger';
     if (event.includes('COMPLETED') || event.includes('VALIDATED') || event.includes('SATISFIED')) return 'text-forge-success';
+    if (event.includes('ACTION') || event.includes('APPROVAL')) return 'text-forge-warning';
     if (event.includes('STARTED') || event.includes('RECORDED')) return 'text-forge-accent';
     return 'text-forge-text-secondary';
   };
@@ -92,7 +98,7 @@ export function Events({ snapshot, selectedTaskId, onSelectedTaskChange }: Event
             </select>
             <button className="button-secondary text-xs" onClick={() => void validateLedger()}>Validate ledger</button>
           <div className="flex items-center gap-1 bg-forge-secondary-surface rounded-6 p-0.5">
-            {['all', 'verification', 'lifecycle', 'policy', 'errors'].map((f) => (
+            {['all', 'verification', 'lifecycle', 'diagnosis', 'actions', 'approvals', 'trajectory', 'continuity', 'policy', 'errors'].map((f) => (
               <button
                 key={f}
                 className={cn(

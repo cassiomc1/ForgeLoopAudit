@@ -2,7 +2,9 @@ import { describe, it, expect } from 'vitest';
 import {
   normalizeCanonicalProtocolInfo,
   negotiateCompatibilityMode,
+  deriveFeatureSupport,
 } from '@main/core/protocol/protocol-capabilities';
+import type { ForgeLoopCapabilitiesSummary } from '@main/core/integration/types';
 
 function validCapabilities(overrides: Record<string, unknown> = {}) {
   return {
@@ -43,6 +45,55 @@ function validProtocolInfo(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function currentCapabilities(overrides: Record<string, unknown> = {}): ForgeLoopCapabilitiesSummary {
+  return {
+    ...validCapabilities({
+    packageVersion: '1.6.0',
+    features: {
+      taskClaimRecovery: {
+        version: 1,
+        durableRecoveryState: true,
+        explicitResume: true,
+        validatedClaimProjection: true,
+      },
+      durableActions: {
+        version: 1,
+        readOnlyResources: true,
+        externalExecutionOverMcp: false,
+      },
+      trajectoryEvaluation: {
+        version: 1,
+        readOnlyMetrics: true,
+        projectLocalReference: true,
+      },
+    },
+    resources: [
+      'protocol/info',
+      'project/tasks',
+      'task/status',
+      'task/ownership',
+      'task/contract',
+      'task/continuity',
+      'task/actions',
+      'task/action',
+      'task/approvals',
+      'task/metrics',
+      'task/evaluations',
+      'project/capability-policy',
+    ],
+    commands: [
+      'history', 'trace', 'reflect', 'inspect', 'metrics', 'action-show',
+    ].map((name) => ({
+      name,
+      baseRiskClass: 'READ_ONLY',
+      mayExecuteExternalProcess: false,
+      mutatesProtocol: false,
+    })),
+    ...overrides,
+    }),
+  } as ForgeLoopCapabilitiesSummary;
+}
+
 describe('core/protocol/protocol-capabilities', () => {
   describe('normalizeCanonicalProtocolInfo', () => {
     it('reads schemaVersion from the compatibility block only', () => {
@@ -79,6 +130,44 @@ describe('core/protocol/protocol-capabilities', () => {
       });
       expect(result.mode).toBe('INTEGRATION_V1');
       expect(result.reason).toBeUndefined();
+    });
+
+    it('derives every optional current feature without changing the core mode', () => {
+      const result = negotiateCompatibilityMode({
+        protocolInfo: normalizeCanonicalProtocolInfo(validProtocolInfo({ packageVersion: '1.6.0' })),
+        capabilities: currentCapabilities(),
+      });
+      expect(result.mode).toBe('INTEGRATION_V1');
+      expect(result.featureSupport).toEqual({
+        canonicalOwnership: true,
+        observability: true,
+        structuredDiagnostics: true,
+        durableActions: true,
+        approvals: true,
+        capabilityPolicy: true,
+        trajectoryMetrics: true,
+        trajectoryEvaluations: true,
+      });
+    });
+
+    it('degrades optional features independently when their advertisements are absent', () => {
+      const capabilities = currentCapabilities({
+        features: {
+          taskClaimRecovery: currentCapabilities().features.taskClaimRecovery,
+        },
+        resources: validCapabilities().resources,
+        commands: [{ name: 'history', baseRiskClass: 'READ_ONLY', mayExecuteExternalProcess: false, mutatesProtocol: false }],
+      });
+      const result = negotiateCompatibilityMode({
+        protocolInfo: normalizeCanonicalProtocolInfo(validProtocolInfo()),
+        capabilities,
+      });
+      expect(result.mode).toBe('INTEGRATION_V1');
+      expect(result.featureSupport.canonicalOwnership).toBe(true);
+      expect(result.featureSupport.observability).toBe(false);
+      expect(result.featureSupport.durableActions).toBe(false);
+      expect(result.featureSupport.trajectoryMetrics).toBe(false);
+      expect(result.featureSupport.trajectoryEvaluations).toBe(false);
     });
 
     it('rejects unknown protocol versions', () => {
@@ -205,5 +294,16 @@ describe('compatibility version axes', () => {
     });
     expect(result.mode).toBe('INCOMPATIBLE');
     expect(result.reason).toBe('CAPABILITY_DRIFT');
+  });
+
+  it('does not treat a mutating advertisement as a read-only capability', () => {
+    const capabilities = currentCapabilities({
+      commands: currentCapabilities().commands?.map((command) => (
+        command.name === 'history' || command.name === 'metrics' ? { ...command, mutatesProtocol: true } : command
+      )),
+    });
+    const support = deriveFeatureSupport(capabilities);
+    expect(support.observability).toBe(false);
+    expect(support.trajectoryMetrics).toBe(false);
   });
 });

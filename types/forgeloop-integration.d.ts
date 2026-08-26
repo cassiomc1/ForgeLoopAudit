@@ -1,6 +1,6 @@
 /**
  * Ambient type declarations for the public subpath of the bundled
- * @cassiomc1/forgeloop package (ForgeLoop 1.5.x). The package ships as plain
+ * @cassiomc1/forgeloop package (ForgeLoop 1.6.x/current-main pin). The package ships as plain
  * ESM JavaScript; the Studio consumes only this allowlisted surface so the
  * canonical semantic authority stays inside ForgeLoop.
  */
@@ -22,18 +22,34 @@ declare module '@cassiomc1/forgeloop/integration' {
     scope: string;
   }
 
+  export interface ForgeLoopRecoveryFeature {
+    version: number;
+    durableRecoveryState: boolean;
+    explicitResume: boolean;
+    validatedClaimProjection: boolean;
+  }
+
+  export interface ForgeLoopDurableActionsFeature {
+    version: number;
+    readOnlyResources: boolean;
+    externalExecutionOverMcp: boolean;
+  }
+
+  export interface ForgeLoopTrajectoryEvaluationFeature {
+    version: number;
+    readOnlyMetrics: boolean;
+    projectLocalReference: boolean;
+  }
+
   export interface ForgeLoopCapabilities {
     packageVersion: string | null;
     protocolVersion: number;
     integrationApiVersion: number;
     executorParity: boolean;
     features: {
-      taskClaimRecovery: {
-        version: number;
-        durableRecoveryState: boolean;
-        explicitResume: boolean;
-        validatedClaimProjection: boolean;
-      };
+      taskClaimRecovery: ForgeLoopRecoveryFeature;
+      durableActions?: ForgeLoopDurableActionsFeature;
+      trajectoryEvaluation?: ForgeLoopTrajectoryEvaluationFeature;
     };
     commands: Array<Record<string, unknown>>;
     resources: ForgeLoopCapabilityEntry[];
@@ -59,6 +75,8 @@ declare module '@cassiomc1/forgeloop/integration' {
     LOOP_MUTATION: 'LOOP_MUTATION';
     CLAIM_REACQUISITION: 'CLAIM_REACQUISITION';
     EXTERNAL_EXECUTION: 'EXTERNAL_EXECUTION';
+    AUTHORITY_MUTATION: 'AUTHORITY_MUTATION';
+    EXTERNAL_STATE_ATTESTATION: 'EXTERNAL_STATE_ATTESTATION';
     MAINTENANCE: 'MAINTENANCE';
     CLAIM_RELEASE_RECOVERY: 'CLAIM_RELEASE_RECOVERY';
     LEGACY_MIGRATION: 'LEGACY_MIGRATION';
@@ -83,6 +101,7 @@ declare module '@cassiomc1/forgeloop/integration' {
       packageRoot?: string;
       packageVersion?: string | null;
       taskId?: string | null;
+      actionId?: string | null;
     },
   ): Promise<ForgeLoopIntegrationResource<T>>;
 

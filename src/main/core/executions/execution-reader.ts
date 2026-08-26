@@ -17,7 +17,7 @@ const EXECUTION_FILE_PATTERN = /^exec-.*\.json$/;
 const DEFAULT_LIMIT = 100;
 
 /**
- * Bounded read-only reader for ForgeLoop 1.5 execution provenance artifacts
+ * Bounded read-only reader for current ForgeLoop protocol-v1 execution provenance artifacts
  * (`.forgeloop/task-state/<task-key>/executions/exec-*.json`).
  *
  * Every entry is validated against the trusted `execution.schema.json`.

@@ -44,9 +44,10 @@ export function createCanonicalTaskReadService(options: {
     async readTask(taskId: string, taskKey: string): Promise<CanonicalTaskReadResult> {
       const artifacts = projectReader.readTaskSummaryArtifacts(taskKey);
 
-      const [canonicalStatus, canonicalOwnership] = await Promise.all([
+      const [canonicalStatus, canonicalOwnership, canonicalContinuity] = await Promise.all([
         integration.readTaskStatus(projectRoot, taskId).catch(() => null),
         integration.readTaskOwnership(projectRoot, taskId).catch(() => null),
+        integration.readTaskContinuity(projectRoot, taskId).catch(() => null),
       ]);
 
       const nextOutcome = await runStudioReadCommand<Record<string, unknown>>(
@@ -57,7 +58,7 @@ export function createCanonicalTaskReadService(options: {
       ).catch(() => null);
       const nextData = nextOutcome?.kind === 'DOMAIN_OUTCOME' ? nextOutcome.data ?? undefined : undefined;
 
-      const summary = buildTaskSummary(taskKey, artifacts, nextData);
+      const summary = buildTaskSummary(taskKey, artifacts, nextData, canonicalContinuity ?? undefined);
 
       const ownershipSummary = normalizeOwnership(canonicalOwnership);
       summary.ownership = ownershipSummary;
