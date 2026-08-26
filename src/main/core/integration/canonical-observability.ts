@@ -1,25 +1,25 @@
 import { runStudioReadCommand } from './studio-read-commands';
 import type { ForgeLoopIntegrationAdapter } from './forgeloop-integration';
-import type { ForgeLoopFeatureSupport } from '@shared/domain';
-import type { ForgeLoopCanonicalError } from './types';
+import type {
+  CanonicalHistoryViewModel,
+  CanonicalInspectionViewModel,
+  CanonicalProjectionView,
+  CanonicalReflectionViewModel,
+  CanonicalTraceViewModel,
+  ForgeLoopFeatureSupport,
+  TaskHistoryView,
+  TaskInspectionView,
+  TaskReflectionView,
+  TaskTraceView,
+} from '@shared/domain';
+import {
+  normalizeCanonicalHistory,
+  normalizeCanonicalInspection,
+  normalizeCanonicalReflection,
+  normalizeCanonicalTrace,
+} from './observability-models';
 
 export type CanonicalObservabilityKind = 'history' | 'trace' | 'reflect' | 'inspect';
-
-export interface CanonicalProjectionView<T = Record<string, unknown>> {
-  available: boolean;
-  source: 'FORGELOOP_INTEGRATION' | 'UNAVAILABLE';
-  feature: CanonicalObservabilityKind;
-  data: T | null;
-  /** Alias kept for callers that use the Integration API's result wording. */
-  result: T | null;
-  exitCode: number | null;
-  error: ForgeLoopCanonicalError | null;
-}
-
-export type TaskHistoryView = CanonicalProjectionView;
-export type TaskTraceView = CanonicalProjectionView;
-export type TaskReflectionView = CanonicalProjectionView;
-export type TaskInspectionView = CanonicalProjectionView;
 
 export interface CanonicalObservabilityService {
   getHistory(projectRoot: string, taskId: string): Promise<TaskHistoryView>;
@@ -28,7 +28,21 @@ export interface CanonicalObservabilityService {
   getInspection(projectRoot: string, taskId: string): Promise<TaskInspectionView>;
 }
 
-function unavailable(feature: CanonicalObservabilityKind, featureSupport?: ForgeLoopFeatureSupport): CanonicalProjectionView {
+type ProjectionMap = {
+  history: CanonicalHistoryViewModel;
+  trace: CanonicalTraceViewModel;
+  reflect: CanonicalReflectionViewModel;
+  inspect: CanonicalInspectionViewModel;
+};
+
+const NORMALIZERS: { [K in CanonicalObservabilityKind]: (value: unknown) => ProjectionMap[K] } = {
+  history: normalizeCanonicalHistory,
+  trace: normalizeCanonicalTrace,
+  reflect: normalizeCanonicalReflection,
+  inspect: normalizeCanonicalInspection,
+};
+
+function unavailable<T>(feature: CanonicalObservabilityKind, featureSupport?: ForgeLoopFeatureSupport): CanonicalProjectionView<T> {
   const supported = featureSupport?.observability === true;
   return {
     available: false,
@@ -46,13 +60,13 @@ function unavailable(feature: CanonicalObservabilityKind, featureSupport?: Forge
   };
 }
 
-async function readProjection(
+async function readProjection<K extends CanonicalObservabilityKind>(
   integration: ForgeLoopIntegrationAdapter,
   projectRoot: string,
   taskId: string,
-  feature: CanonicalObservabilityKind,
+  feature: K,
   featureSupport?: ForgeLoopFeatureSupport,
-): Promise<CanonicalProjectionView> {
+): Promise<CanonicalProjectionView<ProjectionMap[K]>> {
   if (featureSupport && featureSupport.observability !== true) return unavailable(feature, featureSupport);
 
   try {
@@ -77,8 +91,8 @@ async function readProjection(
       available: true,
       source: 'FORGELOOP_INTEGRATION',
       feature,
-      data: outcome.data,
-      result: outcome.data,
+      data: NORMALIZERS[feature](outcome.data),
+      result: NORMALIZERS[feature](outcome.data),
       exitCode: outcome.exitCode,
       error: null,
     };

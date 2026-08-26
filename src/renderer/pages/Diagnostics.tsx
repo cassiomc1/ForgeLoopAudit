@@ -3,6 +3,7 @@ import type { ProjectSnapshot, TaskSummary, TaskHistoryView, TaskTraceView, Task
 import { EmptyState } from '../components/ui/EmptyState';
 import { cn } from '../lib/utils';
 import { Activity, Brain, Gauge, Lightbulb, ShieldAlert } from 'lucide-react';
+import { formatIntervention, isStalledReflection, openHypothesisPresentation } from '../lib/diagnostic-display';
 
 type RecordValue = Record<string, unknown>;
 
@@ -24,14 +25,6 @@ interface DiagnosticViews {
 
 function record(value: unknown): RecordValue {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as RecordValue : {};
-}
-
-function list(value: unknown): unknown[] {
-  return Array.isArray(value) ? value : [];
-}
-
-function strings(value: unknown): string[] {
-  return list(value).filter((entry): entry is string => typeof entry === 'string');
 }
 
 function text(value: unknown): string {
@@ -90,30 +83,22 @@ export function Diagnostics({ snapshot, selectedTaskId, refreshToken = 0, onSele
 
   if (!snapshot.tasks.length) return <EmptyState title="No tasks available" description="Open a ForgeLoop project with tasks to inspect canonical diagnostics." />;
 
-  const trace = record(views.trace?.data);
-  const reflection = record(views.reflection?.data);
-  const inspection = record(views.inspection?.data);
-  const history = record(views.history?.data);
-  const diagnostics = record(trace.diagnostics);
-  const informationGain = record(reflection.informationGain);
-  const stallAnalysis = record(reflection.stallAnalysis);
-  const actions = record(trace.actions);
+  const trace = views.trace?.data;
+  const reflection = views.reflection?.data;
+  const inspection = views.inspection?.data;
+  const history = views.history?.data;
   const metrics = record(views.metrics?.metrics);
   const trajectory = record(metrics.trajectory);
   const usage = record(metrics.usage);
-  const interventionValues = list(diagnostics.interventions).map((entry) => {
-    const value = record(entry);
-    return `${text(value.id)} — ${text(value.statement || value.kind || value.summary)}`;
-  });
-  const caseValues = list(diagnostics.cases).map((entry) => {
-    const value = record(entry);
-    return `${text(value.id || value.diagnosticFingerprint)} — ${text(value.failureClass || value.summary || value.nextSafeAction)}`;
-  });
-  const failureSurfaces = list(trace.failureSurfaces).map((entry) => typeof entry === 'string' ? entry : text(record(entry).summary || record(entry).surface || entry));
-  const failureSignatures = list(trace.failureSignatures).map((entry) => typeof entry === 'string' ? entry : text(record(entry).signature || record(entry).id || entry));
-  const openHypotheses = strings(reflection.openHypotheses).length ? strings(reflection.openHypotheses) : list(diagnostics.hypotheses).map((entry) => text(record(entry).statement || record(entry).id || entry));
-  const guidance = strings(reflection.guidance).length ? strings(reflection.guidance) : strings(reflection.recommendedProtocolAction ? [reflection.recommendedProtocolAction] : []);
-  const noGain = informationGain.cyclesWithoutEffectiveGain;
+  const interventionValues = trace?.diagnostics.interventions.map((entry) => formatIntervention(entry.intervention)) ?? [];
+  const caseValues = trace?.diagnostics.cases.map((entry) => `${text(entry.diagnosticFingerprint)} — ${text(entry.failureClass || entry.nextSafeAction)}`) ?? [];
+  const failureSurfaces = trace?.failureSurfaces.flatMap((entry) => entry.surface) ?? [];
+  const failureSignatures = trace?.failureSignatures.map((entry) => text(entry.signature)) ?? [];
+  const openHypothesisIds = selectedTask?.continuity?.diagnosticContext?.openHypotheses ?? [];
+  const openHypotheses = openHypothesisPresentation(reflection?.hypotheses.open ?? null, openHypothesisIds);
+  const noGain = reflection?.informationGain.cyclesWithoutEffectiveGain ?? [];
+  const stalled = isStalledReflection(reflection);
+  const inspectionKeys = inspection ? Object.values(inspection).filter((value) => value !== null).length : 0;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -121,10 +106,10 @@ export function Diagnostics({ snapshot, selectedTaskId, refreshToken = 0, onSele
       {features?.observability !== true ? <div className="bg-forge-primary-surface border border-forge-warning/30 rounded-10 p-8 text-center"><Activity className="w-8 h-8 mx-auto mb-3 text-forge-warning" /><p className="text-sm font-medium text-forge-text-primary">Structured observability is not available</p><p className="mt-2 text-xs text-forge-text-muted">Not available with the bundled ForgeLoop capability set. Studio does not reconstruct trace or reflection semantics from raw events.</p></div> : loading ? <div className="card p-8 text-center text-sm text-forge-text-muted">Loading canonical diagnostics…</div> : (
         <>
           {error && <div className="border border-forge-danger/30 bg-forge-danger/10 rounded-8 p-3 text-sm text-forge-danger">{error}</div>}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3"><div className="metric-card"><span className="metric-label">Task phase</span><span className="metric-value text-lg">{selectedTask?.phase || 'Unknown'}</span></div><div className="metric-card"><span className="metric-label">Reflection status</span><span className="metric-value text-lg">{text(reflection.status)}</span></div><div className="metric-card"><span className="metric-label">Verification cycles</span><span className="metric-value text-lg">{text(reflection.verificationCycles ?? trajectory.verificationCycles)}</span></div><div className={cn('metric-card', Boolean(stallAnalysis.stalled) && 'ring-1 ring-forge-danger/30')}><span className="metric-label">No effective gain cycles</span><span className={cn('metric-value text-lg', Boolean(stallAnalysis.stalled) && 'text-forge-danger')}>{text(noGain)}</span></div></div>
-          <Section title="Current diagnostic state" icon={<Brain className="w-4 h-4" />}><div className="grid grid-cols-1 md:grid-cols-3 gap-4"><MetricLine label="Status" value={reflection.status} /><MetricLine label="Verification cycle" value={reflection.verificationCycle || reflection.verificationCycles} /><MetricLine label="Stalled" value={stallAnalysis.stalled} /><MetricLine label="Recommended protocol action" value={reflection.recommendedProtocolAction} /><MetricLine label="Trace event count" value={list(trace.events).length || history.eventCount} /><MetricLine label="Inspection source" value={views.inspection?.source} /><MetricLine label="Inspection keys" value={Object.keys(inspection).length} /></div></Section>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6"><Section title="Failure surfaces and signatures" icon={<ShieldAlert className="w-4 h-4" />}><ProjectionNotice projection={views.trace} /><div className="space-y-5"><ListBlock title="Failure surfaces" values={failureSurfaces} /><ListBlock title="Failure signatures" values={failureSignatures} /></div></Section><Section title="Hypotheses and dispositions" icon={<Lightbulb className="w-4 h-4" />}><div className="space-y-5"><ListBlock title="Open hypotheses" values={openHypotheses} /><ListBlock title="Recorded diagnostic cases" values={caseValues} /><ListBlock title="Interventions" values={interventionValues} /></div></Section></div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6"><Section title="Information gain" icon={<Gauge className="w-4 h-4" />}><div className="space-y-2"><MetricLine label="Cycles observed" value={informationGain.cycles} /><MetricLine label="Cycles without effective gain" value={informationGain.cyclesWithoutEffectiveGain} /><MetricLine label="Stall analysis" value={stallAnalysis.reason || stallAnalysis.stalled} /><MetricLine label="Strategy changes" value={trajectory.strategyChanges} /><MetricLine label="Oscillation detected" value={trajectory.oscillationDetected} /></div></Section><Section title="Interventions and strategy" icon={<Activity className="w-4 h-4" />}><div className="space-y-2"><MetricLine label="Interventions" value={trajectory.interventions || actions.interventions} /><MetricLine label="Action total" value={actions.total} /><MetricLine label="Action ambiguous" value={actions.ambiguous} /><MetricLine label="Strategies" value={reflection.strategies} /><ListBlock title="Reflection guidance" values={guidance} /></div></Section></div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3"><div className="metric-card"><span className="metric-label">Task phase</span><span className="metric-value text-lg">{selectedTask?.phase || 'Unknown'}</span></div><div className="metric-card"><span className="metric-label">Reflection status</span><span className="metric-value text-lg">{text(reflection?.status)}</span></div><div className="metric-card"><span className="metric-label">Verification cycles</span><span className="metric-value text-lg">{text(reflection?.verificationCycles ?? trajectory.verificationCycles)}</span></div><div className={cn('metric-card', stalled && 'ring-1 ring-forge-danger/30')}><span className="metric-label">No effective gain cycles</span><span className={cn('metric-value text-lg', stalled && 'text-forge-danger')}>{text(noGain.length)}</span></div></div>
+          <Section title="Current diagnostic state" icon={<Brain className="w-4 h-4" />}><div className="grid grid-cols-1 md:grid-cols-3 gap-4"><MetricLine label="Status" value={reflection?.status} /><MetricLine label="Verification cycle" value={reflection?.verificationCycles} /><MetricLine label="Stalled" value={stalled} /><MetricLine label="Recommended protocol action" value={reflection?.recommendedProtocolAction} /><MetricLine label="Trace event count" value={history?.summary.eventCount} /><MetricLine label="Inspection source" value={views.inspection?.source} /><MetricLine label="Inspection keys" value={inspectionKeys} /></div></Section>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6"><Section title="Failure surfaces and signatures" icon={<ShieldAlert className="w-4 h-4" />}><ProjectionNotice projection={views.trace} /><div className="space-y-5"><ListBlock title="Failure surfaces" values={failureSurfaces} /><ListBlock title="Failure signatures" values={failureSignatures} /></div></Section><Section title="Hypotheses and dispositions" icon={<Lightbulb className="w-4 h-4" />}><div className="space-y-5"><ListBlock title={openHypotheses.summary} values={openHypotheses.items} empty="None recorded" /><ListBlock title="Recorded diagnostic cases" values={caseValues} /><ListBlock title="Interventions" values={interventionValues} /></div></Section></div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6"><Section title="Information gain" icon={<Gauge className="w-4 h-4" />}><div className="space-y-2"><MetricLine label="Open hypotheses" value={reflection?.hypotheses.open} /><MetricLine label="Cycles without effective gain" value={noGain} /><MetricLine label="Latest no gain" value={reflection?.stallAnalysis.latestNoGain} /><MetricLine label="Same strategy as previous" value={reflection?.stallAnalysis.sameStrategyAsPrevious} /><MetricLine label="Same failure surface as previous" value={reflection?.stallAnalysis.sameFailureSurfaceAsPrevious} /><MetricLine label="Same failure signatures as previous" value={reflection?.stallAnalysis.sameFailureSignaturesAsPrevious} /></div></Section><Section title="Interventions and strategy" icon={<Activity className="w-4 h-4" />}><div className="space-y-2"><MetricLine label="Interventions" value={interventionValues.length} /><MetricLine label="Action total" value={trace?.actions.total} /><MetricLine label="Action ambiguous" value={trace?.actions.ambiguous} /><MetricLine label="Inspection task phase" value={inspection?.task.phase} /><MetricLine label="Inspection progress" value={inspection?.progress.status} /><MetricLine label="Next command" value={inspection?.next.command} /></div></Section></div>
           <Section title="Canonical trajectory metrics" icon={<Gauge className="w-4 h-4" />}><ProjectionNotice projection={views.metrics} />{views.metrics?.available ? <div className="grid grid-cols-1 md:grid-cols-3 gap-4"><MetricLine label="Observed commands" value={record(metrics.executions).observedCommands} /><MetricLine label="Failed commands" value={record(metrics.executions).failedCommands} /><MetricLine label="Wall clock" value={record(metrics.timing).wallClockMs} /><MetricLine label="Comparable steps" value={metrics.comparableSteps} /><MetricLine label="Usage tokens" value={usage.tokens ?? 'NULL (not provided)'} /><MetricLine label="Usage cost" value={usage.costUsd ?? 'NULL (not provided)'} /></div> : <p className="text-sm text-forge-text-muted">Trajectory metrics are not available with the negotiated capability set.</p>}</Section>
           <Section title="Trajectory evaluations" icon={<Activity className="w-4 h-4" />}><ProjectionNotice projection={views.evaluations} />{views.evaluations?.available ? views.evaluations.evaluations.length ? <div className="space-y-2">{views.evaluations.evaluations.map((evaluation, index) => <div key={text(evaluation.evaluationId || index)} className="flex flex-wrap items-center justify-between gap-3 rounded-8 bg-forge-secondary-surface p-3 text-sm"><span className="font-mono text-xs">{text(evaluation.evaluationId)}</span><span>Result: <strong>{text(evaluation.result)}</strong></span><span>Completion: {text(evaluation.completionValid)}</span><span>Safety: {text(evaluation.safetyValid)}</span></div>)}</div> : <p className="text-sm text-forge-text-muted">No trajectory evaluations recorded.</p> : <p className="text-sm text-forge-text-muted">Trajectory evaluations are not available with the negotiated capability set.</p>}</Section>
         </>
