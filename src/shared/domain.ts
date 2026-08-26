@@ -177,16 +177,13 @@ export interface ContinuitySummary {
 }
 
 export interface DiagnosticContextSummary {
-  present?: boolean;
+  present: boolean;
   activeFailureSignatures: string[];
   activeFailedRequirements: string[];
-  openHypotheses?: string[];
-  latestIntervention?: string | null;
-  nextExperiment?: string | null;
+  openHypotheses: string[];
+  latestIntervention: string | null;
+  nextExperiment: string | null;
   doNotRepeat: Array<{ id?: string; summary: string; reason?: string }>;
-  verificationCycle?: number;
-  guidance?: string[];
-  stall?: boolean;
 }
 
 export type CanonicalProjectionSource = 'FORGELOOP_INTEGRATION' | 'UNAVAILABLE';
