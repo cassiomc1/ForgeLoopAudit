@@ -266,4 +266,67 @@ describe('observability model normalization', () => {
       next: { command: null },
     });
   });
+
+  describe('canonical intervention kind vocabulary', () => {
+    const canonicalKinds = [
+      'CODE_CHANGE',
+      'CONFIG_CHANGE',
+      'TEST_CHANGE',
+      'FIXTURE_CHANGE',
+      'ENVIRONMENT_CHANGE',
+      'DEPENDENCY_CHANGE',
+      'ROLLBACK',
+      'ISOLATION',
+      'INSTRUMENTATION',
+      'NO_MUTATION_EXPERIMENT',
+      'OTHER',
+    ] as const;
+
+    it.each(canonicalKinds)('normalizes canonical kind %s accurately', (kind) => {
+      const trace = normalizeCanonicalTrace({
+        diagnostics: {
+          interventions: [
+            {
+              intervention: {
+                id: `int-${kind.toLowerCase()}`,
+                kind,
+              },
+            },
+          ],
+        },
+      });
+      expect(trace.diagnostics.interventions[0]?.intervention.kind).toBe(kind);
+    });
+
+    const nonCanonicalValues = [
+      'DOCUMENTATION',
+      'UNKNOWN',
+      'CUSTOM_CHANGE',
+      'HOTFIX',
+      '',
+      123,
+      true,
+      null,
+      undefined,
+      {},
+      [],
+    ];
+
+    it.each(nonCanonicalValues)('degrades non-canonical or unknown value %j to UNKNOWN', (value) => {
+      const trace = normalizeCanonicalTrace({
+        diagnostics: {
+          interventions: [
+            {
+              intervention: {
+                id: 'int-invalid',
+                kind: value,
+              },
+            },
+          ],
+        },
+      });
+      expect(trace.diagnostics.interventions[0]?.intervention.kind).toBe('UNKNOWN');
+    });
+  });
 });
+

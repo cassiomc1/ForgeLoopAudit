@@ -115,6 +115,12 @@ export function deriveFeatureSupport(capabilities: ForgeLoopCapabilitiesSummary)
       && hasResource(capabilities, 'task/action'),
   );
   const trajectoryFeature = capabilities.features.trajectoryEvaluation;
+  const trajectoryContractSupported = Boolean(
+    trajectoryFeature
+      && trajectoryFeature.version === 1
+      && trajectoryFeature.readOnlyMetrics === true
+      && trajectoryFeature.projectLocalReference === true,
+  );
 
   return {
     canonicalOwnership: coreResourcesPresent,
@@ -123,13 +129,11 @@ export function deriveFeatureSupport(capabilities: ForgeLoopCapabilitiesSummary)
     durableActions,
     approvals: durableActions && hasResource(capabilities, 'task/approvals'),
     capabilityPolicy: hasResource(capabilities, 'project/capability-policy'),
-    trajectoryMetrics: hasResource(capabilities, 'task/metrics') && hasReadOnlyCommand(capabilities, 'metrics'),
-    trajectoryEvaluations: Boolean(
-      trajectoryFeature
-        && trajectoryFeature.version >= 1
-        && trajectoryFeature.readOnlyMetrics === true
-        && hasResource(capabilities, 'task/evaluations'),
-    ),
+    trajectoryMetrics: trajectoryContractSupported
+      && hasResource(capabilities, 'task/metrics')
+      && hasReadOnlyCommand(capabilities, 'metrics'),
+    trajectoryEvaluations: trajectoryContractSupported
+      && hasResource(capabilities, 'task/evaluations'),
   };
 }
 

@@ -87,12 +87,13 @@ async function readProjection<K extends CanonicalObservabilityKind>(
         error: outcome.error,
       };
     }
+    const normalized = NORMALIZERS[feature](outcome.data);
     return {
       available: true,
       source: 'FORGELOOP_INTEGRATION',
       feature,
-      data: NORMALIZERS[feature](outcome.data),
-      result: NORMALIZERS[feature](outcome.data),
+      data: normalized,
+      result: normalized,
       exitCode: outcome.exitCode,
       error: null,
     };
