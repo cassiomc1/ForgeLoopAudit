@@ -1,4 +1,4 @@
-import type { CanonicalReflectionViewModel, TraceInterventionViewModel } from '@shared/domain';
+import type { CanonicalInspectionViewModel, CanonicalReflectionViewModel, TraceInterventionViewModel } from '@shared/domain';
 
 export function formatIntervention(intervention: TraceInterventionViewModel): string {
   const identifier = intervention.id ?? 'Unknown intervention';
@@ -18,4 +18,16 @@ export function openHypothesisPresentation(count: number | null, ids: string[]):
     summary: `${count} open hypotheses`,
     items: ['Exact hypothesis IDs unavailable in continuity projection.'],
   };
+}
+
+export function countInspectionSignals(inspection: CanonicalInspectionViewModel | null | undefined): number {
+  if (!inspection) return 0;
+
+  let count = 0;
+  if (inspection.ok !== null) count += 1;
+  if (inspection.task.id !== null) count += 1;
+  if (inspection.task.phase !== null) count += 1;
+  if (inspection.progress.status !== null) count += 1;
+  if (inspection.next.command !== null) count += 1;
+  return count;
 }

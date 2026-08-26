@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatIntervention, isStalledReflection, openHypothesisPresentation } from './diagnostic-display';
+import { countInspectionSignals, formatIntervention, isStalledReflection, openHypothesisPresentation } from './diagnostic-display';
 
 describe('diagnostic display helpers', () => {
   it('formats nested intervention identity and statement', () => {
@@ -22,5 +22,21 @@ describe('diagnostic display helpers', () => {
       summary: '2 open hypotheses',
       items: ['Exact hypothesis IDs unavailable in continuity projection.'],
     });
+  });
+
+  it('counts only populated inspection leaves, not empty nested objects', () => {
+    expect(countInspectionSignals({
+      ok: null,
+      task: { id: null, phase: null },
+      progress: { status: null },
+      next: { command: null },
+    })).toBe(0);
+
+    expect(countInspectionSignals({
+      ok: false,
+      task: { id: 'TASK-002', phase: null },
+      progress: { status: 'ADVANCING' },
+      next: { command: null },
+    })).toBe(3);
   });
 });

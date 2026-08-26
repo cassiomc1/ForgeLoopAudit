@@ -196,8 +196,12 @@ function buildDiagnosticContext(value: unknown): DiagnosticContextSummary | unde
     : [];
   const rawDoNotRepeat = Array.isArray(context.doNotRepeat) ? context.doNotRepeat : [];
   return {
+    present: context.present === true,
     activeFailureSignatures: readStrings('activeFailureSignatures'),
     activeFailedRequirements: readStrings('activeFailedRequirements'),
+    openHypotheses: readStrings('openHypotheses'),
+    latestIntervention: safeString(context, 'latestIntervention') ?? null,
+    nextExperiment: safeString(context, 'nextExperiment') ?? null,
     doNotRepeat: rawDoNotRepeat.map((entry) => {
       if (typeof entry === 'string') return { summary: entry };
       if (entry && typeof entry === 'object') {
@@ -210,9 +214,6 @@ function buildDiagnosticContext(value: unknown): DiagnosticContextSummary | unde
       }
       return { summary: String(entry) };
     }),
-    verificationCycle: safeNumber(context, 'verificationCycle'),
-    guidance: readStrings('guidance'),
-    stall: context.stall === true,
   };
 }
 
