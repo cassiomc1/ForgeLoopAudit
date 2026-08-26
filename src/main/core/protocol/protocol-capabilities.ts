@@ -1,5 +1,5 @@
 import type { ForgeLoopCapabilitiesSummary } from '@main/core/integration/types';
-import type { ForgeLoopCompatibilityMode } from '@shared/domain';
+import type { ForgeLoopCompatibilityMode, ForgeLoopFeatureSupport } from '@shared/domain';
 
 export type { ForgeLoopCompatibilityMode };
 
@@ -34,7 +34,7 @@ const REQUIRED_RESOURCES = Object.freeze([
 /**
  * Normalize the canonical `protocol-info` integration resource.
  *
- * ForgeLoop 1.5 reports schema compatibility exclusively under
+ * ForgeLoop protocol-v1 reports schema compatibility exclusively under
  * `compatibility.schemaVersion`; the resource has NO top-level
  * `schemaVersion`. This normalizer is the only sanctioned access path so no
  * caller can regress to reading the nonexistent top-level field.
@@ -69,6 +69,68 @@ export interface CapabilityNegotiationInput {
 export interface CapabilityNegotiationResult {
   mode: ForgeLoopCompatibilityMode;
   reason?: NegotiationFailure;
+  featureSupport: ForgeLoopFeatureSupport;
+}
+
+const EMPTY_FEATURE_SUPPORT: ForgeLoopFeatureSupport = Object.freeze({
+  canonicalOwnership: false,
+  observability: false,
+  structuredDiagnostics: false,
+  durableActions: false,
+  approvals: false,
+  capabilityPolicy: false,
+  trajectoryMetrics: false,
+  trajectoryEvaluations: false,
+});
+
+function hasResource(capabilities: ForgeLoopCapabilitiesSummary, resource: string): boolean {
+  return Array.isArray(capabilities.resources) && capabilities.resources.includes(resource);
+}
+
+function hasReadOnlyCommand(capabilities: ForgeLoopCapabilitiesSummary, commandName: string): boolean {
+  const command = capabilities.commands?.find((entry) => entry.name === commandName);
+  return Boolean(
+    command
+      && command.baseRiskClass === 'READ_ONLY'
+      && command.mayExecuteExternalProcess !== true
+      && command.mutatesProtocol !== true,
+  );
+}
+
+/**
+ * Derive additive feature support from ForgeLoop's advertised canonical
+ * resources and command metadata. Missing optional advertisements degrade the
+ * individual feature; they do not make protocol-v1 incompatible.
+ */
+export function deriveFeatureSupport(capabilities: ForgeLoopCapabilitiesSummary): ForgeLoopFeatureSupport {
+  const coreResourcesPresent = REQUIRED_RESOURCES.every((resource) => hasResource(capabilities, resource));
+  const observabilityCommands = ['history', 'trace', 'reflect', 'inspect']
+    .every((command) => hasReadOnlyCommand(capabilities, command));
+  const durableFeature = capabilities.features.durableActions;
+  const durableActions = Boolean(
+    durableFeature
+      && durableFeature.version >= 1
+      && durableFeature.readOnlyResources === true
+      && hasResource(capabilities, 'task/actions')
+      && hasResource(capabilities, 'task/action'),
+  );
+  const trajectoryFeature = capabilities.features.trajectoryEvaluation;
+
+  return {
+    canonicalOwnership: coreResourcesPresent,
+    observability: observabilityCommands,
+    structuredDiagnostics: observabilityCommands && hasReadOnlyCommand(capabilities, 'reflect'),
+    durableActions,
+    approvals: durableActions && hasResource(capabilities, 'task/approvals'),
+    capabilityPolicy: hasResource(capabilities, 'project/capability-policy'),
+    trajectoryMetrics: hasResource(capabilities, 'task/metrics') && hasReadOnlyCommand(capabilities, 'metrics'),
+    trajectoryEvaluations: Boolean(
+      trajectoryFeature
+        && trajectoryFeature.version >= 1
+        && trajectoryFeature.readOnlyMetrics === true
+        && hasResource(capabilities, 'task/evaluations'),
+    ),
+  };
 }
 
 function capabilitiesAreComplete(capabilities: ForgeLoopCapabilitiesSummary): boolean {
@@ -98,24 +160,24 @@ function capabilitiesAreComplete(capabilities: ForgeLoopCapabilitiesSummary): bo
  */
 export function negotiateCompatibilityMode(input: CapabilityNegotiationInput): CapabilityNegotiationResult {
   if (!input.protocolInfo) {
-    return { mode: 'ARTIFACT_ONLY', reason: 'INTEGRATION_UNAVAILABLE' };
+    return { mode: 'ARTIFACT_ONLY', reason: 'INTEGRATION_UNAVAILABLE', featureSupport: { ...EMPTY_FEATURE_SUPPORT } };
   }
 
   if (input.protocolInfo.protocolVersion !== SUPPORTED_PROTOCOL_VERSION) {
-    return { mode: 'INCOMPATIBLE', reason: 'UNSUPPORTED_PROTOCOL_VERSION' };
+    return { mode: 'INCOMPATIBLE', reason: 'UNSUPPORTED_PROTOCOL_VERSION', featureSupport: { ...EMPTY_FEATURE_SUPPORT } };
   }
 
   if (input.protocolInfo.schemaVersion !== SUPPORTED_SCHEMA_VERSION) {
-    return { mode: 'INCOMPATIBLE', reason: 'UNSUPPORTED_SCHEMA_VERSION' };
+    return { mode: 'INCOMPATIBLE', reason: 'UNSUPPORTED_SCHEMA_VERSION', featureSupport: { ...EMPTY_FEATURE_SUPPORT } };
   }
 
   if (!input.capabilities) {
-    return { mode: 'ARTIFACT_ONLY', reason: 'INTEGRATION_UNAVAILABLE' };
+    return { mode: 'ARTIFACT_ONLY', reason: 'INTEGRATION_UNAVAILABLE', featureSupport: { ...EMPTY_FEATURE_SUPPORT } };
   }
 
   if (!capabilitiesAreComplete(input.capabilities)) {
-    return { mode: 'INCOMPATIBLE', reason: 'CAPABILITY_DRIFT' };
+    return { mode: 'INCOMPATIBLE', reason: 'CAPABILITY_DRIFT', featureSupport: { ...EMPTY_FEATURE_SUPPORT } };
   }
 
-  return { mode: 'INTEGRATION_V1' };
+  return { mode: 'INTEGRATION_V1', featureSupport: deriveFeatureSupport(input.capabilities) };
 }

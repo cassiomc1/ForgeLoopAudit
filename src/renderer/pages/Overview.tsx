@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { ProjectSnapshot, TaskSummary } from '@shared/domain';
+import type { ProjectSnapshot, TaskSummary, TaskActionsView, TrajectoryMetricsView } from '@shared/domain';
 import { MetricCard } from '../components/ui/MetricCard';
 import { StatusBadge } from '../components/ui/StatusBadge';
 import { TaskRow } from '../components/tasks/TaskRow';
@@ -22,10 +22,13 @@ interface OverviewProps {
   watcherStatus?: { active: boolean };
   onTaskSelect?: (taskId: string) => void;
   onViewAllTasks?: () => void;
+  refreshToken?: number;
 }
 
-export function Overview({ snapshot, watcherStatus: _watcherStatus, onTaskSelect, onViewAllTasks }: OverviewProps) {
+export function Overview({ snapshot, watcherStatus: _watcherStatus, onTaskSelect, onViewAllTasks, refreshToken = 0 }: OverviewProps) {
   const [activeTask, setActiveTask] = useState<TaskSummary | null>(null);
+  const [canonicalMetrics, setCanonicalMetrics] = useState<TrajectoryMetricsView | null>(null);
+  const [canonicalActions, setCanonicalActions] = useState<TaskActionsView | null>(null);
 
   useEffect(() => {
     if (snapshot.activeTaskId) {
@@ -35,6 +38,17 @@ export function Overview({ snapshot, watcherStatus: _watcherStatus, onTaskSelect
       setActiveTask(snapshot.tasks[0]);
     }
   }, [snapshot]);
+
+  useEffect(() => {
+    if (!activeTask) { setCanonicalMetrics(null); setCanonicalActions(null); return; }
+    let cancelled = false;
+    const featureSupport = snapshot.protocol.featureSupport;
+    Promise.all([
+      featureSupport?.trajectoryMetrics === true ? window.forgeLoopStudio.getTaskMetrics(activeTask.taskId) : Promise.resolve(null),
+      featureSupport?.durableActions === true ? window.forgeLoopStudio.getTaskActions(activeTask.taskId) : Promise.resolve(null),
+    ]).then(([metrics, actions]) => { if (!cancelled) { setCanonicalMetrics(metrics); setCanonicalActions(actions); } }).catch(() => { if (!cancelled) { setCanonicalMetrics(null); setCanonicalActions(null); } });
+    return () => { cancelled = true; };
+  }, [activeTask, snapshot.protocol.featureSupport, refreshToken]);
 
   const activeTasks = snapshot.tasks.filter((t) => t.phase !== 'COMPLETE' && t.phase !== 'BLOCKED');
   const blockedTasks = snapshot.tasks.filter((t) => t.phase === 'BLOCKED');
@@ -86,6 +100,15 @@ export function Overview({ snapshot, watcherStatus: _watcherStatus, onTaskSelect
           color="info"
         />
       </div>
+
+      {snapshot.protocol.featureSupport && (snapshot.protocol.featureSupport.trajectoryMetrics || snapshot.protocol.featureSupport.durableActions) && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <MetricCard label="Canonical trajectory cycles" value={canonicalMetric(canonicalMetrics?.metrics?.trajectory, 'verificationCycles')} icon={<Activity className="w-4 h-4" />} color="info" />
+          <MetricCard label="No effective gain" value={canonicalMetric(canonicalMetrics?.metrics?.trajectory, 'noEffectiveInformationGainCycles')} icon={<AlertTriangle className="w-4 h-4" />} color="warning" />
+          <MetricCard label="Trusted actions" value={canonicalActions?.readiness?.satisfied ?? 'Unknown'} icon={<CheckCircle className="w-4 h-4" />} color="success" />
+          <MetricCard label="Ambiguous actions" value={canonicalActions?.readiness?.ambiguous ?? 'Unknown'} icon={<Shield className="w-4 h-4" />} color="danger" alert={(canonicalActions?.readiness?.ambiguous ?? 0) > 0} />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-forge-primary-surface border border-forge-border-subtle rounded-10">
@@ -272,4 +295,10 @@ export function Overview({ snapshot, watcherStatus: _watcherStatus, onTaskSelect
       )}
     </div>
   );
+}
+
+function canonicalMetric(value: unknown, key: string): string | number {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return 'Unknown';
+  const metric = (value as Record<string, unknown>)[key];
+  return typeof metric === 'number' || typeof metric === 'string' ? metric : 'Unknown';
 }

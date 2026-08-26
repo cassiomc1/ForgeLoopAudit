@@ -43,6 +43,16 @@ export function useForgeLoopStudio() {
             setWatcherStatus(update.data as WatcherStatus);
           }
           break;
+        case 'action-changed':
+        case 'approval-changed':
+        case 'evaluation-changed':
+        case 'capability-policy-changed':
+          // These bounded updates intentionally do not replace the snapshot;
+          // task-scoped projections refresh their own canonical read models.
+          if (update.generation !== undefined && update.generation > lastGeneration) {
+            setLastGeneration(update.generation);
+          }
+          break;
         case 'error':
           if (update.data) {
             setError(update.data as { message: string; code: string });

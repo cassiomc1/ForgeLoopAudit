@@ -14,7 +14,7 @@ ForgeLoop Studio is a local-first desktop companion for ForgeLoop. Open a ForgeL
 
 ## Status
 
-Release candidate — the read-only Studio runtime, trusted protocol validation, functional fixture E2E and multi-platform release staging are implemented. The current development target is `v0.1.0-rc.6` (ForgeLoop 1.5 full compatibility: Integration API v1, canonical ownership, durable recovery, execution provenance). Earlier RCs remain immutable at their tagged commits.
+Release candidate — the read-only Studio runtime, trusted protocol validation, functional fixture E2E and multi-platform release staging are implemented. The current development target is `v0.1.0-rc.6`, aligned to the vendored ForgeLoop `1.6.0` Integration API v1 (canonical ownership, durable recovery, observability, durable actions, approvals, capability policy, trajectory metrics and evaluations). Earlier RCs remain immutable at their tagged commits.
 
 For the current RC4 policy, Linux, macOS and Windows builds are unsigned preview artifacts. Validate the published checksums and expect normal operating-system security warnings; signed/notarized distribution is not part of this release candidate.
 
@@ -31,15 +31,17 @@ For the current RC4 policy, Linux, macOS and Windows builds are unsigned preview
 - Ajv
 - Vitest
 - Playwright
-- `@cassiomc1/forgeloop` 1.5.x (bundled Integration API, read-only)
+- `@cassiomc1/forgeloop` 1.6.0 (vendored from the trusted source commit in `schemas/provenance.json`, read-only)
 
 ## Product direction
 
 ForgeLoop Studio is designed as a **read-only observer by default**. ForgeLoop remains the protocol authority and `.forgeloop/` remains the canonical source of truth.
 
-## ForgeLoop 1.5 compatibility
+## Current ForgeLoop compatibility
 
-Studio consumes the bundled `@cassiomc1/forgeloop/integration` public subpath as its semantic boundary: canonical task discovery, canonical claim ownership (`claimState`, `mutationAllowed`, `ownershipValid`, historical vs effective write claims), durable recovery state and execution provenance. Direct `.forgeloop/` artifact reading remains available for detail views and diagnostics only — it never determines current ownership. The Studio never executes mutable ForgeLoop commands; recovery/resume actions are displayed as copy-only instructions.
+Studio consumes the bundled `@cassiomc1/forgeloop/integration` public subpath as its semantic boundary: canonical task discovery, canonical claim ownership (`claimState`, `mutationAllowed`, `ownershipValid`, historical vs effective write claims), durable recovery state, execution provenance, observability projections, durable actions, approvals, capability policy, trajectory metrics and trajectory evaluations. Direct `.forgeloop/` artifact reading remains available for bounded detail views and diagnostics only — it never determines current ownership, action readiness or authority. The Studio never executes mutable ForgeLoop commands; recovery/resume and action decisions are displayed as copy-only/read-only information.
+
+The Diagnostics and Actions views are explicitly capability-negotiated. Missing optional resources degrade those views to an honest **unavailable** state, while `COMMIT_UNKNOWN`, unresolved requirements and unknown usage remain visible rather than being inferred or silently reconciled. The capability policy is displayed as project policy context; it never grants host authority to Studio.
 
 Compatibility modes: `INTEGRATION_V1` (full support), `ARTIFACT_ONLY` (visual reading with ownership unavailable; also the degraded mode for ForgeLoop <= 1.3 projects), and `INCOMPATIBLE` (fail closed). There is deliberately no inferred legacy mode — without an explicit project-level signal, downgrading a broken integration into "legacy" would mask regressions. See [docs/PROTOCOL_COMPATIBILITY.md](docs/PROTOCOL_COMPATIBILITY.md) for the full matrix.
 
@@ -47,7 +49,7 @@ The visual direction is a premium, modern, minimal dark developer interface focu
 
 ## Demo project
 
-ForgeLoop Studio includes a complete, schema-valid ForgeLoop demo project under [`demo/`](./demo) — **ForgeShop**, a fictional premium e-commerce application built through ForgeLoop. Open it directly from Studio (choose **Open Demo Project** on the start screen) or select the `demo/` directory manually to explore tasks, execution flow, contracts, evidence, continuity, policy, recovery and verification without configuring another repository.
+ForgeLoop Studio includes a complete, schema-valid ForgeLoop demo project under [`demo/`](./demo) — **ForgeShop**, a fictional premium e-commerce application built through ForgeLoop. Open it directly from Studio (choose **Open Demo Project** on the start screen) or select the `demo/` directory manually to explore tasks, execution flow, contracts, evidence, continuity, policy, recovery, diagnostics, durable actions and verification without configuring another repository.
 
 The demo is a real ForgeLoop project fixture: every `.forgeloop/` artifact validates against the same trusted protocol schemas Studio enforces for any other project, and it passes through the normal ProjectDetector → PathBoundary → SchemaValidator pipeline. No external service, network access or build step is required. The bundled demo also ships inside release builds and doubles as an end-to-end regression fixture.
 

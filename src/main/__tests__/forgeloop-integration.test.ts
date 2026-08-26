@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, readFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { createForgeLoopIntegration, FORGELOOP_PACKAGE_VERSION } from '@main/core/integration/forgeloop-integration';
+import { createForgeLoopIntegration, FORGELOOP_PACKAGE_VERSION, FORGELOOP_UPSTREAM_COMMIT, hasRequiredResources } from '@main/core/integration/forgeloop-integration';
 import { ForgeLoopStudioError } from '@shared/errors';
 
 describe('core/integration/forgeloop-integration', () => {
@@ -20,7 +20,7 @@ describe('core/integration/forgeloop-integration', () => {
 
   describe('package identity', () => {
     it('exposes the bundled ForgeLoop package version', () => {
-      expect(adapter.getPackageVersion()).toBe('1.5.0');
+      expect(adapter.getPackageVersion()).toBe('1.6.0');
     });
 
     it('keeps the version constant synchronized with the installed dependency pin', () => {
@@ -28,8 +28,13 @@ describe('core/integration/forgeloop-integration', () => {
         readFileSync(join(process.cwd(), 'node_modules', '@cassiomc1', 'forgeloop', 'package.json'), 'utf8'),
       ) as { version: string };
       expect(installed.version).toBe(FORGELOOP_PACKAGE_VERSION);
+      expect(FORGELOOP_UPSTREAM_COMMIT).toBe('1eb8088716e279faa746b11e3077de1fef570b69');
       const dependencySpec = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8')).dependencies as Record<string, string>;
       expect(dependencySpec).toHaveProperty('@cassiomc1/forgeloop');
+    });
+
+    it('rejects an unresolved project root before touching the Integration API', async () => {
+      await expect(adapter.readProtocolInfo('')).rejects.toMatchObject({ code: 'PATH_BOUNDARY_VIOLATION' });
     });
   });
 
@@ -60,6 +65,39 @@ describe('core/integration/forgeloop-integration', () => {
         'task/continuity',
       ]) {
         expect(resources).toContain(required);
+      }
+      expect(resources).toEqual(expect.arrayContaining([
+        'task/actions',
+        'task/action',
+        'task/approvals',
+        'task/metrics',
+        'task/evaluations',
+        'project/capability-policy',
+      ]));
+    });
+
+    it('checks the core resource contract without treating optional resources as required', () => {
+      const capabilities = adapter.getCapabilities();
+      expect(hasRequiredResources(capabilities)).toBe(true);
+      expect(hasRequiredResources({ ...capabilities, resources: ['protocol/info'] })).toBe(false);
+    });
+
+    it('advertises additive observability, durable-action and trajectory capabilities', () => {
+      const capabilities = adapter.getCapabilities();
+      expect(capabilities.features.durableActions).toMatchObject({
+        version: 1,
+        readOnlyResources: true,
+        externalExecutionOverMcp: false,
+      });
+      expect(capabilities.features.trajectoryEvaluation).toMatchObject({
+        version: 1,
+        readOnlyMetrics: true,
+        projectLocalReference: true,
+      });
+      for (const command of ['history', 'trace', 'reflect', 'inspect', 'metrics', 'action-show']) {
+        expect(capabilities.commands).toEqual(expect.arrayContaining([
+          expect.objectContaining({ name: command, baseRiskClass: 'READ_ONLY', mutatesProtocol: false }),
+        ]));
       }
     });
   });
@@ -101,6 +139,10 @@ describe('core/integration/forgeloop-integration', () => {
 
     it('rejects loop mutation via advance', async () => {
       await expectRefusal(adapter.executeReadOnly(scratchDir, 'advance'));
+    });
+
+    it.each(['run-action', 'action-authorize', 'approval-resolve', 'action-reconcile', 'doctor'])('%s remains unavailable to Studio', async (command) => {
+      await expectRefusal(adapter.executeReadOnly(scratchDir, command));
     });
 
     it('rejects maintenance via init even with benign input', async () => {
@@ -145,6 +187,22 @@ describe('core/integration/forgeloop-integration', () => {
       expect(ownership.mutationAllowed).toBe(false);
       expect(ownership.reasonCodes).toContain('E_TASK_NOT_FOUND');
       await expect(adapter.readTaskStatus(scratchDir, 'missing-task')).rejects.toThrow();
+    });
+
+    it('routes every current task/project resource through the canonical resource reader', async () => {
+      const outcomes = await Promise.allSettled([
+        adapter.readTaskContract(scratchDir, 'missing-task'),
+        adapter.readTaskContinuity(scratchDir, 'missing-task'),
+        adapter.readTaskActions!(scratchDir, 'missing-task'),
+        adapter.readTaskAction!(scratchDir, 'missing-task', 'action-missing'),
+        adapter.readTaskApprovals!(scratchDir, 'missing-task'),
+        adapter.readTaskMetrics!(scratchDir, 'missing-task'),
+        adapter.readTaskEvaluations!(scratchDir, 'missing-task'),
+        adapter.readCapabilityPolicy!(scratchDir),
+      ]);
+      expect(outcomes.map((outcome) => outcome.status)).toEqual([
+        'rejected', 'rejected', 'fulfilled', 'rejected', 'fulfilled', 'fulfilled', 'fulfilled', 'fulfilled',
+      ]);
     });
   });
 });

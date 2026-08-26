@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "protocolVersion": 1,
   "taskId": "TASK-004",
-  "workStateFingerprint": "520776a3856803b878829caba255735f2bc87fab5160ee06d7c109022b4e4d80",
-  "contractFingerprint": "c54a4b5c3f20bb9e9fe8172f8759a188b749a1a6f35359b32e73466e489441fa",
+  "workStateFingerprint": "b26dd8647b770265b2229eef7f5f8017f5ec5e6a93cf59482b9fe194aa630a58",
+  "contractFingerprint": "5e7d4a963c5252a6081a64942a9bfdb8d1b12fa28bf5d03a3be78936c283aca0",
   "phase": "BLOCKED",
   "repositoryFingerprint": {
     "branch": "main",

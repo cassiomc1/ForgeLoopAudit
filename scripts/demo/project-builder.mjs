@@ -1,4 +1,4 @@
-import { DEMO_PROJECT_ID, assertSchemaValid, fingerprint, serializeJson, sha256FileBytes, taskKeyFor } from './fixtures.mjs';
+import { DEMO_PROJECT_ID, assertSchemaValid, canonicalFingerprint, fingerprint, serializeJson, sha256FileBytes, taskKeyFor } from './fixtures.mjs';
 import { EventLedgerBuilder } from './event-builder.mjs';
 
 const BRANCH = 'main';
@@ -122,12 +122,13 @@ function executionReceipt(taskId, shape) {
     checks: shape.checks,
     review: shape.review,
     limitations: shape.limitations,
-    publication: { committed: true, pushed: true, pullRequest: null, deployed: false },
-    status: 'complete',
-    taskStatus: 'complete',
-    verificationStatus: 'valid',
-    publicationStatus: 'pushed',
-    productionReadiness: 'not-verified',
+    ...(shape.actions ? { actions: shape.actions } : {}),
+    publication: shape.publication ?? { committed: true, pushed: true, pullRequest: null, deployed: false },
+    status: shape.status ?? 'complete',
+    taskStatus: shape.taskStatus ?? 'complete',
+    verificationStatus: shape.verificationStatus ?? 'valid',
+    publicationStatus: shape.publicationStatus ?? 'pushed',
+    productionReadiness: shape.productionReadiness ?? 'not-verified',
     evidence: shape.evidence,
     evidenceCoverage: shape.evidenceCoverage,
   };
@@ -147,10 +148,10 @@ function gate(taskId, gateName, status, evidence, decisions = [], artifactPath =
   };
 }
 
-// ForgeLoop 1.5 lifecycle helpers -------------------------------------------------
+// ForgeLoop protocol-v1 lifecycle helpers -----------------------------------------
 
 /**
- * Canonical 1.5 check entry: versioned, typed, sourced, and — for observed
+ * Canonical protocol-v1 check entry: versioned, typed, sourced, and — for observed
  * command evidence — backed by execution provenance.
  */
 function demoCheck({ id, requirement, status, evidenceKind = 'NOT_VERIFIED', kind = 'command', source = 'demo-fixture', timestamp, executionRef, exitCode }) {
@@ -171,7 +172,7 @@ function demoCheck({ id, requirement, status, evidenceKind = 'NOT_VERIFIED', kin
 }
 
 /**
- * Canonical 1.5 evidence coverage entry: status must be derivable from the
+ * Canonical protocol-v1 evidence coverage entry: status must be derivable from the
  * required/observed evidence lists (PARTIAL carries readiness details).
  */
 function cov(requirement, mode = 'not-verified') {
@@ -203,7 +204,7 @@ function recoveryRecorded(ledger, details) {
 }
 
 /**
- * Canonical 1.5 execution provenance artifact (executions/exec-*.json).
+ * Canonical protocol-v1 execution provenance artifact (executions/exec-*.json).
  */
 function executionRecord({ executionId, taskId, checkId, requirement, argv, startedAt, finishedAt, status = 'passed', exitCode = 0 }) {
   return {
@@ -228,6 +229,130 @@ function executionRecord({ executionId, taskId, checkId, requirement, argv, star
     status,
     exitCode,
   };
+}
+
+function normalizeDiagnosticText(value) {
+  return String(value).trim().replace(/\s+/gu, ' ').toLowerCase();
+}
+
+function canonicalizeDiagnosticValue(value) {
+  if (Array.isArray(value)) {
+    return [...new Set(value.map(canonicalizeDiagnosticValue))].sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+  }
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value)
+      .filter(([key]) => key !== 'id' && key !== 'createdAt')
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, child]) => [key, canonicalizeDiagnosticValue(child)]));
+  }
+  return typeof value === 'string' ? normalizeDiagnosticText(value) : value;
+}
+
+function diagnosticFingerprint(details) {
+  return canonicalFingerprint({
+    verificationCycle: details.verificationCycle,
+    failureClass: details.failureClass,
+    observations: details.observations.map(({ kind, evidenceRef, statement, provenance }) => canonicalizeDiagnosticValue({ kind, evidenceRef, statement, provenance })).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))),
+    contributors: details.contributors.map(({ type, statement, basis, status }) => canonicalizeDiagnosticValue({ type, statement, basis, status })).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))),
+    hypotheses: details.hypotheses.map(({ statement, contributorRefs, evidenceRefs, settledBy }) => canonicalizeDiagnosticValue({ statement, contributorRefs, evidenceRefs, settledBy })).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))),
+    nextSafeAction: canonicalizeDiagnosticValue(details.nextSafeAction?.statement ?? null),
+  });
+}
+
+function interventionFingerprint(intervention) {
+  return canonicalFingerprint({
+    kind: intervention.kind,
+    statement: normalizeDiagnosticText(intervention.statement),
+    targets: [...new Set((intervention.targets ?? []).map((target) => target.trim()))].sort(),
+    hypothesisRefs: [...new Set((intervention.hypothesisRefs ?? []).map((ref) => ref.trim()))].sort(),
+  });
+}
+
+function durableAction(taskId, shape) {
+  const identity = {
+    taskId,
+    actionId: shape.actionId,
+    effectClass: shape.effectClass,
+    capability: shape.capability,
+    target: shape.target ?? null,
+    operation: shape.operation ?? null,
+    idempotencyKey: shape.idempotencyKey ?? null,
+    requiredForCompletion: Boolean(shape.requiredForCompletion),
+    requirement: shape.requirement ?? null,
+  };
+  return {
+    schemaVersion: 1,
+    taskId,
+    actionId: shape.actionId,
+    actionFingerprint: canonicalFingerprint(identity),
+    effectClass: shape.effectClass,
+    capability: shape.capability,
+    operation: shape.operation,
+    target: shape.target,
+    idempotencyKey: shape.idempotencyKey ?? null,
+    requiredForCompletion: Boolean(shape.requiredForCompletion),
+    requirement: shape.requirement ?? null,
+    provenance: shape.provenance,
+    state: shape.state,
+    revision: shape.revision,
+    createdAt: shape.createdAt,
+    updatedAt: shape.updatedAt,
+    ...(shape.lastEvidenceRef !== undefined ? { lastEvidenceRef: shape.lastEvidenceRef } : {}),
+    ...(shape.lastReconciliationAt !== undefined ? { lastReconciliationAt: shape.lastReconciliationAt } : {}),
+    ...(shape.commitResultCode !== undefined ? { commitResultCode: shape.commitResultCode } : {}),
+  };
+}
+
+function durableApproval(taskId, shape) {
+  return {
+    schemaVersion: 1,
+    taskId,
+    approvalId: shape.approvalId,
+    actionId: shape.actionId,
+    actionFingerprint: shape.actionFingerprint,
+    contractFingerprint: fingerprint(`contract:${taskId}`),
+    taskRevision: shape.taskRevision,
+    capability: shape.capability,
+    status: shape.status,
+    requestedAt: shape.requestedAt,
+    reason: shape.reason,
+  };
+}
+
+function trajectoryEvaluation(taskId) {
+  const base = {
+    schemaVersion: 1,
+    evaluationId: 'eval-cart-hydration',
+    scenarioId: 'cart-hydration-recovery',
+    scenarioFingerprint: fingerprint('scenario:cart-hydration-recovery'),
+    taskId,
+    result: 'FAIL',
+    completionValid: false,
+    safetyValid: true,
+    missingMilestones: ['COMPLETION_VALIDATED'],
+    limits: { verificationCycles: { actual: 1, max: 3, pass: true } },
+    efficiency: { referenceComparableSteps: 4, actualComparableSteps: 6, ratio: 0.6666666667 },
+    computedAt: '2026-08-04T11:05:00.000Z',
+    source: 'PROJECT_LOCAL_REFERENCE',
+  };
+  return { ...base, evaluationFingerprint: canonicalFingerprint(base) };
+}
+
+function finalizeTaskArtifacts(artifacts) {
+  const contract = artifacts['contract.json'];
+  const state = artifacts['work-state.json'];
+  const continuityArtifact = artifacts['continuity.json'];
+  if (contract && state) {
+    const contractFingerprint = canonicalFingerprint(contract);
+    state.contractFingerprint = contractFingerprint;
+    const stateFingerprint = canonicalFingerprint(state);
+    if (continuityArtifact) {
+      continuityArtifact.contractFingerprint = contractFingerprint;
+      continuityArtifact.workStateFingerprint = stateFingerprint;
+    }
+    if (artifacts['execution-receipt.json']) artifacts['execution-receipt.json'].stateFingerprint = stateFingerprint;
+  }
+  return artifacts;
 }
 
 const TASKS = {
@@ -381,6 +506,51 @@ function buildCartTask() {
   ledger.append('EXECUTION_COMPLETED', { area: 'src/cart.ts' });
   ledger.append('VERIFICATION_STARTED', { verificationCycle: 1 });
   ledger.append('CHECK_WARNING', { check: 'hydration-edge-case', note: 'Hydration edge case found for corrupted stored carts' });
+  ledger.append('VERIFICATION_RECORDED', {
+    id: 'corrupt-cart-hydration',
+    checkId: 'corrupt-cart-hydration',
+    requirement: 'Corrupted persisted carts are discarded safely',
+    status: 'failed',
+    verificationCycle: 1,
+    exitCode: 1,
+    failureToken: 'HYDRATION_CORRUPT_PAYLOAD',
+  });
+  const diagnosticCase = {
+    schemaVersion: 1,
+    verificationCycle: 1,
+    diagnosticRevision: 1,
+    failureClass: 'VERIFICATION_FAILURE',
+    observations: [{ id: 'obs-cart-hydration', kind: 'CHECK_RESULT', evidenceRef: 'corrupt-cart-hydration', statement: 'Corrupted persisted cart payload throws during hydration.', provenance: 'FORGELOOP_EXECUTED' }],
+    contributors: [{ id: 'contributor-cart-parser', type: 'CODE', statement: 'The cart hydration parser does not discard malformed persisted data.', basis: ['obs-cart-hydration'], status: 'SUSPECTED' }],
+    hypotheses: [{ id: 'h-cart-parser', statement: 'Hydration needs a guarded parse-and-discard path for malformed carts.', contributorRefs: ['contributor-cart-parser'], evidenceRefs: ['corrupt-cart-hydration'], settledBy: { type: 'CHECK_STATUS', checkId: 'corrupt-cart-hydration', expectedStatus: 'passed' } }],
+    nextSafeAction: { statement: 'Add a reversible guard around persisted cart parsing, then run the hydration regression check.' },
+    previousDiagnosticFingerprint: null,
+  };
+  diagnosticCase.diagnosticFingerprint = diagnosticFingerprint(diagnosticCase);
+  ledger.append('DIAGNOSTIC_CASE_RECORDED', diagnosticCase);
+  ledger.append('HYPOTHESIS_DISPOSITION_RECORDED', {
+    schemaVersion: 1,
+    verificationCycle: 1,
+    hypothesisRef: 'h-cart-parser',
+    status: 'WEAKENED',
+    evidenceRefs: ['corrupt-cart-hydration'],
+    reason: 'The failed hydration check weakens the parser hypothesis until the regression is fixed and re-verified.',
+  });
+  const intervention = {
+    schemaVersion: 1,
+    verificationCycle: 1,
+    intervention: {
+      id: 'intervention-cart-guard',
+      kind: 'CODE_CHANGE',
+      statement: 'Add a guarded parse-and-discard path for malformed persisted carts.',
+      hypothesisRefs: ['h-cart-parser'],
+      targets: ['src/cart.ts'],
+      expectedObservation: 'The hydration regression check passes without throwing.',
+      reversible: true,
+    },
+  };
+  intervention.interventionSemanticFingerprint = interventionFingerprint(intervention.intervention);
+  ledger.append('INTERVENTION_RECORDED', intervention);
 
   const checks = [
     demoCheck({ id: 'cart-unit-tests', requirement: 'Cart unit tests pass', status: 'passed', evidenceKind: 'OBSERVED', source: 'vitest run', exitCode: 0, timestamp: '2026-08-04T10:20:00.000Z' }),
@@ -440,6 +610,65 @@ function buildCartTask() {
     changedAreas: ['src/cart.ts', 'tests/cart.test.ts'],
     inspectFirst: ['src/cart.ts', 'tests/cart.test.ts'],
     resumeNote: 'Verification cycle 1 rejected: hydration edge case still open. Resume in VERIFYING.',
+  });
+  const inspectAction = durableAction(taskId, {
+    actionId: 'action-cart-inspect',
+    effectClass: 'READ_ONLY',
+    capability: 'filesystem.read',
+    operation: 'Inspect persisted cart payload',
+    target: 'src/cart.ts',
+    requiredForCompletion: false,
+    requirement: null,
+    provenance: 'EXTERNAL_OBSERVED',
+    state: 'VERIFIED',
+    revision: 1,
+    createdAt: '2026-08-04T10:45:00.000Z',
+    updatedAt: '2026-08-04T10:46:00.000Z',
+    lastEvidenceRef: 'cart-unit-tests',
+  });
+  const repairAction = durableAction(taskId, {
+    actionId: 'action-cart-repair',
+    effectClass: 'REVERSIBLE_WRITE',
+    capability: 'filesystem.write',
+    operation: 'Discard malformed persisted cart payload',
+    target: 'src/cart.ts',
+    idempotencyKey: 'forgeshop:TASK-002:cart-repair:v1',
+    requiredForCompletion: true,
+    requirement: 'Corrupted persisted carts are discarded safely',
+    provenance: 'CALLER_REPORTED',
+    state: 'COMMIT_UNKNOWN',
+    revision: 2,
+    createdAt: '2026-08-04T10:50:00.000Z',
+    updatedAt: '2026-08-04T11:01:00.000Z',
+    commitResultCode: 'AMBIGUOUS',
+  });
+  artifacts['actions/action-cart-inspect.json'] = inspectAction;
+  artifacts['actions/action-cart-repair.json'] = repairAction;
+  artifacts['approvals/approval-cart-repair.json'] = durableApproval(taskId, {
+    approvalId: 'approval-cart-repair',
+    actionId: repairAction.actionId,
+    actionFingerprint: repairAction.actionFingerprint,
+    taskRevision: repairAction.revision,
+    capability: repairAction.capability,
+    status: 'PENDING',
+    requestedAt: '2026-08-04T11:01:30.000Z',
+    reason: 'The completion-critical repair action needs an explicit decision before any external mutation.',
+  });
+  artifacts['evaluations/eval-cart-hydration.json'] = trajectoryEvaluation(taskId);
+  artifacts['execution-receipt.json'] = executionReceipt(taskId, {
+    selectedGuides: ['test', 'design'],
+    changedPaths: ['src/cart.ts', 'tests/cart.test.ts'],
+    checks,
+    status: 'complete-with-concerns',
+    taskStatus: 'incomplete',
+    verificationStatus: 'invalid',
+    publicationStatus: 'local-only',
+    publication: { committed: true, pushed: false, pullRequest: null, deployed: false },
+    review: { reviewer: 'harness-a', outcome: 'rejected', notes: 'Hydration failure remains unresolved.' },
+    limitations: ['Completion-critical repair has an unknown external commit outcome.'],
+    actions: { count: 2, required: 1, verified: 1, trustedSatisfied: 0, unresolvedRequired: 1, failed: 0, ambiguous: 1, pending: 0, actionRefs: [inspectAction.actionId, repairAction.actionId] },
+    evidence: [{ kind: 'OBSERVED', source: 'vitest run', result: 'cart unit tests: 8 passed' }, { kind: 'NOT_VERIFIED', source: 'manual observation', result: 'Corrupted persisted carts are not yet discarded safely.' }],
+    evidenceCoverage: coverage,
   });
   return { taskId, ledger, artifacts };
 }
@@ -871,7 +1100,17 @@ function buildPolicyFiles() {
     baselineDigest: sha256FileBytes(baselineText),
     capturedAt: '2026-08-01T09:00:00.000Z',
   };
-  return { rules, discovery, baseline, lock };
+  const capabilities = {
+    schemaVersion: 1,
+    defaultDecision: 'DENY',
+    rules: [
+      { capability: 'filesystem.read', decision: 'ALLOW' },
+      { capability: 'filesystem.write', decision: 'REQUIRE_APPROVAL' },
+      { capability: 'process.execute', decision: 'REQUIRE_AUTHORITY' },
+      { capability: 'external.publish', decision: 'DENY' },
+    ],
+  };
+  return { rules, discovery, baseline, lock, capabilities };
 }
 
 export function buildForgeShopProject() {
@@ -921,17 +1160,25 @@ export function buildForgeShopProject() {
   put('.forgeloop/policy/discovery.json', policy.discovery, 'policy/discovery.json');
   put('.forgeloop/policy/baseline.json', policy.baseline, 'policy/baseline.json');
   put('.forgeloop/policy/policy.lock', policy.lock, 'policy/policy.lock');
+  put('.forgeloop/policy/capabilities.json', policy.capabilities, 'policy/capabilities.json');
 
   const builders = [buildCatalogTask, buildCartTask, buildCheckoutTask, buildA11yTask, buildPerfTask, buildSecurityTask];
   let eventCount = 0;
   for (const build of builders) {
-    const { taskId, ledger, artifacts, executions = [] } = build();
+    const { taskId, ledger, artifacts: rawArtifacts, executions = [] } = build();
+    const artifacts = finalizeTaskArtifacts(rawArtifacts);
     const key = taskKeyFor(taskId);
     for (const [name, value] of Object.entries(artifacts)) {
       const artifactName = name === 'events.ndjson'
         ? 'event'
         : name.startsWith('gates/')
           ? 'gate.json'
+          : name.startsWith('actions/')
+            ? 'action.json'
+            : name.startsWith('approvals/')
+              ? 'approval.json'
+              : name.startsWith('evaluations/')
+                ? 'trajectory-evaluation.json'
           : name;
       put(`.forgeloop/task-state/${key}/${name}`, value, artifactName);
     }

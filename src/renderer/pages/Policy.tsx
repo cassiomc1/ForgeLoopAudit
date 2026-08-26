@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { ProjectSnapshot, TaskSummary, PolicySummary } from '@shared/domain';
+import type { ProjectSnapshot, TaskSummary, PolicySummary, CapabilityPolicyView } from '@shared/domain';
 import { EmptyState } from '../components/ui/EmptyState';
 import { cn } from '../lib/utils';
 import { Shield, AlertTriangle, Lock, FileText, Activity } from 'lucide-react';
@@ -7,15 +7,17 @@ import { Shield, AlertTriangle, Lock, FileText, Activity } from 'lucide-react';
 interface PolicyProps {
   snapshot: ProjectSnapshot;
   selectedTaskId?: string | null;
+  refreshToken?: number;
   onSelectedTaskChange?: (taskId: string) => void;
 }
 
-export function Policy({ snapshot, selectedTaskId, onSelectedTaskChange }: PolicyProps) {
+export function Policy({ snapshot, selectedTaskId, refreshToken = 0, onSelectedTaskChange }: PolicyProps) {
   const [selectedTask, setSelectedTask] = useState<TaskSummary | null>(
     snapshot.tasks.find((t) => t.taskId === snapshot.activeTaskId) || snapshot.tasks[0] || null
   );
   const [taskPolicy, setTaskPolicy] = useState<PolicySummary | null>(null);
   const [policyLoading, setPolicyLoading] = useState(false);
+  const [capabilityPolicy, setCapabilityPolicy] = useState<CapabilityPolicyView | null>(null);
   useEffect(() => { setSelectedTask(snapshot.tasks.find((t) => t.taskId === selectedTaskId) || snapshot.tasks.find((t) => t.taskId === snapshot.activeTaskId) || snapshot.tasks[0] || null); }, [snapshot, selectedTaskId]);
   useEffect(() => {
     if (!selectedTask) { setTaskPolicy(null); return; }
@@ -27,6 +29,17 @@ export function Policy({ snapshot, selectedTaskId, onSelectedTaskChange }: Polic
       .finally(() => { if (!cancelled) setPolicyLoading(false); });
     return () => { cancelled = true; };
   }, [selectedTask]);
+  useEffect(() => {
+    let cancelled = false;
+    if (snapshot.protocol.featureSupport?.capabilityPolicy !== true) {
+      setCapabilityPolicy(null);
+      return () => { cancelled = true; };
+    }
+    window.forgeLoopStudio.getCapabilityPolicy()
+      .then((result) => { if (!cancelled) setCapabilityPolicy(result); })
+      .catch(() => { if (!cancelled) setCapabilityPolicy(null); });
+    return () => { cancelled = true; };
+  }, [snapshot.protocol.featureSupport?.capabilityPolicy, refreshToken]);
 
   if (snapshot.tasks.length === 0) {
     return <EmptyState title="No tasks available" description="Select a task to view policy information." />;
@@ -159,6 +172,15 @@ export function Policy({ snapshot, selectedTaskId, onSelectedTaskChange }: Polic
           </div>
         </div>
       )}
+
+      <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-10 p-4">
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <h2 className="text-sm font-semibold text-forge-text-primary">Project capability policy</h2>
+          <Shield className="w-4 h-4 text-forge-accent" />
+        </div>
+        <p className="text-xs text-forge-text-muted mb-4">Project capability policy controls ForgeLoop policy decisions. It does not itself grant host authority.</p>
+        {snapshot.protocol.featureSupport?.capabilityPolicy !== true ? <p className="text-sm text-forge-warning">Not available with the bundled ForgeLoop capability set.</p> : !capabilityPolicy ? <p className="text-sm text-forge-text-muted">Loading canonical capability policy…</p> : !capabilityPolicy.available ? <p className="text-sm text-forge-warning">{capabilityPolicy.error?.message || 'Capability policy unavailable.'}</p> : <div className="space-y-3"><div className="flex items-center justify-between text-sm"><span className="text-forge-text-muted">Default decision</span><span className="font-mono text-forge-text-primary">{capabilityPolicy.defaultDecision || 'Unknown'}</span></div><div className="flex items-center justify-between text-sm"><span className="text-forge-text-muted">Fingerprint</span><span className="font-mono text-xs text-forge-text-secondary truncate max-w-[60%]">{capabilityPolicy.fingerprint || 'Unknown / not verified'}</span></div>{capabilityPolicy.rules.length > 0 ? <div className="divide-y divide-forge-border-subtle/50 border border-forge-border-subtle rounded-8">{capabilityPolicy.rules.map((rule) => <div key={rule.capability} className="px-3 py-2 flex items-center justify-between gap-3 text-sm"><span className="font-mono text-xs text-forge-text-secondary">{rule.capability}</span><span className={cn('text-xs font-semibold', rule.decision === 'DENY' ? 'text-forge-danger' : rule.decision === 'ALLOW' ? 'text-forge-success' : 'text-forge-warning')}>{rule.decision}</span></div>)}</div> : <p className="text-sm text-forge-text-muted">No capability-specific rules recorded.</p>}</div>}
+      </div>
 
       {selectedTask && selectedTask.gates.length > 0 && (
         <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-10">

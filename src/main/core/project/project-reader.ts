@@ -4,7 +4,7 @@ import { ForgeLoopStudioError } from '@shared/errors';
 import { parseJsonSafely } from '@main/security/resource-limits';
 import { PathBoundary } from '@main/security/path-boundary';
 import { CONFIG_FILE, SOURCES_FILE, TASK_STATE_DIR, SESSIONS_DIR, POLICY_DIR } from '@shared/constants';
-import type { ProjectDetectionResult } from '@shared/domain';
+import type { ProjectDetectionResult, RawCollectionArtifactRequest } from '@shared/domain';
 import { checkProtocolCompatibility } from '@main/core/protocol/compatibility';
 import { SchemaValidator } from '@main/core/protocol/validator';
 import { ARTIFACT_SCHEMAS } from '@main/core/protocol/artifact-registry';
@@ -64,6 +64,12 @@ const TASK_JSON_ARTIFACTS = new Set([
   'execution-receipt.json',
   'policy-snapshot.json',
 ]);
+
+const COLLECTION_ARTIFACTS = {
+  action: { directory: 'actions', schema: 'action.schema.json' },
+  approval: { directory: 'approvals', schema: 'approval.schema.json' },
+  evaluation: { directory: 'evaluations', schema: 'trajectory-evaluation.schema.json' },
+} as const;
 
 export class ProjectDetector {
   constructor(
@@ -315,6 +321,64 @@ export class ProjectReader {
     const validated = this.validateArtifact('policy-snapshot.json', parsed);
     if (validated.error) throw ForgeLoopStudioError.artifactInvalid('policy-snapshot.json', validated.error);
     return validated.value as Record<string, unknown>;
+  }
+
+  readRawCollectionArtifact(
+    taskKey: string,
+    request: Exclude<RawCollectionArtifactRequest, { kind: 'capability-policy' }>,
+  ): string {
+    const definition = COLLECTION_ARTIFACTS[request.kind];
+    const id = request.kind === 'action' ? request.actionId : request.kind === 'approval' ? request.approvalId : request.evaluationId;
+    const idPattern = request.kind === 'action'
+      ? /^action-[A-Za-z0-9_-]+$/
+      : request.kind === 'approval'
+        ? /^approval-[A-Za-z0-9_-]+$/
+        : /^eval-[A-Za-z0-9_-]+$/;
+    if (!idPattern.test(id) || id.includes('/') || id.includes('\\') || id.includes('..')) {
+      throw ForgeLoopStudioError.pathBoundaryViolation(id, `invalid ${request.kind} artifact identifier`);
+    }
+
+    const relativePath = join(TASK_STATE_DIR, taskKey, definition.directory, `${id}.json`);
+    const candidate = this.pathBoundary.resolveForgeLoopPathLexically(relativePath);
+    let stat;
+    try {
+      stat = lstatSync(candidate);
+    } catch {
+      throw ForgeLoopStudioError.artifactUnreadable(relativePath, 'Artifact not found');
+    }
+    if (!stat.isFile() || stat.isSymbolicLink()) {
+      throw ForgeLoopStudioError.artifactInvalid(relativePath, 'Symbolic links and non-file artifacts are not allowed');
+    }
+    const validatedPath = this.pathBoundary.validatePath(candidate);
+    const content = readFileSync(validatedPath, 'utf8');
+    const parsed = parseJsonSafely(content);
+    const validation = this.validator.validate(definition.schema, parsed);
+    if (!validation.valid) {
+      throw ForgeLoopStudioError.artifactInvalid(relativePath, validation.errors?.join('; ') || 'Collection artifact schema validation failed');
+    }
+    return content;
+  }
+
+  readRawCapabilityPolicy(): string {
+    const relativePath = join(POLICY_DIR, 'capabilities.json');
+    const candidate = this.pathBoundary.resolveForgeLoopPathLexically(relativePath);
+    let stat;
+    try {
+      stat = lstatSync(candidate);
+    } catch {
+      throw ForgeLoopStudioError.artifactUnreadable(relativePath, 'Artifact not found');
+    }
+    if (!stat.isFile() || stat.isSymbolicLink()) {
+      throw ForgeLoopStudioError.artifactInvalid(relativePath, 'Symbolic links and non-file artifacts are not allowed');
+    }
+    const validatedPath = this.pathBoundary.validatePath(candidate);
+    const content = readFileSync(validatedPath, 'utf8');
+    const parsed = parseJsonSafely(content);
+    const validation = this.validator.validate('capability-policy.schema.json', parsed);
+    if (!validation.valid) {
+      throw ForgeLoopStudioError.artifactInvalid(relativePath, validation.errors?.join('; ') || 'Capability policy schema validation failed');
+    }
+    return content;
   }
 
   readGlobalPolicy(): Record<string, unknown> {

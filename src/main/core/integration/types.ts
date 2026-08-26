@@ -5,6 +5,25 @@ export interface ForgeLoopRecoveryFeatureSummary {
   validatedClaimProjection: boolean;
 }
 
+export interface ForgeLoopDurableActionsFeatureSummary {
+  version: number;
+  readOnlyResources: boolean;
+  externalExecutionOverMcp: boolean;
+}
+
+export interface ForgeLoopTrajectoryEvaluationFeatureSummary {
+  version: number;
+  readOnlyMetrics: boolean;
+  projectLocalReference: boolean;
+}
+
+export interface ForgeLoopCommandCapabilitySummary {
+  name: string;
+  baseRiskClass?: string;
+  mayExecuteExternalProcess?: boolean;
+  mutatesProtocol?: boolean;
+}
+
 export interface ForgeLoopCapabilitiesSummary {
   packageVersion: string | null;
   protocolVersion: number;
@@ -12,8 +31,11 @@ export interface ForgeLoopCapabilitiesSummary {
   executorParity: boolean;
   features: {
     taskClaimRecovery: ForgeLoopRecoveryFeatureSummary;
+    durableActions?: ForgeLoopDurableActionsFeatureSummary;
+    trajectoryEvaluation?: ForgeLoopTrajectoryEvaluationFeatureSummary;
   };
   resources: string[];
+  commands?: ForgeLoopCommandCapabilitySummary[];
 }
 
 export interface CanonicalTaskListEntry {
@@ -52,4 +74,12 @@ export interface ForgeLoopReadOnlyResult<T> {
   result: T | null;
   error: ForgeLoopCanonicalError | null;
   metadata: Record<string, unknown> | null;
+}
+
+export interface ForgeLoopResourceReadOptions {
+  projectPath?: string;
+  packageRoot?: string;
+  packageVersion?: string | null;
+  taskId?: string | null;
+  actionId?: string | null;
 }

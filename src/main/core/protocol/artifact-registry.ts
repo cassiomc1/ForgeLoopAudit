@@ -4,6 +4,16 @@ import registry from './artifact-registry.json';
 
 export const ARTIFACT_SCHEMAS = registry as Record<ArtifactName, string>;
 
+export type ArtifactScope = 'PROJECT' | 'TASK' | 'COLLECTION' | 'SESSION';
+
+export interface StudioArtifactDefinition {
+  key: ArtifactName;
+  schema: string;
+  scope: ArtifactScope;
+  pattern?: RegExp;
+  authoritative: boolean;
+}
+
 export type ArtifactName =
   | 'config.json'
   | 'sources.json'
@@ -23,7 +33,11 @@ export type ArtifactName =
   | 'policy/rules.json'
   | 'policy/discovery.json'
   | 'policy/baseline.json'
-  | 'policy/policy.lock';
+  | 'policy/policy.lock'
+  | 'action.json'
+  | 'approval.json'
+  | 'policy/capabilities.json'
+  | 'trajectory-evaluation.json';
 
 export const REQUIRED_ARTIFACTS: ArtifactName[] = [
   'config.json',
@@ -42,10 +56,47 @@ export const TASK_ARTIFACTS: ArtifactName[] = [
 
 export const OPTIONAL_TASK_ARTIFACTS: ArtifactName[] = [
   'policy-snapshot.json',
+  'action.json',
+  'approval.json',
+  'trajectory-evaluation.json',
 ];
+
+export const ARTIFACT_DEFINITIONS: Record<ArtifactName, StudioArtifactDefinition> = {
+  'config.json': { key: 'config.json', schema: ARTIFACT_SCHEMAS['config.json'], scope: 'PROJECT', authoritative: true },
+  'sources.json': { key: 'sources.json', schema: ARTIFACT_SCHEMAS['sources.json'], scope: 'PROJECT', authoritative: true },
+  'task.json': { key: 'task.json', schema: ARTIFACT_SCHEMAS['task.json'], scope: 'TASK', authoritative: true },
+  'contract.json': { key: 'contract.json', schema: ARTIFACT_SCHEMAS['contract.json'], scope: 'TASK', authoritative: true },
+  'routing-result.json': { key: 'routing-result.json', schema: ARTIFACT_SCHEMAS['routing-result.json'], scope: 'TASK', authoritative: true },
+  'preflight.json': { key: 'preflight.json', schema: ARTIFACT_SCHEMAS['preflight.json'], scope: 'TASK', authoritative: true },
+  'work-state.json': { key: 'work-state.json', schema: ARTIFACT_SCHEMAS['work-state.json'], scope: 'TASK', authoritative: true },
+  'continuity.json': { key: 'continuity.json', schema: ARTIFACT_SCHEMAS['continuity.json'], scope: 'TASK', authoritative: true },
+  'recovery.json': { key: 'recovery.json', schema: ARTIFACT_SCHEMAS['recovery.json'], scope: 'TASK', authoritative: false },
+  'execution.json': { key: 'execution.json', schema: ARTIFACT_SCHEMAS['execution.json'], scope: 'COLLECTION', authoritative: false },
+  'execution-receipt.json': { key: 'execution-receipt.json', schema: ARTIFACT_SCHEMAS['execution-receipt.json'], scope: 'TASK', authoritative: true },
+  'session.json': { key: 'session.json', schema: ARTIFACT_SCHEMAS['session.json'], scope: 'SESSION', authoritative: true },
+  'gate.json': { key: 'gate.json', schema: ARTIFACT_SCHEMAS['gate.json'], scope: 'COLLECTION', authoritative: false },
+  'event': { key: 'event', schema: ARTIFACT_SCHEMAS.event, scope: 'COLLECTION', authoritative: true },
+  'policy-snapshot.json': { key: 'policy-snapshot.json', schema: ARTIFACT_SCHEMAS['policy-snapshot.json'], scope: 'TASK', authoritative: true },
+  'policy/rules.json': { key: 'policy/rules.json', schema: ARTIFACT_SCHEMAS['policy/rules.json'], scope: 'PROJECT', authoritative: true },
+  'policy/discovery.json': { key: 'policy/discovery.json', schema: ARTIFACT_SCHEMAS['policy/discovery.json'], scope: 'PROJECT', authoritative: false },
+  'policy/baseline.json': { key: 'policy/baseline.json', schema: ARTIFACT_SCHEMAS['policy/baseline.json'], scope: 'PROJECT', authoritative: true },
+  'policy/policy.lock': { key: 'policy/policy.lock', schema: ARTIFACT_SCHEMAS['policy/policy.lock'], scope: 'PROJECT', authoritative: true },
+  'action.json': { key: 'action.json', schema: ARTIFACT_SCHEMAS['action.json'], scope: 'COLLECTION', pattern: /^task-state\/[^/]+\/actions\/action-[A-Za-z0-9_-]+\.json$/, authoritative: true },
+  'approval.json': { key: 'approval.json', schema: ARTIFACT_SCHEMAS['approval.json'], scope: 'COLLECTION', pattern: /^task-state\/[^/]+\/approvals\/approval-[A-Za-z0-9_-]+\.json$/, authoritative: true },
+  'policy/capabilities.json': { key: 'policy/capabilities.json', schema: ARTIFACT_SCHEMAS['policy/capabilities.json'], scope: 'PROJECT', authoritative: true },
+  'trajectory-evaluation.json': { key: 'trajectory-evaluation.json', schema: ARTIFACT_SCHEMAS['trajectory-evaluation.json'], scope: 'COLLECTION', pattern: /^task-state\/[^/]+\/evaluations\/eval-[A-Za-z0-9_-]+\.json$/, authoritative: true },
+};
 
 export function getSchemaForArtifact(artifact: ArtifactName): string {
   return ARTIFACT_SCHEMAS[artifact];
+}
+
+export function getArtifactDefinition(artifact: ArtifactName): StudioArtifactDefinition {
+  return ARTIFACT_DEFINITIONS[artifact];
+}
+
+export function isCollectionArtifact(artifact: ArtifactName): boolean {
+  return ARTIFACT_DEFINITIONS[artifact].scope === 'COLLECTION';
 }
 
 export function isRequiredArtifact(artifact: ArtifactName): boolean {

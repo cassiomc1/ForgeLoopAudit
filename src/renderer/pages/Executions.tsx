@@ -50,7 +50,7 @@ export function Executions({ snapshot, selectedTaskId, onSelectedTaskChange }: E
         <div>
           <h1 className="text-xl font-semibold text-forge-text-primary">Executions</h1>
           <p className="text-sm text-forge-text-muted mt-1">
-            Read-only command execution provenance from ForgeLoop 1.5 artifacts
+            Read-only command execution provenance from current ForgeLoop artifacts
           </p>
         </div>
         <select

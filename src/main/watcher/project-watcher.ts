@@ -7,7 +7,7 @@ import { ForgeLoopStudioError } from '@shared/errors';
 import { WATCHER_RETRY_MS, WATCHER_MAX_RETRIES } from '@shared/constants';
 
 export interface WatcherEvent {
-  type: 'artifact-changed' | 'task-added' | 'task-removed' | 'event-appended' | 'policy-changed' | 'session-changed' | 'execution-changed';
+  type: 'artifact-changed' | 'task-added' | 'task-removed' | 'event-appended' | 'policy-changed' | 'session-changed' | 'execution-changed' | 'action-changed' | 'approval-changed' | 'evaluation-changed' | 'capability-policy-changed';
   taskKey?: string;
   artifact?: string;
   path: string;
@@ -159,6 +159,33 @@ export class ProjectWatcher {
           };
         }
 
+        if (parts.length >= 3 && parts[2] === 'actions' && /^action-[A-Za-z0-9_-]+\.json$/.test(parts[parts.length - 1])) {
+          return {
+            type: 'action-changed',
+            taskKey,
+            artifact: parts[parts.length - 1],
+            path: change.path,
+          };
+        }
+
+        if (parts.length >= 3 && parts[2] === 'approvals' && /^approval-[A-Za-z0-9_-]+\.json$/.test(parts[parts.length - 1])) {
+          return {
+            type: 'approval-changed',
+            taskKey,
+            artifact: parts[parts.length - 1],
+            path: change.path,
+          };
+        }
+
+        if (parts.length >= 3 && parts[2] === 'evaluations' && /^eval-[A-Za-z0-9_-]+\.json$/.test(parts[parts.length - 1])) {
+          return {
+            type: 'evaluation-changed',
+            taskKey,
+            artifact: parts[parts.length - 1],
+            path: change.path,
+          };
+        }
+
         if (change.path.endsWith('recovery.json')) {
           return {
             type: 'artifact-changed',
@@ -178,7 +205,7 @@ export class ProjectWatcher {
           };
         }
 
-        if (change.type === 'directory' && change.changeType === 'add') {
+        if (change.type === 'directory' && change.changeType === 'add' && parts.length === 2) {
           return {
             type: 'task-added',
             taskKey,
@@ -186,7 +213,7 @@ export class ProjectWatcher {
           };
         }
 
-        if (change.type === 'directory' && change.changeType === 'unlink') {
+        if (change.type === 'directory' && change.changeType === 'unlink' && parts.length === 2) {
           return {
             type: 'task-removed',
             taskKey,
@@ -199,6 +226,13 @@ export class ProjectWatcher {
     if (relativePath.startsWith(SESSIONS_DIR + '/')) {
       return {
         type: 'session-changed',
+        path: change.path,
+      };
+    }
+
+    if (relativePath === `${POLICY_DIR}/capabilities.json`) {
+      return {
+        type: 'capability-policy-changed',
         path: change.path,
       };
     }

@@ -17,5 +17,9 @@
   "policy/rules.json": "policy-rules.schema.json",
   "policy/discovery.json": "policy-discovery.schema.json",
   "policy/baseline.json": "policy-baseline.schema.json",
-  "policy/policy.lock": "policy-lock.schema.json"
+  "policy/policy.lock": "policy-lock.schema.json",
+  "action.json": "action.schema.json",
+  "approval.json": "approval.schema.json",
+  "policy/capabilities.json": "capability-policy.schema.json",
+  "trajectory-evaluation.json": "trajectory-evaluation.schema.json"
 }

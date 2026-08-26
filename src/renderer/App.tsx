@@ -11,6 +11,8 @@ import { Events } from './pages/Events';
 import { Executions } from './pages/Executions';
 import { Continuity } from './pages/Continuity';
 import { Policy } from './pages/Policy';
+import { Diagnostics } from './pages/Diagnostics';
+import { Actions } from './pages/Actions';
 import { Settings } from './pages/Settings';
 import { EmptyState } from './components/ui/EmptyState';
 import { LoadingState } from './components/ui/LoadingState';
@@ -24,6 +26,8 @@ export const NAV_ITEMS = [
   { id: 'events', label: 'Events', icon: 'history' },
   { id: 'executions', label: 'Executions', icon: 'terminal' },
   { id: 'continuity', label: 'Continuity', icon: 'repeat' },
+  { id: 'diagnostics', label: 'Diagnostics', icon: 'activity' },
+  { id: 'actions', label: 'Actions', icon: 'activity' },
   { id: 'policy', label: 'Policy', icon: 'shield' },
   { id: 'settings', label: 'Settings', icon: 'settings' },
 ] as const;
@@ -44,6 +48,7 @@ export function App() {
   const [watcherStatus, setWatcherStatus] = useState<WatcherStatus>({ active: false });
   const [isLoading, setIsLoading] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [projectionRefreshKey, setProjectionRefreshKey] = useState(0);
 
   const api = getApi();
 
@@ -62,6 +67,7 @@ export function App() {
         if (update.detection) setDetectionResult(update.detection);
         if (update.snapshot) setSnapshot(update.snapshot);
         setActiveNav('overview');
+        setProjectionRefreshKey((value) => value + 1);
         break;
       case 'snapshot-refreshed':
         if (update.snapshot) {
@@ -85,6 +91,11 @@ export function App() {
       case 'project-health-changed':
       case 'policy-changed':
       case 'session-changed':
+      case 'action-changed':
+      case 'approval-changed':
+      case 'evaluation-changed':
+      case 'capability-policy-changed':
+        setProjectionRefreshKey((value) => value + 1);
         break;
     }
   }, []);
@@ -185,7 +196,7 @@ export function App() {
 
     switch (activeNav) {
       case 'overview':
-        return <Overview snapshot={snapshot} watcherStatus={watcherStatus} onTaskSelect={(taskId) => { setSelectedTaskId(taskId); setActiveNav('flow'); }} onViewAllTasks={() => setActiveNav('tasks')} />;
+        return <Overview snapshot={snapshot} watcherStatus={watcherStatus} refreshToken={projectionRefreshKey} onTaskSelect={(taskId) => { setSelectedTaskId(taskId); setActiveNav('flow'); }} onViewAllTasks={() => setActiveNav('tasks')} />;
       case 'tasks':
         return <Tasks snapshot={snapshot} isDemoProject={isDemoProject} onTaskSelect={(taskId) => { setSelectedTaskId(taskId); setActiveNav('flow'); }} />;
       case 'flow':
@@ -193,15 +204,19 @@ export function App() {
       case 'contract':
         return <Contract snapshot={snapshot} selectedTaskId={selectedTaskId} onSelectedTaskChange={setSelectedTaskId} />;
       case 'evidence':
-        return <Evidence snapshot={snapshot} selectedTaskId={selectedTaskId} onSelectedTaskChange={setSelectedTaskId} />;
+        return <Evidence snapshot={snapshot} selectedTaskId={selectedTaskId} refreshToken={projectionRefreshKey} onSelectedTaskChange={setSelectedTaskId} onOpenActions={() => setActiveNav('actions')} />;
       case 'events':
         return <Events snapshot={snapshot} selectedTaskId={selectedTaskId} onSelectedTaskChange={setSelectedTaskId} />;
       case 'executions':
         return <Executions snapshot={snapshot} selectedTaskId={selectedTaskId} onSelectedTaskChange={setSelectedTaskId} />;
       case 'continuity':
-        return <Continuity snapshot={snapshot} selectedTaskId={selectedTaskId} onSelectedTaskChange={setSelectedTaskId} />;
+        return <Continuity snapshot={snapshot} selectedTaskId={selectedTaskId} onSelectedTaskChange={setSelectedTaskId} onOpenDiagnostics={() => setActiveNav('diagnostics')} />;
+      case 'diagnostics':
+        return <Diagnostics snapshot={snapshot} selectedTaskId={selectedTaskId} refreshToken={projectionRefreshKey} onSelectedTaskChange={setSelectedTaskId} />;
+      case 'actions':
+        return <Actions snapshot={snapshot} selectedTaskId={selectedTaskId} refreshToken={projectionRefreshKey} onSelectedTaskChange={setSelectedTaskId} />;
       case 'policy':
-        return <Policy snapshot={snapshot} selectedTaskId={selectedTaskId} onSelectedTaskChange={setSelectedTaskId} />;
+        return <Policy snapshot={snapshot} selectedTaskId={selectedTaskId} refreshToken={projectionRefreshKey} onSelectedTaskChange={setSelectedTaskId} />;
       case 'settings':
         return <Settings />;
       default:

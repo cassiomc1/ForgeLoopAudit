@@ -80,6 +80,18 @@ export interface ProtocolSummary {
   compatible: boolean;
   compatibilitySource?: 'PROTOCOL_INFO' | 'ARTIFACT_ONLY';
   compatibilityMode?: ForgeLoopCompatibilityMode;
+  featureSupport?: ForgeLoopFeatureSupport;
+}
+
+export interface ForgeLoopFeatureSupport {
+  canonicalOwnership: boolean;
+  observability: boolean;
+  structuredDiagnostics: boolean;
+  durableActions: boolean;
+  approvals: boolean;
+  capabilityPolicy: boolean;
+  trajectoryMetrics: boolean;
+  trajectoryEvaluations: boolean;
 }
 
 export interface BlockerSummary {
@@ -152,6 +164,7 @@ export interface ContinuitySummary {
   resumeNote?: string;
   repositoryFingerprint?: unknown;
   verificationCycle?: number;
+  diagnosticContext?: DiagnosticContextSummary;
   /** @deprecated Canonical continuity no longer exposes harness/session fields. */
   previousHarness?: never;
   previousSession?: never;
@@ -161,6 +174,143 @@ export interface ContinuitySummary {
   nextIntendedStep?: never;
   knownBlockers?: never;
   reconciliationRequired?: never;
+}
+
+export interface DiagnosticContextSummary {
+  activeFailureSignatures: string[];
+  activeFailedRequirements: string[];
+  doNotRepeat: Array<{ id?: string; summary: string; reason?: string }>;
+  verificationCycle?: number;
+  guidance?: string[];
+  stall?: boolean;
+}
+
+export type CanonicalProjectionSource = 'FORGELOOP_INTEGRATION' | 'UNAVAILABLE';
+
+export interface CanonicalProjectionError {
+  code: string;
+  message: string;
+}
+
+export interface CanonicalProjectionView<T = Record<string, unknown>> {
+  available: boolean;
+  source: CanonicalProjectionSource;
+  feature: string;
+  data: T | null;
+  result: T | null;
+  exitCode: number | null;
+  error: CanonicalProjectionError | null;
+}
+
+export type TaskHistoryView = CanonicalProjectionView<Record<string, unknown>>;
+export type TaskTraceView = CanonicalProjectionView<Record<string, unknown>>;
+export type TaskReflectionView = CanonicalProjectionView<Record<string, unknown>>;
+export type TaskInspectionView = CanonicalProjectionView<Record<string, unknown>>;
+
+export type DurableActionState =
+  | 'PROPOSED'
+  | 'AUTHORIZED'
+  | 'STARTED'
+  | 'COMMITTED'
+  | 'VERIFIED'
+  | 'FAILED'
+  | 'COMMIT_UNKNOWN'
+  | 'CANCELLED'
+  | 'UNKNOWN';
+
+export type DurableActionEffectClass =
+  | 'READ_ONLY'
+  | 'REVERSIBLE_WRITE'
+  | 'IRREVERSIBLE_WRITE'
+  | 'EXTERNAL_PUBLICATION'
+  | 'DESTRUCTIVE'
+  | 'UNKNOWN';
+
+export interface DurableActionView {
+  actionId: string;
+  actionFingerprint: string | null;
+  effectClass: DurableActionEffectClass;
+  capability: string | null;
+  operation: string | null;
+  target: string | null;
+  idempotencyKey: string | null;
+  requiredForCompletion: boolean;
+  requirement: string | null;
+  provenance: string | null;
+  state: DurableActionState;
+  revision: number | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+  lastEvidenceRef: string | null;
+  lastReconciliationAt: string | null;
+  commitResultCode: string | null;
+}
+
+export type ActionReadinessStatus = 'SATISFIED' | 'PENDING' | 'FAILED' | 'AMBIGUOUS' | 'UNTRUSTED' | 'UNKNOWN';
+
+export interface ActionReadinessSummary {
+  total: number | null;
+  satisfied: number | null;
+  unresolved: number | null;
+  failed: number | null;
+  ambiguous: number | null;
+  pending: number | null;
+  untrusted: number | null;
+  source: 'FORGELOOP_INTEGRATION' | 'UNAVAILABLE';
+}
+
+export interface DurableApprovalView {
+  approvalId: string;
+  actionId: string | null;
+  actionFingerprint: string | null;
+  contractFingerprint: string | null;
+  taskRevision: number | null;
+  capability: string | null;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'UNKNOWN';
+  requestedAt: string | null;
+  reason: string | null;
+  decision: 'APPROVED' | 'REJECTED' | null;
+  resolvedAt: string | null;
+  authorityKind: 'CALLER_ACKNOWLEDGED' | 'HOST_ATTESTED' | null;
+  hostGrantRef: string | null;
+}
+
+export interface TaskActionsView {
+  available: boolean;
+  source: CanonicalProjectionSource;
+  actions: DurableActionView[];
+  approvals: DurableApprovalView[];
+  readiness: ActionReadinessSummary | null;
+  error: CanonicalProjectionError | null;
+}
+
+export interface CapabilityPolicyRuleView {
+  capability: string;
+  decision: 'ALLOW' | 'DENY' | 'REQUIRE_AUTHORITY' | 'REQUIRE_APPROVAL' | 'UNKNOWN';
+}
+
+export interface CapabilityPolicyView {
+  available: boolean;
+  source: CanonicalProjectionSource;
+  defaultDecision: 'ALLOW' | 'DENY' | null;
+  rules: CapabilityPolicyRuleView[];
+  fingerprint: string | null;
+  path: string | null;
+  error: CanonicalProjectionError | null;
+}
+
+export interface TrajectoryMetricsView {
+  available: boolean;
+  source: CanonicalProjectionSource;
+  metrics: Record<string, unknown> | null;
+  error: CanonicalProjectionError | null;
+}
+
+export interface TrajectoryEvaluationsView {
+  available: boolean;
+  source: CanonicalProjectionSource;
+  evaluations: Array<Record<string, unknown>>;
+  error: CanonicalProjectionError | null;
 }
 
 export type ContinuityWorkItem = { id: string; summary: string };
@@ -231,6 +381,13 @@ export interface ForgeLoopIntegrationCapabilitiesSummary {
     explicitResume: boolean;
     validatedClaimProjection: boolean;
   };
+  features?: ForgeLoopFeatureSupport;
+  resources?: string[];
+  commands?: Array<{
+    name: string;
+    baseRiskClass?: string;
+    mayExecuteExternalProcess?: boolean;
+  }>;
 }
 
 export interface TaskSummary {
@@ -418,6 +575,12 @@ export interface RawArtifactRequest {
   artifact: AllowedArtifact;
 }
 
+export type RawCollectionArtifactRequest =
+  | { kind: 'action'; taskId: string; actionId: string }
+  | { kind: 'approval'; taskId: string; approvalId: string }
+  | { kind: 'evaluation'; taskId: string; evaluationId: string }
+  | { kind: 'capability-policy' };
+
 export interface ExecutionRecord {
   executionId: string;
   taskId: string;
@@ -462,6 +625,17 @@ export interface ForgeLoopStudioAPI {
   getTaskEvents(taskId: string, cursor?: string, limit?: number): Promise<EventPage>;
   getPolicyStatus(taskId?: string): Promise<PolicySummary | null>;
   getRawArtifact(request: RawArtifactRequest): Promise<string>;
+  getRawCollectionArtifact(request: RawCollectionArtifactRequest): Promise<string>;
+  getTaskHistory(taskId: string): Promise<TaskHistoryView>;
+  getTaskTrace(taskId: string): Promise<TaskTraceView>;
+  getTaskReflection(taskId: string): Promise<TaskReflectionView>;
+  getTaskInspection(taskId: string): Promise<TaskInspectionView>;
+  getTaskActions(taskId: string): Promise<TaskActionsView>;
+  getTaskAction(taskId: string, actionId: string): Promise<DurableActionView | null>;
+  getTaskApprovals(taskId: string): Promise<DurableApprovalView[]>;
+  getTaskMetrics(taskId: string): Promise<TrajectoryMetricsView>;
+  getTaskEvaluations(taskId: string): Promise<TrajectoryEvaluationsView>;
+  getCapabilityPolicy(): Promise<CapabilityPolicyView>;
   getRecentProjects(): Promise<RecentProject[]>;
   addRecentProject(project: RecentProject): Promise<void>;
   removeRecentProject(path: string): Promise<void>;
@@ -470,7 +644,7 @@ export interface ForgeLoopStudioAPI {
 }
 
 export interface ProjectUpdate {
-  type: 'task-added' | 'task-updated' | 'task-removed' | 'project-health-changed' | 'policy-changed' | 'session-changed' | 'snapshot-refreshed' | 'project-opened' | 'watcher-status' | 'error';
+  type: 'task-added' | 'task-updated' | 'task-removed' | 'project-health-changed' | 'policy-changed' | 'session-changed' | 'action-changed' | 'approval-changed' | 'evaluation-changed' | 'capability-policy-changed' | 'snapshot-refreshed' | 'project-opened' | 'watcher-status' | 'error';
   taskId?: string;
   snapshot?: ProjectSnapshot;
   detection?: ProjectDetectionResult;

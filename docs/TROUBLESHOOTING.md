@@ -33,7 +33,23 @@ Settings → Diagnostics reports the negotiated `ForgeLoopCompatibilityMode` ver
 
 ## Ownership shows "OWNERSHIP UNAVAILABLE"
 
-Canonical ownership comes exclusively from the bundled ForgeLoop 1.5 Integration API (`task/ownership`). When the Integration API is unavailable, Studio degrades to `ARTIFACT_ONLY` mode: raw artifacts stay readable for inspection but ownership facts are shown as unavailable instead of being guessed from `task.json` or the legacy CLI.
+Canonical ownership comes exclusively from the bundled ForgeLoop 1.6 Integration API (`task/ownership`). When the Integration API is unavailable, Studio degrades to `ARTIFACT_ONLY` mode: raw artifacts stay readable for inspection but ownership facts are shown as unavailable instead of being guessed from `task.json` or the legacy CLI.
+
+## Diagnostics or Actions says "unavailable"
+
+The Diagnostics and Actions panels are gated by the capabilities advertised by the bundled Integration API. An unavailable panel means its canonical resource or read-only command was not negotiated; Studio does not reconstruct the missing projection from local artifacts. Update the bundled ForgeLoop pin only through the trusted provenance workflow, then rerun schema and compatibility verification.
+
+## An action is marked `COMMIT_UNKNOWN`
+
+`COMMIT_UNKNOWN` is an intentionally unresolved durable-action state. Studio surfaces the action, its provenance and any linked approval, but never retries, reconciles or authorizes it. Resolution must be performed by an authorized ForgeLoop harness through the canonical action workflow.
+
+## Capability policy is shown but does not authorize anything
+
+The project capability policy is context for ForgeLoop decisions. Displaying `ALLOW`, `DENY`, `REQUIRE_APPROVAL` or `REQUIRE_AUTHORITY` in Studio does not grant host authority, approve an action or enable a mutable command.
+
+## Usage metrics are unavailable
+
+ForgeLoop reports usage as `null`/`UNKNOWN` when the runtime cannot attest tokens or cost. Studio preserves that honest state; it does not estimate usage from event counts or wall-clock time.
 
 ## Task badge says "RECOVERED — RESUME REQUIRED"
 
