@@ -54,7 +54,7 @@ export async function discoverForgeLoopProjects(selectedDirectory: string): Prom
     }
 
     for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
-      if (!entry.isDirectory() || IGNORED_DIRECTORY_NAMES.has(entry.name)) continue;
+      if (entry.isSymbolicLink() || !entry.isDirectory() || IGNORED_DIRECTORY_NAMES.has(entry.name)) continue;
       pending.push(join(directory, entry.name));
     }
   }

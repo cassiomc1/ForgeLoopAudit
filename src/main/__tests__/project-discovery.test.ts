@@ -69,4 +69,17 @@ describe('ForgeLoop project discovery', () => {
       rmSync(outside, { recursive: true, force: true });
     }
   });
+
+  it('does not enter dependency or build directories', async () => {
+    const root = makeRoot();
+    try {
+      for (const ignoredDirectory of ['.git', '.worktrees', 'worktrees', 'node_modules', 'dist', 'build', 'coverage']) {
+        writeProjectConfig(join(root, ignoredDirectory, `${ignoredDirectory}-project`));
+      }
+
+      await expect(discoverForgeLoopProjects(root)).resolves.toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });

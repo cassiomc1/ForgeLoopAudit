@@ -25,7 +25,7 @@ project, Studio searches its accessible subfolders recursively for a
 
 When exactly one project is found, Studio opens it automatically. If several
 projects are found, Studio stops and asks you to select one project directory
-directly instead of choosing an arbitrary result. Symlinked directories and
+directly instead of choosing an arbitrary result. Symlinked subdirectories and
 common dependency/build folders are not followed during discovery.
 
 ## Status
