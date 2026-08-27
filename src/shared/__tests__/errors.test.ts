@@ -32,6 +32,13 @@ describe('shared/errors', () => {
         expect(error.details).toContain('/path');
       });
 
+      it('projectDiscoveryAmbiguous', () => {
+        const error = ForgeLoopStudioError.projectDiscoveryAmbiguous('/workspace', ['/workspace/one', '/workspace/two']);
+        expect(error.code).toBe('PROJECT_DISCOVERY_AMBIGUOUS');
+        expect(error.message).toContain('Multiple ForgeLoop projects');
+        expect(error.details).toContain('/workspace/two');
+      });
+
       it('protocolUnsupported', () => {
         const error = ForgeLoopStudioError.protocolUnsupported(99, '/path');
         expect(error.code).toBe('PROTOCOL_UNSUPPORTED');
