@@ -26,6 +26,7 @@ import { isFixtureProjectMode as resolveFixtureProjectMode } from './fixture-mod
 import { resolveBundledDemoPath } from '@main/demo/demo-path';
 import { buildStudioDiagnostics } from '@main/core/diagnostics/diagnostics';
 import { assertTrustedSender as assertSenderUrl } from '@main/security/sender-policy';
+import { resolveForgeLoopProjectRoot } from '@main/core/project/project-discovery';
 
 const store = new Store<{ recentProjects: RecentProject[] }>({
   name: 'forgeloop-studio-settings',
@@ -84,7 +85,7 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
       return null;
     }
 
-    const projectRoot = result.filePaths[0];
+    const projectRoot = await resolveForgeLoopProjectRoot(result.filePaths[0]);
     return openProject(projectRoot, 'PROJECT');
   });
 

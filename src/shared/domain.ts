@@ -689,6 +689,7 @@ export interface TaskSnapshot {
 
 export type StudioErrorCode =
   | 'PROJECT_NOT_FORGELOOP'
+  | 'PROJECT_DISCOVERY_AMBIGUOUS'
   | 'PROTOCOL_UNSUPPORTED'
   | 'ARTIFACT_INVALID'
   | 'ARTIFACT_UNREADABLE'

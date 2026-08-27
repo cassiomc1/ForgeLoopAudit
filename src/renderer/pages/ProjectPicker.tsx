@@ -86,7 +86,7 @@ export function ProjectPicker({ onOpenProject, onOpenDemoProject, onOpenRecentPr
               Use it to explore verification, recovery, continuity, evidence, and policy behavior.
             </p>
             <p className="text-center text-xs text-forge-text-muted mt-3">
-              Select a directory containing a <code className="font-mono text-forge-text-secondary">.forgeloop</code> folder
+              Select a project directory or a parent folder; Studio searches subfolders for a <code className="font-mono text-forge-text-secondary">.forgeloop</code> project
             </p>
           </div>
 

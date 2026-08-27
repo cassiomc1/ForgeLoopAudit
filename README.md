@@ -6,11 +6,27 @@ ForgeLoop Studio is a local-first desktop companion for ForgeLoop. Open a ForgeL
 
 ## Screenshots
 
-| | |
-|---|---|
-| ![Screenshot 1](screen/screenshot.png) | ![Screenshot 2](screen/screenshot%20(1).png) |
-| ![Screenshot 3](screen/screenshot%20(2).png) | ![Screenshot 4](screen/screenshot%20(3).png) |
-| ![Screenshot 5](screen/screenshot%20(4).png) | |
+| Overview | Tasks | Lifecycle flow |
+|---|---|---|
+| <img src="screen/Captura%20de%20Tela%202026-08-27%20at%2007.38.45.png" alt="Project overview" width="420"> | <img src="screen/Captura%20de%20Tela%202026-08-27%20at%2007.38.51.png" alt="Tasks list" width="420"> | <img src="screen/Captura%20de%20Tela%202026-08-27%20at%2007.38.57.png" alt="Lifecycle flow" width="420"> |
+| Contract inspector | Evidence matrix | Event ledger |
+| <img src="screen/Captura%20de%20Tela%202026-08-27%20at%2007.39.02.png" alt="Contract inspector" width="420"> | <img src="screen/Captura%20de%20Tela%202026-08-27%20at%2007.39.08.png" alt="Evidence matrix" width="420"> | <img src="screen/Captura%20de%20Tela%202026-08-27%20at%2007.39.15.png" alt="Event ledger" width="420"> |
+| Continuity | Diagnostics | Actions |
+| <img src="screen/Captura%20de%20Tela%202026-08-27%20at%2007.39.28.png" alt="Continuity view" width="420"> | <img src="screen/Captura%20de%20Tela%202026-08-27%20at%2007.39.33.png" alt="Diagnostics view" width="420"> | <img src="screen/Captura%20de%20Tela%202026-08-27%20at%2007.39.37.png" alt="Actions view" width="420"> |
+| Policy | Settings | |
+| <img src="screen/Captura%20de%20Tela%202026-08-27%20at%2007.39.48.png" alt="Policy view" width="420"> | <img src="screen/Captura%20de%20Tela%202026-08-27%20at%2007.39.53.png" alt="Settings view" width="420"> | |
+
+## Project selection
+
+Use **Open ForgeLoop Project** to select either a ForgeLoop project directory
+or a parent folder that contains one. If the selected folder is not itself a
+project, Studio searches its accessible subfolders recursively for a
+`.forgeloop/config.json` project marker.
+
+When exactly one project is found, Studio opens it automatically. If several
+projects are found, Studio stops and asks you to select one project directory
+directly instead of choosing an arbitrary result. Symlinked subdirectories and
+common dependency/build folders are not followed during discovery.
 
 ## Status
 

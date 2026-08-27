@@ -23,6 +23,15 @@ export class ForgeLoopStudioError extends Error {
     );
   }
 
+  static projectDiscoveryAmbiguous(path: string, candidates: string[]): ForgeLoopStudioError {
+    return new ForgeLoopStudioError(
+      'PROJECT_DISCOVERY_AMBIGUOUS',
+      'Multiple ForgeLoop projects were found below the selected directory. Select one project folder directly.',
+      true,
+      `Path: ${path}\nProjects:\n${candidates.map((candidate) => `- ${candidate}`).join('\n')}`,
+    );
+  }
+
   static protocolUnsupported(version: number, path: string): ForgeLoopStudioError {
     return new ForgeLoopStudioError(
       'PROTOCOL_UNSUPPORTED',
