@@ -128,11 +128,11 @@ Include the exact command strings, exit status, environment, identities, and any
 
 Run the focused tests, full unit suite, typecheck, lint, build, docs/schema/demo/release checks, and `git diff --check` as applicable. Read every exit status.
 
-- [ ] **Step 2: Review the exact diff against the attached requirements**
+- [x] **Step 2: Review the exact diff against the attached requirements**
 
 Confirm no schema/runtime pin changed, no mutating ForgeLoop command was introduced, no isolation facts are inferred, and no unrelated file is staged.
 
-- [ ] **Step 3: Request independent code review with exact base/head SHAs**
+- [x] **Step 3: Request independent code review with exact base/head SHAs**
 
 Fix Critical and Important findings, rerun affected validation, and retain Minor findings only when they do not affect acceptance.
 
