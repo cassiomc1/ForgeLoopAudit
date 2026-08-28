@@ -38,7 +38,7 @@ describe('execution display helpers', () => {
       { label: 'Protocol project root', value: '/repo' },
       { label: 'Execution cwd', value: '/repo/.forgeloop-isolation/worktree' },
     ]);
-    expect(executionIsolationDetails(ISOLATED_EXECUTION)).toEqual([
+    expect(executionIsolationDetails(ISOLATED_EXECUTION, true)).toEqual([
       { label: 'Isolation mode', value: 'PROJECT_ISOLATED' },
       { label: 'Isolated', value: 'Yes' },
       { label: 'Live project writable', value: 'No' },
@@ -61,7 +61,7 @@ describe('execution display helpers', () => {
   it('does not infer execution kind or isolation mode for legacy records', () => {
     expect(executionKindLabel(LEGACY_EXECUTION)).toBe('Not recorded by this artifact');
     expect(isolationModeLabel(LEGACY_EXECUTION)).toBe('Not recorded by this artifact');
-    expect(executionIsolationDetails(LEGACY_EXECUTION)).toEqual([
+    expect(executionIsolationDetails(LEGACY_EXECUTION, true)).toEqual([
       { label: 'Isolation mode', value: 'Not recorded by this artifact' },
       { label: 'Isolated', value: 'Not recorded by this artifact' },
       { label: 'Live project writable', value: 'Not recorded by this artifact' },
@@ -73,5 +73,9 @@ describe('execution display helpers', () => {
   it('accepts only an explicitly negotiated isolation capability', () => {
     expect(isVerificationExecutionIsolationAvailable({ verificationExecutionIsolation: true })).toBe(true);
     expect(isVerificationExecutionIsolationAvailable({ verificationExecutionIsolation: 1 as unknown as boolean })).toBe(false);
+  });
+
+  it('requires an explicit availability decision before returning isolation details', () => {
+    expect(executionIsolationDetails(ISOLATED_EXECUTION, undefined as unknown as boolean)).toEqual([]);
   });
 });

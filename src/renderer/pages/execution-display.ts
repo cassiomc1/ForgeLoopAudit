@@ -31,9 +31,9 @@ export function executionProvenanceDetails(execution: ExecutionRecord): Executio
 
 export function executionIsolationDetails(
   execution: ExecutionRecord,
-  featureAvailable = true,
+  featureAvailable: boolean,
 ): ExecutionProvenanceDetail[] {
-  if (!featureAvailable) return [];
+  if (featureAvailable !== true) return [];
 
   const isolation = execution.isolation;
   return [
