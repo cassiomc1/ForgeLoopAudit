@@ -33,6 +33,7 @@ const allFeatures = {
   capabilityPolicy: true,
   trajectoryMetrics: true,
   trajectoryEvaluations: true,
+  verificationExecutionIsolation: true,
 } as const;
 
 describe('canonical read-only projection services', () => {
