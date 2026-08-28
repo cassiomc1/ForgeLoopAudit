@@ -7,12 +7,22 @@
   "requirement": "TypeScript compiles without errors",
   "verificationCycle": 1,
   "kind": "COMMAND_EXECUTION",
+  "executionKind": "VERIFICATION",
   "argv": [
     "npx",
     "tsc",
     "--noEmit"
   ],
+  "protocolProjectRoot": "/workspace/forgeshop",
   "cwd": "/workspace/forgeshop",
+  "executionIsolation": "NATIVE_PROJECT",
+  "isolation": {
+    "mode": "NATIVE_PROJECT",
+    "isolated": false,
+    "liveProjectWritable": true,
+    "networkPolicy": "INHERITED",
+    "environmentPolicy": "INHERITED"
+  },
   "resolution": {
     "resolutionMode": "direct",
     "mayInstall": false,

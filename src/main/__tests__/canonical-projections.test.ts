@@ -6,7 +6,7 @@ import type { ForgeLoopIntegrationAdapter } from '@main/core/integration/forgelo
 
 function adapterWith(overrides: Partial<ForgeLoopIntegrationAdapter> = {}): ForgeLoopIntegrationAdapter {
   return {
-    getPackageVersion: () => '1.6.0',
+    getPackageVersion: () => '1.6.1',
     getCapabilities: () => ({}) as never,
     readProtocolInfo: async () => ({}),
     listTasks: async () => ({ count: 0, tasks: [] }),
@@ -33,6 +33,7 @@ const allFeatures = {
   capabilityPolicy: true,
   trajectoryMetrics: true,
   trajectoryEvaluations: true,
+  verificationExecutionIsolation: true,
 } as const;
 
 describe('canonical read-only projection services', () => {

@@ -92,6 +92,7 @@ export interface ForgeLoopFeatureSupport {
   capabilityPolicy: boolean;
   trajectoryMetrics: boolean;
   trajectoryEvaluations: boolean;
+  verificationExecutionIsolation: boolean;
 }
 
 export interface BlockerSummary {
@@ -739,6 +740,21 @@ export type RawCollectionArtifactRequest =
   | { kind: 'evaluation'; taskId: string; evaluationId: string }
   | { kind: 'capability-policy' };
 
+export type ExecutionKind = 'VERIFICATION' | 'DURABLE_ACTION';
+
+export type VerificationIsolationMode =
+  | 'NATIVE_PROJECT'
+  | 'PROJECT_ISOLATED'
+  | 'SYSTEM_ISOLATED';
+
+export interface ExecutionIsolationMetadata {
+  mode: VerificationIsolationMode;
+  isolated: boolean;
+  liveProjectWritable: boolean;
+  networkPolicy: string;
+  environmentPolicy: string;
+}
+
 export interface ExecutionRecord {
   executionId: string;
   taskId: string;
@@ -748,6 +764,10 @@ export interface ExecutionRecord {
   kind: string;
   argv: string[];
   cwd: string;
+  executionKind?: ExecutionKind;
+  protocolProjectRoot?: string;
+  executionIsolation?: VerificationIsolationMode;
+  isolation?: ExecutionIsolationMetadata;
   resolution: Record<string, unknown>;
   dispatch?: Record<string, unknown>;
   startedAt: string;

@@ -20,7 +20,7 @@ describe('core/integration/forgeloop-integration', () => {
 
   describe('package identity', () => {
     it('exposes the bundled ForgeLoop package version', () => {
-      expect(adapter.getPackageVersion()).toBe('1.6.0');
+      expect(adapter.getPackageVersion()).toBe('1.6.1');
     });
 
     it('keeps the version constant synchronized with the installed dependency pin', () => {
@@ -28,7 +28,7 @@ describe('core/integration/forgeloop-integration', () => {
         readFileSync(join(process.cwd(), 'node_modules', '@cassiomc1', 'forgeloop', 'package.json'), 'utf8'),
       ) as { version: string };
       expect(installed.version).toBe(FORGELOOP_PACKAGE_VERSION);
-      expect(FORGELOOP_UPSTREAM_COMMIT).toBe('1eb8088716e279faa746b11e3077de1fef570b69');
+      expect(FORGELOOP_UPSTREAM_COMMIT).toBe('f331100cff175a4ce990fa843b397fcf720b40f5');
       const dependencySpec = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8')).dependencies as Record<string, string>;
       expect(dependencySpec).toHaveProperty('@cassiomc1/forgeloop');
     });
@@ -93,6 +93,13 @@ describe('core/integration/forgeloop-integration', () => {
         version: 1,
         readOnlyMetrics: true,
         projectLocalReference: true,
+      });
+      expect(capabilities.features.verificationExecutionIsolation).toMatchObject({
+        version: 1,
+        supported: true,
+        adapter: true,
+        modes: ['NATIVE_PROJECT', 'PROJECT_ISOLATED', 'SYSTEM_ISOLATED'],
+        protocolProjectRootSeparateFromExecutionCwd: true,
       });
       for (const command of ['history', 'trace', 'reflect', 'inspect', 'metrics', 'action-show']) {
         expect(capabilities.commands).toEqual(expect.arrayContaining([

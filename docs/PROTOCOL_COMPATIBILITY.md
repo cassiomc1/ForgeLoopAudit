@@ -1,13 +1,13 @@
 # ForgeLoop Protocol Compatibility
 
-ForgeLoop Studio supports protocol version 1 and schema version 1 from the pinned ForgeLoop source revision recorded in `schemas/provenance.json` (ForgeLoop **1.6.0**, commit `1eb8088716e279faa746b11e3077de1fef570b69`). The runtime artifact registry and `SUPPORTED_PROTOCOL.requiredSchemas` are contract-tested to remain identical.
+ForgeLoop Studio supports protocol version 1 and schema version 1 from the pinned ForgeLoop source revision recorded in `schemas/provenance.json` (ForgeLoop **1.6.1**, commit `f331100cff175a4ce990fa843b397fcf720b40f5`). The runtime artifact registry and `SUPPORTED_PROTOCOL.requiredSchemas` are contract-tested to remain identical.
 
 ## Compatibility matrix
 
 | Project / Build | Integration API | Result |
 |---|---|---|
-| Pinned ForgeLoop build (`1.6.0 @ 1eb8088...`) | Integration API v1 valid (`INTEGRATION_V1`) | Full tested Studio capability set: canonical task discovery, ownership, recovery, observability, durable actions, approvals, capability policy and trajectory projections |
-| Other protocol-v1 / Integration API v1 build | Required core capabilities present; optional capability absent | Core support is negotiated from required capabilities; optional panels (Diagnostics, Actions, Approvals, Policy, Trajectory) are enabled only when their individual capability contracts are advertised; affected feature unavailable |
+| Pinned ForgeLoop build (`1.6.1 @ f331100c...`) | Integration API v1 valid (`INTEGRATION_V1`) | Full tested Studio capability set: canonical task discovery, ownership, recovery, observability, durable actions, approvals, capability policy, trajectory projections and verification-execution provenance |
+| Other protocol-v1 / Integration API v1 build | Required core capabilities present; optional capability absent | Core support remains `INTEGRATION_V1`; optional panels and verification-execution provenance are enabled only when their individual capability contracts are advertised; the affected feature is unavailable |
 | Any protocol-v1 build | Missing CORE required resources or capability drift | Rejected with `INCOMPATIBLE` (fails closed; missing core resources, unsupported recovery contract, or broken executor parity) |
 | Protocol-v1 project | Integration API unavailable | Degraded mode (`ARTIFACT_ONLY`): visual reading + schema validation; canonical ownership and optional canonical projections are unavailable |
 | ForgeLoop 1.3 / legacy protocol 1 | Integration API not applicable | `ARTIFACT_ONLY`: visual reading + schema validation; canonical ownership is never inferred from raw artifacts or the legacy CLI |
@@ -22,6 +22,8 @@ Studio explicitly distinguishes core compatibility from additive optional featur
 - **Missing CORE required resources or contract drift &rarr; `INCOMPATIBLE`**: Core resources (`protocol/info`, `project/tasks`, `task/status`, `task/ownership`, `task/contract`, `task/continuity`), Integration API version mismatch, broken executor parity, or incomplete `taskClaimRecovery` fail closed to `INCOMPATIBLE`.
 - **Missing OPTIONAL resources or feature contracts &rarr; Affected feature unavailable**: Optional resources (`task/actions`, `task/action`, `task/approvals`, `task/metrics`, `task/evaluations`, `project/capability-policy`) or observability command restrictions degrade individual panels/views gracefully without compromising core protocol compatibility.
 
+ForgeLoop 1.6.1 adds persisted verification-execution isolation provenance. Studio validates these artifacts with the pinned v1.6.1 execution schema and surfaces the recorded execution kind, protocol project root, execution cwd and isolation metadata. Studio remains read-only and does not create or attest verification isolation environments. The additive `verificationExecutionIsolation` capability is not a core compatibility gate: when it is missing or incomplete, the project remains `INTEGRATION_V1` and isolation-specific capability presentation is unavailable.
+
 ## Authority boundary
 
 Semantic facts come exclusively from the bundled `@cassiomc1/forgeloop/integration` subpath:
@@ -29,6 +31,7 @@ Semantic facts come exclusively from the bundled `@cassiomc1/forgeloop/integrati
 - `protocol/info` — protocol/schema compatibility (`compatibility.schemaVersion`; there is no top-level `schemaVersion`);
 - `project/tasks` — canonical task discovery; in `INTEGRATION_V1` it drives semantic task existence: filesystem namespaces only locate artifacts and produce diagnostics (extra namespaces are never promoted into tasks, corrupt namespaces never become synthetic `RECEIVED` tasks, and an unavailable discovery fails closed instead of falling back to the filesystem);
 - `task/status`, `task/ownership`, `task/contract`, `task/continuity` — canonical per-task facts.
+- `executions/exec-*.json` — bounded read-only execution detail artifacts; Studio validates and displays persisted verification provenance, including recorded isolation metadata when available, without deriving sandbox semantics.
 - `history`, `trace`, `reflect`, `inspect` — canonical read-only observability projections; Studio does not recompute their semantics.
 - `task/actions`, `task/action`, `task/approvals`, `task/metrics`, `task/evaluations`, `project/capability-policy` — canonical read-only action, approval, policy and trajectory projections.
 
@@ -44,9 +47,9 @@ Refresh the trusted schema set only from a controlled ForgeLoop checkout:
 
 ```bash
 node scripts/generate-schema-provenance.mjs \
-  --source ../ForgeLoop \
-  --commit 1eb8088716e279faa746b11e3077de1fef570b69 \
-  --package-version 1.6.0
+  --source ../forgeloop \
+  --commit f331100cff175a4ce990fa843b397fcf720b40f5 \
+  --package-version 1.6.1
 npm run protocol:schemas:verify
 ```
 

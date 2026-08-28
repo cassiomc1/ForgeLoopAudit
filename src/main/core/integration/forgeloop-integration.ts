@@ -6,6 +6,7 @@ import type {
   ForgeLoopCapabilitiesSummary,
   ForgeLoopReadOnlyResult,
   ForgeLoopResourceReadOptions,
+  ForgeLoopVerificationIsolationMode,
 } from './types';
 
 export * from './types';
@@ -49,6 +50,17 @@ const REQUIRED_RESOURCES = [
   'task/contract',
   'task/continuity',
 ] as const;
+
+const KNOWN_VERIFICATION_ISOLATION_MODES: ForgeLoopVerificationIsolationMode[] = [
+  'NATIVE_PROJECT',
+  'PROJECT_ISOLATED',
+  'SYSTEM_ISOLATED',
+];
+
+function isKnownIsolationMode(value: unknown): value is ForgeLoopVerificationIsolationMode {
+  return typeof value === 'string'
+    && KNOWN_VERIFICATION_ISOLATION_MODES.includes(value as ForgeLoopVerificationIsolationMode);
+}
 
 export interface ForgeLoopIntegrationAdapter {
   getPackageVersion(): string;
@@ -104,6 +116,13 @@ interface ForgeLoopIntegrationModule {
         readOnlyMetrics: boolean;
         projectLocalReference: boolean;
       };
+      verificationExecutionIsolation?: {
+        version: number;
+        supported: boolean;
+        adapter: boolean;
+        modes: unknown[];
+        protocolProjectRootSeparateFromExecutionCwd: boolean;
+      };
     };
     commands: Array<Record<string, unknown>>;
     resources: Array<{ name: string }>;
@@ -148,6 +167,7 @@ function buildAdapter(fl: ForgeLoopIntegrationModule): ForgeLoopIntegrationAdapt
       const raw = fl.getForgeLoopCapabilities({ packageVersion });
       const durableActions = raw.features.durableActions;
       const trajectoryEvaluation = raw.features.trajectoryEvaluation;
+      const verificationExecutionIsolation = raw.features.verificationExecutionIsolation;
       return {
         packageVersion,
         protocolVersion: raw.protocolVersion,
@@ -172,6 +192,18 @@ function buildAdapter(fl: ForgeLoopIntegrationModule): ForgeLoopIntegrationAdapt
               version: trajectoryEvaluation.version,
               readOnlyMetrics: trajectoryEvaluation.readOnlyMetrics === true,
               projectLocalReference: trajectoryEvaluation.projectLocalReference === true,
+            },
+          } : {}),
+          ...(verificationExecutionIsolation ? {
+            verificationExecutionIsolation: {
+              version: verificationExecutionIsolation.version,
+              supported: verificationExecutionIsolation.supported === true,
+              adapter: verificationExecutionIsolation.adapter === true,
+              modes: Array.isArray(verificationExecutionIsolation.modes)
+                ? verificationExecutionIsolation.modes.filter(isKnownIsolationMode)
+                : [],
+              protocolProjectRootSeparateFromExecutionCwd:
+                verificationExecutionIsolation.protocolProjectRootSeparateFromExecutionCwd === true,
             },
           } : {}),
         },

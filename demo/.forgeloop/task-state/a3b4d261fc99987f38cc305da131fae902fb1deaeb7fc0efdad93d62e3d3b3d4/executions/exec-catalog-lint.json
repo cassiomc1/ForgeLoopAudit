@@ -7,12 +7,22 @@
   "requirement": "Lint passes on changed files",
   "verificationCycle": 1,
   "kind": "COMMAND_EXECUTION",
+  "executionKind": "VERIFICATION",
   "argv": [
     "npx",
     "eslint",
     "src/catalog.ts"
   ],
+  "protocolProjectRoot": "/workspace/forgeshop",
   "cwd": "/workspace/forgeshop",
+  "executionIsolation": "NATIVE_PROJECT",
+  "isolation": {
+    "mode": "NATIVE_PROJECT",
+    "isolated": false,
+    "liveProjectWritable": true,
+    "networkPolicy": "INHERITED",
+    "environmentPolicy": "INHERITED"
+  },
   "resolution": {
     "resolutionMode": "direct",
     "mayInstall": false,

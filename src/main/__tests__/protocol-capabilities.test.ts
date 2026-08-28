@@ -48,7 +48,7 @@ function validProtocolInfo(overrides: Record<string, unknown> = {}) {
 function currentCapabilities(overrides: Record<string, unknown> = {}): ForgeLoopCapabilitiesSummary {
   return {
     ...validCapabilities({
-    packageVersion: '1.6.0',
+    packageVersion: '1.6.1',
     features: {
       taskClaimRecovery: {
         version: 1,
@@ -65,6 +65,13 @@ function currentCapabilities(overrides: Record<string, unknown> = {}): ForgeLoop
         version: 1,
         readOnlyMetrics: true,
         projectLocalReference: true,
+      },
+      verificationExecutionIsolation: {
+        version: 1,
+        supported: true,
+        adapter: true,
+        modes: ['NATIVE_PROJECT', 'PROJECT_ISOLATED', 'SYSTEM_ISOLATED'],
+        protocolProjectRootSeparateFromExecutionCwd: true,
       },
     },
     resources: [
@@ -147,7 +154,57 @@ describe('core/protocol/protocol-capabilities', () => {
         capabilityPolicy: true,
         trajectoryMetrics: true,
         trajectoryEvaluations: true,
+        verificationExecutionIsolation: true,
       });
+    });
+
+    it('enables the additive verification execution isolation feature for a complete v1 contract', () => {
+      const result = negotiateCompatibilityMode({
+        protocolInfo: normalizeCanonicalProtocolInfo(validProtocolInfo({ packageVersion: '1.6.1' })),
+        capabilities: currentCapabilities(),
+      });
+
+      expect(result.mode).toBe('INTEGRATION_V1');
+      expect(result.featureSupport.verificationExecutionIsolation).toBe(true);
+    });
+
+    it('keeps protocol-v1 compatible when the optional isolation capability is absent', () => {
+      const capabilities = currentCapabilities();
+      const features = { ...capabilities.features };
+      Reflect.deleteProperty(features, 'verificationExecutionIsolation');
+      const result = negotiateCompatibilityMode({
+        protocolInfo: normalizeCanonicalProtocolInfo(validProtocolInfo()),
+        capabilities: { ...capabilities, features },
+      });
+
+      expect(result.mode).toBe('INTEGRATION_V1');
+      expect(result.featureSupport.verificationExecutionIsolation).toBe(false);
+    });
+
+    it.each([
+      ['unsupported version', { version: 2 }],
+      ['missing NATIVE_PROJECT mode', { modes: ['PROJECT_ISOLATED', 'SYSTEM_ISOLATED'] }],
+      ['missing PROJECT_ISOLATED mode', { modes: ['NATIVE_PROJECT', 'SYSTEM_ISOLATED'] }],
+      ['missing SYSTEM_ISOLATED mode', { modes: ['NATIVE_PROJECT', 'PROJECT_ISOLATED'] }],
+      ['supported false', { supported: false }],
+      ['adapter false', { adapter: false }],
+      ['root/cwd separation absent', { protocolProjectRootSeparateFromExecutionCwd: false }],
+    ])('degrades optional isolation support without changing INTEGRATION_V1 for %s', (_name, overrides) => {
+      const current = currentCapabilities();
+      const feature = {
+        ...current.features.verificationExecutionIsolation,
+        ...overrides,
+      } as NonNullable<ForgeLoopCapabilitiesSummary['features']['verificationExecutionIsolation']>;
+      const result = negotiateCompatibilityMode({
+        protocolInfo: normalizeCanonicalProtocolInfo(validProtocolInfo()),
+        capabilities: {
+          ...current,
+          features: { ...current.features, verificationExecutionIsolation: feature },
+        },
+      });
+
+      expect(result.mode).toBe('INTEGRATION_V1');
+      expect(result.featureSupport.verificationExecutionIsolation).toBe(false);
     });
 
     it('degrades optional features independently when their advertisements are absent', () => {

@@ -7,13 +7,23 @@
   "requirement": "Checkout integration tests pass",
   "verificationCycle": 1,
   "kind": "COMMAND_EXECUTION",
+  "executionKind": "VERIFICATION",
   "argv": [
     "npx",
     "vitest",
     "run",
     "tests/checkout.test.ts"
   ],
+  "protocolProjectRoot": "/workspace/forgeshop",
   "cwd": "/workspace/forgeshop",
+  "executionIsolation": "NATIVE_PROJECT",
+  "isolation": {
+    "mode": "NATIVE_PROJECT",
+    "isolated": false,
+    "liveProjectWritable": true,
+    "networkPolicy": "INHERITED",
+    "environmentPolicy": "INHERITED"
+  },
   "resolution": {
     "resolutionMode": "direct",
     "mayInstall": false,
