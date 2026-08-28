@@ -8,13 +8,13 @@ ForgeLoop Studio is a local-first desktop companion for ForgeLoop. Open a ForgeL
 
 | Overview | Tasks | Lifecycle flow |
 |---|---|---|
-| <img src="screen/Captura%20de%20Tela%202026-08-27%20at%2007.38.45.png" alt="Project overview" width="420"> | <img src="screen/Captura%20de%20Tela%202026-08-27%20at%2007.38.51.png" alt="Tasks list" width="420"> | <img src="screen/Captura%20de%20Tela%202026-08-27%20at%2007.38.57.png" alt="Lifecycle flow" width="420"> |
+| <img src="screen/overview.png" alt="Project overview" width="420"> | <img src="screen/tasks.png" alt="Tasks list" width="420"> | <img src="screen/lifecycle-flow.png" alt="Lifecycle flow" width="420"> |
 | Contract inspector | Evidence matrix | Event ledger |
-| <img src="screen/Captura%20de%20Tela%202026-08-27%20at%2007.39.02.png" alt="Contract inspector" width="420"> | <img src="screen/Captura%20de%20Tela%202026-08-27%20at%2007.39.08.png" alt="Evidence matrix" width="420"> | <img src="screen/Captura%20de%20Tela%202026-08-27%20at%2007.39.15.png" alt="Event ledger" width="420"> |
+| <img src="screen/contract-inspector.png" alt="Contract inspector" width="420"> | <img src="screen/evidence-matrix.png" alt="Evidence matrix" width="420"> | <img src="screen/event-ledger.png" alt="Event ledger" width="420"> |
 | Continuity | Diagnostics | Actions |
-| <img src="screen/Captura%20de%20Tela%202026-08-27%20at%2007.39.28.png" alt="Continuity view" width="420"> | <img src="screen/Captura%20de%20Tela%202026-08-27%20at%2007.39.33.png" alt="Diagnostics view" width="420"> | <img src="screen/Captura%20de%20Tela%202026-08-27%20at%2007.39.37.png" alt="Actions view" width="420"> |
+| <img src="screen/continuity.png" alt="Continuity view" width="420"> | <img src="screen/diagnostics.png" alt="Diagnostics view" width="420"> | <img src="screen/actions.png" alt="Actions view" width="420"> |
 | Policy | Settings | |
-| <img src="screen/Captura%20de%20Tela%202026-08-27%20at%2007.39.48.png" alt="Policy view" width="420"> | <img src="screen/Captura%20de%20Tela%202026-08-27%20at%2007.39.53.png" alt="Settings view" width="420"> | |
+| <img src="screen/policy.png" alt="Policy view" width="420"> | <img src="screen/settings.png" alt="Settings view" width="420"> | |
 
 ## Project selection
 
