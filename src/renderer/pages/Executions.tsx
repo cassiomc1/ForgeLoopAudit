@@ -4,6 +4,12 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingState } from '../components/ui/LoadingState';
 import { cn } from '../lib/utils';
 import { Terminal, ChevronDown, ChevronRight } from 'lucide-react';
+import {
+  executionKindLabel,
+  executionProvenanceDetails,
+  isolationModeLabel,
+  NOT_RECORDED_EXECUTION_METADATA,
+} from './execution-display';
 
 interface ExecutionsProps {
   snapshot: ProjectSnapshot;
@@ -52,6 +58,9 @@ export function Executions({ snapshot, selectedTaskId, onSelectedTaskChange }: E
           <p className="text-sm text-forge-text-muted mt-1">
             Read-only command execution provenance from current ForgeLoop artifacts
           </p>
+          <p className="text-xs text-forge-text-muted mt-2 max-w-2xl">
+            Isolation information is persisted by ForgeLoop. Studio displays the recorded provenance and does not create or verify execution sandboxes itself.
+          </p>
         </div>
         <select
           className="input w-56"
@@ -90,11 +99,16 @@ export function Executions({ snapshot, selectedTaskId, onSelectedTaskChange }: E
             <EmptyState title="No executions" description={`No valid exec-*.json provenance found for ${effectiveTask.taskId}.`} />
           ) : (
             <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-10 divide-y divide-forge-border-subtle/50">
-              {page.executions.map((execution) => (
+              {page.executions.map((execution) => {
+                const kind = executionKindLabel(execution);
+                const isolationMode = isolationModeLabel(execution);
+                const provenanceDetails = executionProvenanceDetails(execution);
+                return (
                 <div key={execution.executionId}>
                   <button
                     className="w-full px-4 py-3 flex items-center gap-4 hover:bg-forge-hover-surface transition-colors text-left"
                     onClick={() => setExpandedId(expandedId === execution.executionId ? null : execution.executionId)}
+                    aria-expanded={expandedId === execution.executionId}
                   >
                     {expandedId === execution.executionId
                       ? <ChevronDown className="w-4 h-4 text-forge-text-muted shrink-0" />
@@ -104,6 +118,16 @@ export function Executions({ snapshot, selectedTaskId, onSelectedTaskChange }: E
                       {execution.executionId}
                     </span>
                     <span className="text-xs text-forge-text-secondary truncate flex-1">{execution.argv.join(' ')}</span>
+                    {kind !== NOT_RECORDED_EXECUTION_METADATA && (
+                      <span className="hidden md:inline-flex items-center rounded-4 border border-forge-border-subtle bg-forge-secondary-surface px-2 py-0.5 text-[10px] font-semibold tracking-wide text-forge-text-secondary">
+                        {kind}
+                      </span>
+                    )}
+                    {isolationMode !== NOT_RECORDED_EXECUTION_METADATA && (
+                      <span className="hidden lg:inline-flex items-center rounded-4 border border-forge-border-subtle bg-forge-secondary-surface px-2 py-0.5 text-[10px] font-semibold tracking-wide text-forge-text-secondary">
+                        {isolationMode}
+                      </span>
+                    )}
                     <span className={cn('text-xs font-semibold', execution.status === 'passed' ? 'text-forge-success' : 'text-forge-danger')}>
                       {execution.status.toUpperCase()}
                     </span>
@@ -119,7 +143,14 @@ export function Executions({ snapshot, selectedTaskId, onSelectedTaskChange }: E
                         <p><span className="text-forge-text-muted">Cycle:</span> <span className="font-mono">{execution.verificationCycle}</span></p>
                         <p><span className="text-forge-text-muted">Started:</span> <span className="font-mono">{execution.startedAt}</span></p>
                         <p><span className="text-forge-text-muted">Finished:</span> <span className="font-mono">{execution.finishedAt}</span></p>
-                        <p className="col-span-2"><span className="text-forge-text-muted">cwd:</span> <span className="font-mono break-all">{execution.cwd}</span></p>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                        {provenanceDetails.map((detail) => (
+                          <p key={detail.label} className="break-words">
+                            <span className="text-forge-text-muted">{detail.label}:</span>{' '}
+                            <span className="font-mono break-all">{detail.value}</span>
+                          </p>
+                        ))}
                       </div>
                       <button
                         type="button"
@@ -136,7 +167,8 @@ export function Executions({ snapshot, selectedTaskId, onSelectedTaskChange }: E
                     </div>
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </>
