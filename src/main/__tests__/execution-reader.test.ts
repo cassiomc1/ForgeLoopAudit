@@ -24,6 +24,22 @@ const VALID_EXECUTION = {
   exitCode: 0,
 };
 
+const V161_EXECUTION = {
+  ...VALID_EXECUTION,
+  executionId: 'exec-isolated-1',
+  executionKind: 'VERIFICATION',
+  protocolProjectRoot: '/repo',
+  cwd: '/repo/.forgeloop-isolation/worktree',
+  executionIsolation: 'PROJECT_ISOLATED',
+  isolation: {
+    mode: 'PROJECT_ISOLATED',
+    isolated: true,
+    liveProjectWritable: false,
+    networkPolicy: 'INHERITED',
+    environmentPolicy: 'SANITIZED',
+  },
+};
+
 describe('core/executions/execution-reader', () => {
   let root: string;
 
@@ -41,7 +57,7 @@ describe('core/executions/execution-reader', () => {
     return createExecutionReader(new PathBoundary(root), new SchemaValidator('schemas'));
   }
 
-  it('reads valid executions in deterministic order', () => {
+  it('accepts a valid legacy protocol-v1 execution without isolation metadata', () => {
     const dir = join(root, '.forgeloop', 'task-state', 'a'.repeat(64), 'executions');
     for (const id of ['exec-c', 'exec-a', 'exec-b']) {
       writeFileSync(join(dir, `${id}.json`), JSON.stringify({ ...VALID_EXECUTION, executionId: id }));
@@ -51,12 +67,44 @@ describe('core/executions/execution-reader', () => {
     expect(page.invalidCount).toBe(0);
   });
 
+  it('accepts a valid ForgeLoop 1.6.1 execution and preserves isolation metadata', () => {
+    const dir = join(root, '.forgeloop', 'task-state', 'a'.repeat(64), 'executions');
+    writeFileSync(join(dir, 'exec-isolated-1.json'), JSON.stringify(V161_EXECUTION));
+
+    const page = reader().readExecutions('a'.repeat(64));
+
+    expect(page.invalidCount).toBe(0);
+    expect(page.executions).toHaveLength(1);
+    expect(page.executions[0]).toMatchObject({
+      executionKind: 'VERIFICATION',
+      protocolProjectRoot: '/repo',
+      cwd: '/repo/.forgeloop-isolation/worktree',
+      executionIsolation: 'PROJECT_ISOLATED',
+      isolation: V161_EXECUTION.isolation,
+    });
+  });
+
   it('surfaces invalid executions without dropping the valid ones', () => {
     const dir = join(root, '.forgeloop', 'task-state', 'a'.repeat(64), 'executions');
     writeFileSync(join(dir, 'exec-good.json'), JSON.stringify(VALID_EXECUTION));
     writeFileSync(join(dir, 'exec-bad.json'), JSON.stringify({ ...VALID_EXECUTION, status: 'meh' }));
     const page = reader().readExecutions('a'.repeat(64));
     expect(page.executions).toHaveLength(1);
+    expect(page.invalidCount).toBe(1);
+  });
+
+  it('withholds unsupported top-level properties while keeping valid siblings visible', () => {
+    const dir = join(root, '.forgeloop', 'task-state', 'a'.repeat(64), 'executions');
+    writeFileSync(join(dir, 'exec-good.json'), JSON.stringify(VALID_EXECUTION));
+    writeFileSync(join(dir, 'exec-unknown.json'), JSON.stringify({
+      ...VALID_EXECUTION,
+      executionId: 'exec-unknown',
+      unsupportedProperty: true,
+    }));
+
+    const page = reader().readExecutions('a'.repeat(64));
+
+    expect(page.executions.map((entry) => entry.executionId)).toEqual(['exec-good']);
     expect(page.invalidCount).toBe(1);
   });
 
