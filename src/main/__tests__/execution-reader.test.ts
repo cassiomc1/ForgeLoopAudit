@@ -40,6 +40,22 @@ const V161_EXECUTION = {
   },
 };
 
+const NATIVE_EXECUTION = {
+  ...VALID_EXECUTION,
+  executionId: 'exec-native-1',
+  executionKind: 'VERIFICATION',
+  protocolProjectRoot: '/repo',
+  cwd: '/repo',
+  executionIsolation: 'NATIVE_PROJECT',
+  isolation: {
+    mode: 'NATIVE_PROJECT',
+    isolated: false,
+    liveProjectWritable: true,
+    networkPolicy: 'INHERITED',
+    environmentPolicy: 'INHERITED',
+  },
+};
+
 describe('core/executions/execution-reader', () => {
   let root: string;
 
@@ -81,6 +97,23 @@ describe('core/executions/execution-reader', () => {
       cwd: '/repo/.forgeloop-isolation/worktree',
       executionIsolation: 'PROJECT_ISOLATED',
       isolation: V161_EXECUTION.isolation,
+    });
+  });
+
+  it('accepts a native ForgeLoop 1.6.1 execution and preserves its recorded boundary', () => {
+    const dir = join(root, '.forgeloop', 'task-state', 'a'.repeat(64), 'executions');
+    writeFileSync(join(dir, 'exec-native-1.json'), JSON.stringify(NATIVE_EXECUTION));
+
+    const page = reader().readExecutions('a'.repeat(64));
+
+    expect(page.invalidCount).toBe(0);
+    expect(page.executions).toHaveLength(1);
+    expect(page.executions[0]).toMatchObject({
+      executionKind: 'VERIFICATION',
+      protocolProjectRoot: '/repo',
+      cwd: '/repo',
+      executionIsolation: 'NATIVE_PROJECT',
+      isolation: NATIVE_EXECUTION.isolation,
     });
   });
 

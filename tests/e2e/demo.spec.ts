@@ -39,6 +39,10 @@ test('bundled demo project renders every Studio surface', async () => {
     await window.getByRole('button', { name: /exec-catalog-unit-tests/ }).click();
     await expect(window.locator('body')).toContainText('Protocol project root');
     await expect(window.locator('body')).toContainText('Environment policy');
+    await expect(window.getByRole('button', { name: /exec-catalog-typecheck/ })).toBeVisible();
+    await expect(window.locator('body')).toContainText('NATIVE_PROJECT');
+    await window.getByRole('button', { name: /exec-catalog-typecheck/ }).click();
+    await expect(window.locator('body')).toContainText('Execution cwd');
 
     await window.getByLabel('Main navigation').getByRole('button', { name: 'Continuity', exact: true }).click();
     await expect(window.locator('h1').filter({ hasText: 'Continuity' })).toBeVisible({ timeout: 5000 });
