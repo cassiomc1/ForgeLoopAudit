@@ -86,7 +86,7 @@ describe('core/executions/execution-reader', () => {
 
   it('surfaces invalid executions without dropping the valid ones', () => {
     const dir = join(root, '.forgeloop', 'task-state', 'a'.repeat(64), 'executions');
-    writeFileSync(join(dir, 'exec-good.json'), JSON.stringify(VALID_EXECUTION));
+    writeFileSync(join(dir, 'exec-good.json'), JSON.stringify({ ...VALID_EXECUTION, executionId: 'exec-good' }));
     writeFileSync(join(dir, 'exec-bad.json'), JSON.stringify({ ...VALID_EXECUTION, status: 'meh' }));
     const page = reader().readExecutions('a'.repeat(64));
     expect(page.executions).toHaveLength(1);
@@ -95,7 +95,7 @@ describe('core/executions/execution-reader', () => {
 
   it('withholds unsupported top-level properties while keeping valid siblings visible', () => {
     const dir = join(root, '.forgeloop', 'task-state', 'a'.repeat(64), 'executions');
-    writeFileSync(join(dir, 'exec-good.json'), JSON.stringify(VALID_EXECUTION));
+    writeFileSync(join(dir, 'exec-good.json'), JSON.stringify({ ...VALID_EXECUTION, executionId: 'exec-good' }));
     writeFileSync(join(dir, 'exec-unknown.json'), JSON.stringify({
       ...VALID_EXECUTION,
       executionId: 'exec-unknown',
