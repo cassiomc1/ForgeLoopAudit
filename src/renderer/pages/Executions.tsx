@@ -6,8 +6,10 @@ import { cn } from '../lib/utils';
 import { Terminal, ChevronDown, ChevronRight } from 'lucide-react';
 import {
   executionKindLabel,
+  executionIsolationDetails,
   executionProvenanceDetails,
   isolationModeLabel,
+  isVerificationExecutionIsolationAvailable,
   NOT_RECORDED_EXECUTION_METADATA,
 } from './execution-display';
 
@@ -25,6 +27,7 @@ export function Executions({ snapshot, selectedTaskId, onSelectedTaskChange }: E
   const [rawJson, setRawJson] = useState<string | null>(null);
 
   const effectiveTask = snapshot.tasks.find((t) => t.taskId === selectedTaskId) || null;
+  const isolationFeatureAvailable = isVerificationExecutionIsolationAvailable(snapshot.protocol.featureSupport);
 
   const loadExecutions = useCallback(async () => {
     if (!effectiveTask) return;
@@ -61,6 +64,11 @@ export function Executions({ snapshot, selectedTaskId, onSelectedTaskChange }: E
           <p className="text-xs text-forge-text-muted mt-2 max-w-2xl">
             Isolation information is persisted by ForgeLoop. Studio displays the recorded provenance and does not create or verify execution sandboxes itself.
           </p>
+          {!isolationFeatureAvailable && (
+            <p className="text-xs text-forge-text-muted mt-2 max-w-2xl" role="status">
+              Verification isolation capability is unavailable for this ForgeLoop runtime. Persisted execution provenance remains available in raw form.
+            </p>
+          )}
         </div>
         <select
           className="input w-56"
@@ -103,6 +111,7 @@ export function Executions({ snapshot, selectedTaskId, onSelectedTaskChange }: E
                 const kind = executionKindLabel(execution);
                 const isolationMode = isolationModeLabel(execution);
                 const provenanceDetails = executionProvenanceDetails(execution);
+                const isolationDetails = executionIsolationDetails(execution, isolationFeatureAvailable);
                 return (
                 <div key={execution.executionId}>
                   <button
@@ -123,7 +132,7 @@ export function Executions({ snapshot, selectedTaskId, onSelectedTaskChange }: E
                         {kind}
                       </span>
                     )}
-                    {isolationMode !== NOT_RECORDED_EXECUTION_METADATA && (
+                    {isolationFeatureAvailable && isolationMode !== NOT_RECORDED_EXECUTION_METADATA && (
                       <span className="hidden lg:inline-flex items-center rounded-4 border border-forge-border-subtle bg-forge-secondary-surface px-2 py-0.5 text-[10px] font-semibold tracking-wide text-forge-text-secondary">
                         {isolationMode}
                       </span>
@@ -146,6 +155,12 @@ export function Executions({ snapshot, selectedTaskId, onSelectedTaskChange }: E
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
                         {provenanceDetails.map((detail) => (
+                          <p key={detail.label} className="break-words">
+                            <span className="text-forge-text-muted">{detail.label}:</span>{' '}
+                            <span className="font-mono break-all">{detail.value}</span>
+                          </p>
+                        ))}
+                        {isolationDetails.map((detail) => (
                           <p key={detail.label} className="break-words">
                             <span className="text-forge-text-muted">{detail.label}:</span>{' '}
                             <span className="font-mono break-all">{detail.value}</span>
