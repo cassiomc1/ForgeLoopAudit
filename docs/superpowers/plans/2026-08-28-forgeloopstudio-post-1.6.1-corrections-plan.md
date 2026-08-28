@@ -26,37 +26,38 @@
 - Modify: `src/renderer/pages/execution-display.ts`
 - Modify: `src/renderer/pages/execution-display.test.ts`
 - Modify: `src/renderer/pages/Executions.tsx`
+- Add: `src/renderer/pages/Executions.test.ts`
 - Modify: `tests/e2e/demo.spec.ts` only if the available-capability flow needs an assertion update
 
 **Interfaces:**
 - Consumes: `ExecutionRecord` persisted provenance and `ProjectSnapshot.protocol.featureSupport`.
 - Produces: generic provenance rows that remain available for every valid artifact and isolation rows that require exact negotiated support.
 
-- [ ] **Step 1: Add failing display-helper tests**
+- [x] **Step 1: Add failing display-helper tests**
 
-Test three observable contracts: complete capability returns all isolation rows, false/absent capability returns no isolation rows while generic rows remain available, and a legacy record never receives guessed execution kind or isolation mode.
+Test four observable contracts: complete capability returns all isolation rows, false/absent capability returns no isolation rows while generic rows remain available, the page shows the neutral message when support is unavailable, and a legacy record never receives guessed execution kind or isolation mode.
 
-- [ ] **Step 2: Run the focused helper test and verify the expected failure**
+- [x] **Step 2: Run the focused helper test and verify the expected failure**
 
 Run: `npm test -- --run src/renderer/pages/execution-display.test.ts`
 
 Expected: FAIL because the helper does not yet separate generic provenance from isolation presentation.
 
-- [ ] **Step 3: Implement the minimal pure helper split**
+- [x] **Step 3: Implement the minimal pure helper split**
 
 Keep `executionProvenanceDetails(execution)` for execution kind, protocol project root, and execution cwd. Add an `executionIsolationDetails(execution)` helper for isolation mode, isolated, live-project-writable, network policy, and environment policy. Use persisted values and the existing explicit absent label only; do not infer values.
 
-- [ ] **Step 4: Run the focused helper test and verify it passes**
+- [x] **Step 4: Run the focused helper test and verify it passes**
 
 Run: `npm test -- --run src/renderer/pages/execution-display.test.ts`
 
 Expected: PASS with both negotiated and degraded cases covered.
 
-- [ ] **Step 5: Gate the React page with one strict capability boolean**
+- [x] **Step 5: Gate the React page with one strict capability boolean**
 
 Derive `snapshot.protocol.featureSupport?.verificationExecutionIsolation === true` once. Always render generic execution data and raw JSON. Render isolation badges/details only when available, and otherwise show the neutral unavailability message from the spec.
 
-- [ ] **Step 6: Run renderer typecheck/build and the existing demo E2E contract**
+- [x] **Step 6: Run renderer typecheck/build and the existing demo E2E contract**
 
 Run: `npm run typecheck`
 
@@ -66,11 +67,11 @@ Run: `npm run test:e2e -- tests/e2e/demo.spec.ts`
 
 Expected: PASS; the demo continues to show persisted `PROJECT_ISOLATED` and `NATIVE_PROJECT` values when its capability is negotiated.
 
-- [ ] **Step 7: Commit the UI correction**
+- [x] **Step 7: Commit the UI correction**
 
 Run: `git add src/renderer/pages/Executions.tsx src/renderer/pages/execution-display.ts src/renderer/pages/execution-display.test.ts tests/e2e/demo.spec.ts && git commit -m "fix(executions): gate isolation presentation by capability"`
 
-### Task 2: Correct current RC wording
+### Task 2: Correct current release-candidate wording
 
 **Files:**
 - Modify: `README.md`
@@ -79,23 +80,23 @@ Run: `git add src/renderer/pages/Executions.tsx src/renderer/pages/execution-dis
 - Consumes: package version `0.1.0-rc.6` and current release-policy wording.
 - Produces: durable current-policy prose without rewriting historical release references.
 
-- [ ] **Step 1: Replace only the current RC4 policy sentence**
+- [x] **Step 1: Replace only the stale current release-candidate policy sentence**
 
 Use: `For the current release-candidate policy, Linux, macOS and Windows builds are unsigned preview artifacts.` Keep any historical RC references outside the current-policy paragraph unchanged.
 
-- [ ] **Step 2: Verify documentation and whitespace**
+- [x] **Step 2: Verify documentation and whitespace**
 
-Run: `rg -n "RC4|rc\\.4" README.md docs`
+Run: `rg -n "release-candidate policy|unsigned preview" README.md`
 
 Run: `npm run docs:check`
 
 Run: `git diff --check`
 
-Expected: no current README RC4 wording, documentation conformance passes, and no whitespace errors.
+Expected: the current README policy uses durable wording, documentation conformance passes, and no whitespace errors.
 
-- [ ] **Step 3: Commit the wording correction**
+- [x] **Step 3: Commit the wording correction**
 
-Run: `git add README.md && git commit -m "docs: remove stale current RC4 policy wording"`
+Run: `git add README.md && git commit -m "docs: remove stale current release-candidate policy wording"`
 
 ### Task 3: Record verification evidence
 
@@ -106,15 +107,15 @@ Run: `git add README.md && git commit -m "docs: remove stale current RC4 policy 
 - Consumes: final Studio commit, ForgeLoop upstream identity, vendored archive digest, schema provenance identity, exact local command results, and environment details.
 - Produces: one compact auditable record with explicit exit status for every requested command and explicit skipped-gate reasons.
 
-- [ ] **Step 1: Gather immutable identities and runtime details**
+- [x] **Step 1: Gather immutable identities and runtime details**
 
 Record `git rev-parse HEAD`, the upstream commit from the supplied requirements, `shasum -a 256 vendor/cassiomc1-forgeloop-1.6.1-f331100.tgz`, the relevant fields from `schemas/provenance.json`, `node --version`, `npm --version`, and `uname -a`.
 
-- [ ] **Step 2: Run the requested verification matrix sequentially**
+- [x] **Step 2: Run the requested verification matrix sequentially**
 
 Run each command from the correction document and preserve its actual exit status: `npm run protocol:schemas:verify`, `npm run demo:verify`, `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run docs:check`, `npm run test:release-contracts`, `npm run test:e2e`, `npm run test:electron-smoke`, `npm run test:packaged-smoke`, `npm run verify:full`, and `git diff --check`.
 
-- [ ] **Step 3: Write the dated record from captured results**
+- [x] **Step 3: Write the dated record from captured results**
 
 Include the exact command strings, exit status, environment, identities, and any gate that could not run because of local platform/tooling constraints. Do not claim a skipped gate passed.
 

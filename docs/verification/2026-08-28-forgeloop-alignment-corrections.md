@@ -5,7 +5,9 @@
 
 ## Source identity
 
-- Studio code commit verified: `69e284a7ff04a8b725f89ac77b73295b52a8fbce`
+- Studio implementation commits verified: `69e284a7ff04a8b725f89ac77b73295b52a8fbce` (capability-gated UI) and `e9f89df` (fail-closed helper plus unavailable-capability presentation coverage)
+- Studio verification record introduced in commit: `5fef9c08410c05d653db8f405145be3c9d19cae5`
+- Studio code head for the reviewed correction: `e9f89df`
 - Studio base commit: `3059187dd8ca63e229add17cecdf06e6575c2757`
 - ForgeLoop package: `1.6.1`
 - ForgeLoop upstream commit: `f331100cff175a4ce990fa843b397fcf720b40f5`
