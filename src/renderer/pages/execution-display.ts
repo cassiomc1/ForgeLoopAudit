@@ -1,4 +1,4 @@
-import type { ExecutionRecord } from '@shared/domain';
+import type { ExecutionRecord, ForgeLoopFeatureSupport } from '@shared/domain';
 
 export const NOT_RECORDED_EXECUTION_METADATA = 'Not recorded by this artifact';
 
@@ -22,15 +22,31 @@ export function isolationModeLabel(execution: ExecutionRecord): string {
 }
 
 export function executionProvenanceDetails(execution: ExecutionRecord): ExecutionProvenanceDetail[] {
-  const isolation = execution.isolation;
   return [
     { label: 'Execution kind', value: executionKindLabel(execution) },
     { label: 'Protocol project root', value: recordedValue(execution.protocolProjectRoot) },
     { label: 'Execution cwd', value: recordedValue(execution.cwd) },
+  ];
+}
+
+export function executionIsolationDetails(
+  execution: ExecutionRecord,
+  featureAvailable: boolean,
+): ExecutionProvenanceDetail[] {
+  if (featureAvailable !== true) return [];
+
+  const isolation = execution.isolation;
+  return [
     { label: 'Isolation mode', value: isolationModeLabel(execution) },
     { label: 'Isolated', value: isolation ? (isolation.isolated ? 'Yes' : 'No') : NOT_RECORDED_EXECUTION_METADATA },
     { label: 'Live project writable', value: isolation ? (isolation.liveProjectWritable ? 'Yes' : 'No') : NOT_RECORDED_EXECUTION_METADATA },
     { label: 'Network policy', value: recordedValue(isolation?.networkPolicy) },
     { label: 'Environment policy', value: recordedValue(isolation?.environmentPolicy) },
   ];
+}
+
+export function isVerificationExecutionIsolationAvailable(
+  featureSupport?: Pick<ForgeLoopFeatureSupport, 'verificationExecutionIsolation'>,
+): boolean {
+  return featureSupport?.verificationExecutionIsolation === true;
 }

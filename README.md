@@ -32,7 +32,7 @@ common dependency/build folders are not followed during discovery.
 
 Release candidate — the read-only Studio runtime, trusted protocol validation, functional fixture E2E and multi-platform release staging are implemented. The current development target is `v0.1.0-rc.6`, aligned to the vendored ForgeLoop `1.6.1` Integration API v1 (canonical ownership, durable recovery, observability, durable actions, approvals, capability policy, trajectory metrics, evaluations and verification-execution provenance). Earlier RCs remain immutable at their tagged commits.
 
-For the current RC4 policy, Linux, macOS and Windows builds are unsigned preview artifacts. Validate the published checksums and expect normal operating-system security warnings; signed/notarized distribution is not part of this release candidate.
+For the current release-candidate policy, Linux, macOS and Windows builds are unsigned preview artifacts. Validate the published checksums and expect normal operating-system security warnings; signed/notarized distribution is not part of this release candidate.
 
 ## Stack
 

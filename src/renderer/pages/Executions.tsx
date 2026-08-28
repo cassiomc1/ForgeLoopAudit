@@ -1,13 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { ProjectSnapshot, ExecutionPage } from '@shared/domain';
+import type { ProjectSnapshot, ExecutionPage, ExecutionRecord } from '@shared/domain';
 import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingState } from '../components/ui/LoadingState';
 import { cn } from '../lib/utils';
 import { Terminal, ChevronDown, ChevronRight } from 'lucide-react';
 import {
   executionKindLabel,
+  executionIsolationDetails,
   executionProvenanceDetails,
   isolationModeLabel,
+  isVerificationExecutionIsolationAvailable,
   NOT_RECORDED_EXECUTION_METADATA,
 } from './execution-display';
 
@@ -15,6 +17,101 @@ interface ExecutionsProps {
   snapshot: ProjectSnapshot;
   selectedTaskId: string | null;
   onSelectedTaskChange?: (taskId: string) => void;
+}
+
+export interface ExecutionEntryProps {
+  execution: ExecutionRecord;
+  featureAvailable: boolean;
+  expanded: boolean;
+  rawVisible: boolean;
+  onToggleExpanded: () => void;
+  onToggleRaw: () => void;
+}
+
+export function ExecutionEntry({
+  execution,
+  featureAvailable,
+  expanded,
+  rawVisible,
+  onToggleExpanded,
+  onToggleRaw,
+}: ExecutionEntryProps) {
+  const kind = executionKindLabel(execution);
+  const isolationMode = isolationModeLabel(execution);
+  const provenanceDetails = executionProvenanceDetails(execution);
+  const isolationDetails = executionIsolationDetails(execution, featureAvailable);
+
+  return (
+    <div>
+      <button
+        className="w-full px-4 py-3 flex items-center gap-4 hover:bg-forge-hover-surface transition-colors text-left"
+        onClick={onToggleExpanded}
+        aria-expanded={expanded}
+      >
+        {expanded
+          ? <ChevronDown className="w-4 h-4 text-forge-text-muted shrink-0" />
+          : <ChevronRight className="w-4 h-4 text-forge-text-muted shrink-0" />}
+        <Terminal className="w-4 h-4 text-forge-text-muted shrink-0" />
+        <span className="text-sm font-mono font-medium text-forge-text-primary truncate">
+          {execution.executionId}
+        </span>
+        <span className="text-xs text-forge-text-secondary truncate flex-1">{execution.argv.join(' ')}</span>
+        {kind !== NOT_RECORDED_EXECUTION_METADATA && (
+          <span className="hidden md:inline-flex items-center rounded-4 border border-forge-border-subtle bg-forge-secondary-surface px-2 py-0.5 text-[10px] font-semibold tracking-wide text-forge-text-secondary">
+            {kind}
+          </span>
+        )}
+        {featureAvailable && isolationMode !== NOT_RECORDED_EXECUTION_METADATA && (
+          <span className="hidden lg:inline-flex items-center rounded-4 border border-forge-border-subtle bg-forge-secondary-surface px-2 py-0.5 text-[10px] font-semibold tracking-wide text-forge-text-secondary">
+            {isolationMode}
+          </span>
+        )}
+        <span className={cn('text-xs font-semibold', execution.status === 'passed' ? 'text-forge-success' : 'text-forge-danger')}>
+          {execution.status.toUpperCase()}
+        </span>
+        <span className="text-xs text-forge-text-muted font-mono">
+          exit {execution.exitCode ?? '—'}
+        </span>
+      </button>
+
+      {expanded && (
+        <div className="px-12 pb-4 space-y-2">
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <p><span className="text-forge-text-muted">Check:</span> <span className="font-mono">{execution.checkId}</span></p>
+            <p><span className="text-forge-text-muted">Cycle:</span> <span className="font-mono">{execution.verificationCycle}</span></p>
+            <p><span className="text-forge-text-muted">Started:</span> <span className="font-mono">{execution.startedAt}</span></p>
+            <p><span className="text-forge-text-muted">Finished:</span> <span className="font-mono">{execution.finishedAt}</span></p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+            {provenanceDetails.map((detail) => (
+              <p key={detail.label} className="break-words">
+                <span className="text-forge-text-muted">{detail.label}:</span>{' '}
+                <span className="font-mono break-all">{detail.value}</span>
+              </p>
+            ))}
+            {isolationDetails.map((detail) => (
+              <p key={detail.label} className="break-words">
+                <span className="text-forge-text-muted">{detail.label}:</span>{' '}
+                <span className="font-mono break-all">{detail.value}</span>
+              </p>
+            ))}
+          </div>
+          <button
+            type="button"
+            className="text-xs text-forge-accent hover:text-forge-accent-hover"
+            onClick={onToggleRaw}
+          >
+            {rawVisible ? 'Hide raw JSON' : 'Show raw JSON'}
+          </button>
+          {rawVisible && (
+            <pre className="text-[11px] font-mono text-forge-text-secondary bg-forge-secondary-surface rounded-6 p-3 overflow-x-auto select-text whitespace-pre-wrap">
+{JSON.stringify(execution, null, 2)}
+            </pre>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function Executions({ snapshot, selectedTaskId, onSelectedTaskChange }: ExecutionsProps) {
@@ -25,6 +122,7 @@ export function Executions({ snapshot, selectedTaskId, onSelectedTaskChange }: E
   const [rawJson, setRawJson] = useState<string | null>(null);
 
   const effectiveTask = snapshot.tasks.find((t) => t.taskId === selectedTaskId) || null;
+  const isolationFeatureAvailable = isVerificationExecutionIsolationAvailable(snapshot.protocol.featureSupport);
 
   const loadExecutions = useCallback(async () => {
     if (!effectiveTask) return;
@@ -61,6 +159,11 @@ export function Executions({ snapshot, selectedTaskId, onSelectedTaskChange }: E
           <p className="text-xs text-forge-text-muted mt-2 max-w-2xl">
             Isolation information is persisted by ForgeLoop. Studio displays the recorded provenance and does not create or verify execution sandboxes itself.
           </p>
+          {!isolationFeatureAvailable && (
+            <p className="text-xs text-forge-text-muted mt-2 max-w-2xl" role="status">
+              Verification isolation capability is unavailable for this ForgeLoop runtime. Persisted execution provenance remains available in raw form.
+            </p>
+          )}
         </div>
         <select
           className="input w-56"
@@ -99,76 +202,17 @@ export function Executions({ snapshot, selectedTaskId, onSelectedTaskChange }: E
             <EmptyState title="No executions" description={`No valid exec-*.json provenance found for ${effectiveTask.taskId}.`} />
           ) : (
             <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-10 divide-y divide-forge-border-subtle/50">
-              {page.executions.map((execution) => {
-                const kind = executionKindLabel(execution);
-                const isolationMode = isolationModeLabel(execution);
-                const provenanceDetails = executionProvenanceDetails(execution);
-                return (
-                <div key={execution.executionId}>
-                  <button
-                    className="w-full px-4 py-3 flex items-center gap-4 hover:bg-forge-hover-surface transition-colors text-left"
-                    onClick={() => setExpandedId(expandedId === execution.executionId ? null : execution.executionId)}
-                    aria-expanded={expandedId === execution.executionId}
-                  >
-                    {expandedId === execution.executionId
-                      ? <ChevronDown className="w-4 h-4 text-forge-text-muted shrink-0" />
-                      : <ChevronRight className="w-4 h-4 text-forge-text-muted shrink-0" />}
-                    <Terminal className="w-4 h-4 text-forge-text-muted shrink-0" />
-                    <span className="text-sm font-mono font-medium text-forge-text-primary truncate">
-                      {execution.executionId}
-                    </span>
-                    <span className="text-xs text-forge-text-secondary truncate flex-1">{execution.argv.join(' ')}</span>
-                    {kind !== NOT_RECORDED_EXECUTION_METADATA && (
-                      <span className="hidden md:inline-flex items-center rounded-4 border border-forge-border-subtle bg-forge-secondary-surface px-2 py-0.5 text-[10px] font-semibold tracking-wide text-forge-text-secondary">
-                        {kind}
-                      </span>
-                    )}
-                    {isolationMode !== NOT_RECORDED_EXECUTION_METADATA && (
-                      <span className="hidden lg:inline-flex items-center rounded-4 border border-forge-border-subtle bg-forge-secondary-surface px-2 py-0.5 text-[10px] font-semibold tracking-wide text-forge-text-secondary">
-                        {isolationMode}
-                      </span>
-                    )}
-                    <span className={cn('text-xs font-semibold', execution.status === 'passed' ? 'text-forge-success' : 'text-forge-danger')}>
-                      {execution.status.toUpperCase()}
-                    </span>
-                    <span className="text-xs text-forge-text-muted font-mono">
-                      exit {execution.exitCode ?? '—'}
-                    </span>
-                  </button>
-
-                  {expandedId === execution.executionId && (
-                    <div className="px-12 pb-4 space-y-2">
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <p><span className="text-forge-text-muted">Check:</span> <span className="font-mono">{execution.checkId}</span></p>
-                        <p><span className="text-forge-text-muted">Cycle:</span> <span className="font-mono">{execution.verificationCycle}</span></p>
-                        <p><span className="text-forge-text-muted">Started:</span> <span className="font-mono">{execution.startedAt}</span></p>
-                        <p><span className="text-forge-text-muted">Finished:</span> <span className="font-mono">{execution.finishedAt}</span></p>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
-                        {provenanceDetails.map((detail) => (
-                          <p key={detail.label} className="break-words">
-                            <span className="text-forge-text-muted">{detail.label}:</span>{' '}
-                            <span className="font-mono break-all">{detail.value}</span>
-                          </p>
-                        ))}
-                      </div>
-                      <button
-                        type="button"
-                        className="text-xs text-forge-accent hover:text-forge-accent-hover"
-                        onClick={() => setRawJson(rawJson === execution.executionId ? null : execution.executionId)}
-                      >
-                        {rawJson === execution.executionId ? 'Hide raw JSON' : 'Show raw JSON'}
-                      </button>
-                      {rawJson === execution.executionId && (
-                        <pre className="text-[11px] font-mono text-forge-text-secondary bg-forge-secondary-surface rounded-6 p-3 overflow-x-auto select-text whitespace-pre-wrap">
-{JSON.stringify(execution, null, 2)}
-                        </pre>
-                      )}
-                    </div>
-                  )}
-                </div>
-                );
-              })}
+              {page.executions.map((execution) => (
+                <ExecutionEntry
+                  key={execution.executionId}
+                  execution={execution}
+                  featureAvailable={isolationFeatureAvailable}
+                  expanded={expandedId === execution.executionId}
+                  rawVisible={rawJson === execution.executionId}
+                  onToggleExpanded={() => setExpandedId(expandedId === execution.executionId ? null : execution.executionId)}
+                  onToggleRaw={() => setRawJson(rawJson === execution.executionId ? null : execution.executionId)}
+                />
+              ))}
             </div>
           )}
         </>
