@@ -3,7 +3,7 @@
 `cassiomc1-forgeloop-1.6.1-f331100.tgz` is the packed ForgeLoop runtime used by
 ForgeLoop Studio through the public `@cassiomc1/forgeloop/integration` subpath.
 
-- Source repository: `cassiomc1/ForgeLoop`
+- Source repository: `cassiomc1/forgeloop`
 - Pinned commit: `f331100cff175a4ce990fa843b397fcf720b40f5`
 - Package version: `1.6.1`
 - SHA-256: `0411a7a0d45429ac40b498cd432c377184afd6530058d56469561e4c3cab1193`
