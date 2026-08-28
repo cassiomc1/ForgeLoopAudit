@@ -18,6 +18,22 @@ test('demo generation is deterministic', () => {
   }
 });
 
+test('demo executions include current ForgeLoop isolation provenance', () => {
+  const { files } = generateDemoFiles();
+  const executions = [...files.entries()]
+    .filter(([path]) => /\/executions\/exec-.*\.json$/u.test(path))
+    .map(([, content]) => JSON.parse(content));
+
+  assert.ok(executions.some((execution) => (
+    execution.executionIsolation === 'NATIVE_PROJECT'
+    && execution.isolation?.mode === 'NATIVE_PROJECT'
+  )));
+  assert.ok(executions.some((execution) => (
+    execution.executionIsolation === 'PROJECT_ISOLATED'
+    && execution.isolation?.mode === 'PROJECT_ISOLATED'
+  )));
+});
+
 test('committed demo matches generator output exactly', () => {
   const result = demoHasDrift();
   assert.equal(result.drift, false, `committed demo/ has drifted from the generator: ${result.reason}`);

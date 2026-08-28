@@ -7,13 +7,23 @@
   "requirement": "Catalog unit tests pass",
   "verificationCycle": 1,
   "kind": "COMMAND_EXECUTION",
+  "executionKind": "VERIFICATION",
   "argv": [
     "npx",
     "vitest",
     "run",
     "tests/catalog.test.ts"
   ],
-  "cwd": "/workspace/forgeshop",
+  "protocolProjectRoot": "/workspace/forgeshop",
+  "cwd": "/tmp/forgeloop/forgeshop-checkout",
+  "executionIsolation": "PROJECT_ISOLATED",
+  "isolation": {
+    "mode": "PROJECT_ISOLATED",
+    "isolated": true,
+    "liveProjectWritable": false,
+    "networkPolicy": "INHERITED",
+    "environmentPolicy": "SANITIZED"
+  },
   "resolution": {
     "resolutionMode": "direct",
     "mayInstall": false,

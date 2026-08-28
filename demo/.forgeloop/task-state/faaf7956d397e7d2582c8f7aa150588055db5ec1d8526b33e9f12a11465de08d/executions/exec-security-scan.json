@@ -7,11 +7,21 @@
   "requirement": "Dependency and flow scan reports no critical findings",
   "verificationCycle": 1,
   "kind": "COMMAND_EXECUTION",
+  "executionKind": "VERIFICATION",
   "argv": [
     "node",
     "tests/security-scan.mjs"
   ],
+  "protocolProjectRoot": "/workspace/forgeshop",
   "cwd": "/workspace/forgeshop",
+  "executionIsolation": "NATIVE_PROJECT",
+  "isolation": {
+    "mode": "NATIVE_PROJECT",
+    "isolated": false,
+    "liveProjectWritable": true,
+    "networkPolicy": "INHERITED",
+    "environmentPolicy": "INHERITED"
+  },
   "resolution": {
     "resolutionMode": "direct",
     "mayInstall": false,

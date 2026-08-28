@@ -206,7 +206,27 @@ function recoveryRecorded(ledger, details) {
 /**
  * Canonical protocol-v1 execution provenance artifact (executions/exec-*.json).
  */
-function executionRecord({ executionId, taskId, checkId, requirement, argv, startedAt, finishedAt, status = 'passed', exitCode = 0 }) {
+function executionRecord({
+  executionId,
+  taskId,
+  checkId,
+  requirement,
+  argv,
+  startedAt,
+  finishedAt,
+  status = 'passed',
+  exitCode = 0,
+  executionKind = 'VERIFICATION',
+  protocolProjectRoot = `/workspace/${DEMO_PROJECT_ID}`,
+  cwd = protocolProjectRoot,
+  isolation = {
+    mode: 'NATIVE_PROJECT',
+    isolated: false,
+    liveProjectWritable: true,
+    networkPolicy: 'INHERITED',
+    environmentPolicy: 'INHERITED',
+  },
+}) {
   return {
     schemaVersion: 1,
     protocolVersion: 1,
@@ -216,8 +236,12 @@ function executionRecord({ executionId, taskId, checkId, requirement, argv, star
     requirement,
     verificationCycle: 1,
     kind: 'COMMAND_EXECUTION',
+    executionKind,
     argv,
-    cwd: `/workspace/${DEMO_PROJECT_ID}`,
+    protocolProjectRoot,
+    cwd,
+    executionIsolation: isolation.mode,
+    isolation,
     resolution: { resolutionMode: 'direct', mayInstall: false, installer: null, tool: null },
     startedAt,
     finishedAt,
@@ -483,7 +507,23 @@ function buildCatalogTask() {
   artifacts['gates/typecheck.json'] = gate(taskId, 'typecheck', 'satisfied', [{ kind: 'OBSERVED', source: 'tsc --noEmit', result: 'clean' }]);
   artifacts['gates/lint.json'] = gate(taskId, 'lint', 'satisfied', [{ kind: 'OBSERVED', source: 'eslint', result: 'clean' }]);
   const executions = [
-    executionRecord({ executionId: 'exec-catalog-unit-tests', taskId, checkId: 'catalog-unit-tests', requirement: 'Catalog unit tests pass', argv: ['npx', 'vitest', 'run', 'tests/catalog.test.ts'], startedAt: '2026-08-03T09:33:00.000Z', finishedAt: '2026-08-03T09:35:00.000Z' }),
+    executionRecord({
+      executionId: 'exec-catalog-unit-tests',
+      taskId,
+      checkId: 'catalog-unit-tests',
+      requirement: 'Catalog unit tests pass',
+      argv: ['npx', 'vitest', 'run', 'tests/catalog.test.ts'],
+      startedAt: '2026-08-03T09:33:00.000Z',
+      finishedAt: '2026-08-03T09:35:00.000Z',
+      cwd: '/tmp/forgeloop/forgeshop-checkout',
+      isolation: {
+        mode: 'PROJECT_ISOLATED',
+        isolated: true,
+        liveProjectWritable: false,
+        networkPolicy: 'INHERITED',
+        environmentPolicy: 'SANITIZED',
+      },
+    }),
     executionRecord({ executionId: 'exec-catalog-typecheck', taskId, checkId: 'typecheck', requirement: 'TypeScript compiles without errors', argv: ['npx', 'tsc', '--noEmit'], startedAt: '2026-08-03T09:38:00.000Z', finishedAt: '2026-08-03T09:40:00.000Z' }),
     executionRecord({ executionId: 'exec-catalog-lint', taskId, checkId: 'lint', requirement: 'Lint passes on changed files', argv: ['npx', 'eslint', 'src/catalog.ts'], startedAt: '2026-08-03T09:41:00.000Z', finishedAt: '2026-08-03T09:42:00.000Z' }),
   ].map((record) => [`executions/${record.executionId}.json`, record]);
