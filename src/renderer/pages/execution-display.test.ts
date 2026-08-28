@@ -28,7 +28,7 @@ describe('execution display helpers', () => {
     expect(isolationModeLabel(LEGACY_EXECUTION)).toBe('Not recorded by this artifact');
   });
 
-  it('formats persisted v1.6.1 provenance without inferring semantics', () => {
+  it('formats persisted isolation provenance without inferring semantics', () => {
     expect(executionKindLabel(ISOLATED_EXECUTION)).toBe('VERIFICATION');
     expect(isolationModeLabel(ISOLATED_EXECUTION)).toBe('PROJECT_ISOLATED');
     expect(executionProvenanceDetails(ISOLATED_EXECUTION)).toEqual([
