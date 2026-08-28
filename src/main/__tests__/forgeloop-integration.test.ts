@@ -94,6 +94,13 @@ describe('core/integration/forgeloop-integration', () => {
         readOnlyMetrics: true,
         projectLocalReference: true,
       });
+      expect(capabilities.features.verificationExecutionIsolation).toMatchObject({
+        version: 1,
+        supported: true,
+        adapter: true,
+        modes: ['NATIVE_PROJECT', 'PROJECT_ISOLATED', 'SYSTEM_ISOLATED'],
+        protocolProjectRootSeparateFromExecutionCwd: true,
+      });
       for (const command of ['history', 'trace', 'reflect', 'inspect', 'metrics', 'action-show']) {
         expect(capabilities.commands).toEqual(expect.arrayContaining([
           expect.objectContaining({ name: command, baseRiskClass: 'READ_ONLY', mutatesProtocol: false }),

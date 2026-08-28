@@ -1,4 +1,7 @@
-import type { ForgeLoopCapabilitiesSummary } from '@main/core/integration/types';
+import type {
+  ForgeLoopCapabilitiesSummary,
+  ForgeLoopVerificationIsolationMode,
+} from '@main/core/integration/types';
 import type { ForgeLoopCompatibilityMode, ForgeLoopFeatureSupport } from '@shared/domain';
 
 export type { ForgeLoopCompatibilityMode };
@@ -30,6 +33,12 @@ const REQUIRED_RESOURCES = Object.freeze([
   'task/contract',
   'task/continuity',
 ]);
+
+const REQUIRED_VERIFICATION_ISOLATION_MODES: ForgeLoopVerificationIsolationMode[] = [
+  'NATIVE_PROJECT',
+  'PROJECT_ISOLATED',
+  'SYSTEM_ISOLATED',
+];
 
 /**
  * Normalize the canonical `protocol-info` integration resource.
@@ -81,6 +90,7 @@ const EMPTY_FEATURE_SUPPORT: ForgeLoopFeatureSupport = Object.freeze({
   capabilityPolicy: false,
   trajectoryMetrics: false,
   trajectoryEvaluations: false,
+  verificationExecutionIsolation: false,
 });
 
 function hasResource(capabilities: ForgeLoopCapabilitiesSummary, resource: string): boolean {
@@ -121,6 +131,15 @@ export function deriveFeatureSupport(capabilities: ForgeLoopCapabilitiesSummary)
       && trajectoryFeature.readOnlyMetrics === true
       && trajectoryFeature.projectLocalReference === true,
   );
+  const verificationExecutionIsolation = capabilities.features.verificationExecutionIsolation;
+  const verificationExecutionIsolationSupported = Boolean(
+    verificationExecutionIsolation
+      && verificationExecutionIsolation.version === 1
+      && verificationExecutionIsolation.supported === true
+      && verificationExecutionIsolation.adapter === true
+      && REQUIRED_VERIFICATION_ISOLATION_MODES.every((mode) => verificationExecutionIsolation.modes.includes(mode))
+      && verificationExecutionIsolation.protocolProjectRootSeparateFromExecutionCwd === true,
+  );
 
   return {
     canonicalOwnership: coreResourcesPresent,
@@ -134,6 +153,7 @@ export function deriveFeatureSupport(capabilities: ForgeLoopCapabilitiesSummary)
       && hasReadOnlyCommand(capabilities, 'metrics'),
     trajectoryEvaluations: trajectoryContractSupported
       && hasResource(capabilities, 'task/evaluations'),
+    verificationExecutionIsolation: verificationExecutionIsolationSupported,
   };
 }
 

@@ -92,6 +92,7 @@ export interface ForgeLoopFeatureSupport {
   capabilityPolicy: boolean;
   trajectoryMetrics: boolean;
   trajectoryEvaluations: boolean;
+  verificationExecutionIsolation: boolean;
 }
 
 export interface BlockerSummary {

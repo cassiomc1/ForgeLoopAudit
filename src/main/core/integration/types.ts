@@ -17,6 +17,19 @@ export interface ForgeLoopTrajectoryEvaluationFeatureSummary {
   projectLocalReference: boolean;
 }
 
+export type ForgeLoopVerificationIsolationMode =
+  | 'NATIVE_PROJECT'
+  | 'PROJECT_ISOLATED'
+  | 'SYSTEM_ISOLATED';
+
+export interface ForgeLoopVerificationExecutionIsolationFeatureSummary {
+  version: number;
+  supported: boolean;
+  adapter: boolean;
+  modes: ForgeLoopVerificationIsolationMode[];
+  protocolProjectRootSeparateFromExecutionCwd: boolean;
+}
+
 export interface ForgeLoopCommandCapabilitySummary {
   name: string;
   baseRiskClass?: string;
@@ -33,6 +46,7 @@ export interface ForgeLoopCapabilitiesSummary {
     taskClaimRecovery: ForgeLoopRecoveryFeatureSummary;
     durableActions?: ForgeLoopDurableActionsFeatureSummary;
     trajectoryEvaluation?: ForgeLoopTrajectoryEvaluationFeatureSummary;
+    verificationExecutionIsolation?: ForgeLoopVerificationExecutionIsolationFeatureSummary;
   };
   resources: string[];
   commands?: ForgeLoopCommandCapabilitySummary[];
