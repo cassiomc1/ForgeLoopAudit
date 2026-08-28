@@ -1,13 +1,14 @@
 # ForgeLoop Alignment Corrections Verification
 
-**Date:** 2026-08-28 09:33 BRT
+**Date:** 2026-08-28 09:51 BRT
 **Scope:** Post-1.6.1 alignment corrections from `FORGELOOP_STUDIO_POST_1_6_1_CORRECTIONS.md`
 
 ## Source identity
 
-- Studio implementation commits verified: `69e284a7ff04a8b725f89ac77b73295b52a8fbce` (capability-gated UI) and `e9f89df` (fail-closed helper plus unavailable-capability presentation coverage)
+- Studio implementation commits verified: `69e284a7ff04a8b725f89ac77b73295b52a8fbce` (capability-gated UI) and `e9f89df335ec47ad46ec1b2d54e41f94aa0b52d4` (fail-closed helper plus unavailable-capability presentation coverage)
 - Studio verification record introduced in commit: `5fef9c08410c05d653db8f405145be3c9d19cae5`
-- Studio code head for the reviewed correction: `e9f89df`
+- Studio code head for the reviewed correction: `e9f89df335ec47ad46ec1b2d54e41f94aa0b52d4`
+- Final branch commit validated locally: `7704d4824984400fc800b6d89178531a8c4b5227` (documentation-only commit carrying the code head above)
 - Studio base commit: `3059187dd8ca63e229add17cecdf06e6575c2757`
 - ForgeLoop package: `1.6.1`
 - ForgeLoop upstream commit: `f331100cff175a4ce990fa843b397fcf720b40f5`
@@ -40,7 +41,7 @@ Read from `schemas/provenance.json`:
 | `npm run demo:verify` | `0` | 6 tasks, 70 events, 23/23 artifact categories; protocol-valid |
 | `npm run typecheck` | `0` | TypeScript check passed |
 | `npm run lint` | `0` | ESLint passed |
-| `npm test` | `0` | 57 files and 356 tests passed |
+| `npm test` | `0` | 58 files and 359 tests passed |
 | `npm run build` | `0` | Renderer and Electron build passed |
 | `npm run docs:check` | `0` | Documentation conformance passed for `0.1.0-rc.6` |
 | `npm run test:release-contracts` | `0` | 70 tests passed, 0 failed |
@@ -52,7 +53,7 @@ Read from `schemas/provenance.json`:
 
 ## Focused verification
 
-- `npm test -- --run src/main/__tests__/execution-reader.test.ts src/main/__tests__/schema-provenance.test.ts src/main/__tests__/forgeloop-integration.test.ts src/main/__tests__/protocol-capabilities.test.ts src/main/__tests__/canonical-projections.test.ts src/renderer/pages/execution-display.test.ts`: exit `0`, 6 files and 96 tests passed.
+- `npm test -- --run src/main/__tests__/execution-reader.test.ts src/main/__tests__/schema-provenance.test.ts src/main/__tests__/forgeloop-integration.test.ts src/main/__tests__/protocol-capabilities.test.ts src/main/__tests__/canonical-projections.test.ts src/renderer/pages/execution-display.test.ts src/renderer/pages/Executions.test.ts`: exit `0`, 7 files and 99 tests passed.
 - `npm run test:e2e -- tests/e2e/demo.spec.ts`: exit `0` after the worktree build, 1 test passed.
 - The first targeted E2E attempt before building the fresh worktree timed out while the expected `dist/` entrypoints were absent. After `npm run build`, the same test passed; no product timeout or workaround was added.
 

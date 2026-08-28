@@ -124,7 +124,7 @@ Include the exact command strings, exit status, environment, identities, and any
 **Files:**
 - Review: complete branch diff and verification record
 
-- [ ] **Step 1: Run the full relevant verification again after the evidence file is added**
+- [x] **Step 1: Run the full relevant verification again after the evidence file is added**
 
 Run the focused tests, full unit suite, typecheck, lint, build, docs/schema/demo/release checks, and `git diff --check` as applicable. Read every exit status.
 
