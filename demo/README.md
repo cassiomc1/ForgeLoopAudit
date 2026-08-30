@@ -10,7 +10,7 @@ No external service, network access or build step is required.
 
 1. Launch ForgeLoop Studio.
 2. Choose **Open Demo Project** on the start screen (or **Open Project** and select this `demo/` directory).
-3. Explore Overview, Tasks, Flow, Contract, Evidence, Events, Continuity and Policy. The active task's Overview includes the read-only Task Boundaries surface.
+3. Explore Overview, Tasks, Flow, Contract, Evidence, Events, Executions, Continuity, Diagnostics, Actions, Policy and Settings. The active task's Overview includes the read-only Task Boundaries surface.
 
 ## Task map
 

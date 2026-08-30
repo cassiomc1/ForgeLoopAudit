@@ -2,23 +2,41 @@
 
 > **A real-time visual interface for the ForgeLoop engineering protocol.**
 
-ForgeLoop Studio is a local-first desktop companion for ForgeLoop. Open a ForgeLoop-enabled project and visualize tasks, lifecycle phases, contracts, routing, gates, checks, evidence, recovery cycles, continuity, policy state and completion health in real time.
+ForgeLoop Studio is a local-first, read-only desktop visualizer for ForgeLoop.
+Open a ForgeLoop-enabled project and inspect canonical tasks, lifecycle phases,
+contracts, routing, gates, checks, evidence, recovery, continuity, policy and
+provenance in real time. ForgeLoop remains the protocol authority; Studio is a
+visual consumer of the state that ForgeLoop exposes.
+
+## Trust model
+
+Studio never changes protocol claims, binds workspaces, creates handoffs, sets
+responsibility, computes or persists verification scope, creates or signs
+attestations, or becomes task authority. It reads canonical Integration API
+resources and bounded artifacts through a narrow, read-only boundary. Missing
+optional capabilities remain unavailable instead of being inferred, and
+recovery, action and verification decisions are displayed as read-only
+information.
 
 ## Screenshots
 
 | Overview | Tasks | Lifecycle flow |
 |---|---|---|
-| <img src="screen/overview.png" alt="Project overview" width="420"> | <img src="screen/tasks.png" alt="Tasks list" width="420"> | <img src="screen/lifecycle-flow.png" alt="Lifecycle flow" width="420"> |
+| <img src="screen/overview.png" alt="ForgeShop project overview with health metrics and Task Boundaries" width="420"> | <img src="screen/tasks.png" alt="ForgeShop task list with six mixed lifecycle states" width="420"> | <img src="screen/lifecycle-flow.png" alt="ForgeShop lifecycle flow for the selected task" width="420"> |
 | Contract inspector | Evidence matrix | Event ledger |
-| <img src="screen/contract-inspector.png" alt="Contract inspector" width="420"> | <img src="screen/evidence-matrix.png" alt="Evidence matrix" width="420"> | <img src="screen/event-ledger.png" alt="Event ledger" width="420"> |
+| <img src="screen/contract-inspector.png" alt="ForgeShop contract inspector showing the selected task contract" width="420"> | <img src="screen/evidence-matrix.png" alt="ForgeShop evidence matrix showing verification scope and attestation boundaries" width="420"> | <img src="screen/event-ledger.png" alt="ForgeShop event ledger with canonical task events" width="420"> |
 | Continuity | Diagnostics | Actions |
-| <img src="screen/continuity.png" alt="Continuity view" width="420"> | <img src="screen/diagnostics.png" alt="Diagnostics view" width="420"> | <img src="screen/actions.png" alt="Actions view" width="420"> |
+| <img src="screen/continuity.png" alt="ForgeShop continuity view with canonical handoff snapshots" width="420"> | <img src="screen/diagnostics.png" alt="ForgeShop diagnostics view with canonical observations" width="420"> | <img src="screen/actions.png" alt="ForgeShop durable actions and approval state in read-only mode" width="420"> |
 | Policy | Settings | |
-| <img src="screen/policy.png" alt="Policy view" width="420"> | <img src="screen/settings.png" alt="Settings view" width="420"> | |
+| <img src="screen/policy.png" alt="ForgeShop policy and capability decisions" width="420"> | <img src="screen/settings.png" alt="ForgeLoop Studio settings and protocol capability metadata" width="420"> | |
 
 ### ForgeLoop 1.6.4 boundary surfaces
 
-<img src="screen/task-boundaries.png" alt="Task Boundaries surface" width="840">
+<img src="screen/task-boundaries.png" alt="ForgeShop Task Boundaries showing workspace binding and responsibility status" width="840">
+
+The captures come from the generated ForgeShop fixture and the production
+renderer build. See the [screenshot source and review guide](screen/README.md)
+for mappings and the regeneration policy.
 
 ## Project selection
 
@@ -32,9 +50,16 @@ projects are found, Studio stops and asks you to select one project directory
 directly instead of choosing an arbitrary result. Symlinked subdirectories and
 common dependency/build folders are not followed during discovery.
 
-## Status
+## Current status
 
-Release candidate — the read-only Studio runtime, trusted protocol validation, functional fixture E2E and multi-platform release staging are implemented. The current development target is `v0.1.0-rc.6`, aligned to the vendored ForgeLoop `1.6.4` Integration API v1 (canonical ownership, durable recovery, observability, durable actions, approvals, capability policy, trajectory metrics, evaluations, verification-execution provenance, workspace binding, canonical handoffs, responsibility constraints, differential verification scope and code attestation). Earlier RCs remain immutable at their tagged commits.
+The current release line is `v0.1.0-rc.6`. The read-only Studio runtime,
+trusted protocol validation, functional fixture E2E and multi-platform release
+staging are implemented. This release line is aligned to the vendored ForgeLoop
+`1.6.4` Integration API v1 (canonical ownership, durable recovery,
+observability, durable actions, approvals, capability policy, trajectory
+metrics, evaluations, verification-execution provenance, workspace binding,
+canonical handoffs, responsibility constraints, differential verification scope
+and code attestation).
 
 For the current release-candidate policy, Linux, macOS and Windows builds are unsigned preview artifacts. Validate the published checksums and expect normal operating-system security warnings; signed/notarized distribution is not part of this release candidate.
 
@@ -59,7 +84,7 @@ ForgeLoop Studio is designed as a **read-only observer by default**. ForgeLoop r
 
 ## Current ForgeLoop compatibility
 
-The current vendored ForgeLoop baseline is `1.6.4` at immutable source commit `24f50f9eefe5055cec053f075c748542b42e4ea2` (protocol v1, schema v1, Integration API v1).
+The current vendored ForgeLoop baseline is ForgeLoop `1.6.4` at immutable source commit `24f50f9eefe5055cec053f075c748542b42e4ea2` (protocol v1, schema v1, Integration API v1).
 
 Studio consumes the bundled `@cassiomc1/forgeloop/integration` public subpath as its semantic boundary: canonical task discovery, canonical claim ownership (`claimState`, `mutationAllowed`, `ownershipValid`, historical vs effective write claims), durable recovery state, execution provenance, observability projections, durable actions, approvals, capability policy, trajectory metrics, trajectory evaluations, workspace binding, canonical handoffs, responsibility constraints, differential verification scope and code attestation. Direct `.forgeloop/` artifact reading remains available for bounded detail views and diagnostics only — it never determines current ownership, action readiness or authority. The Studio never executes mutable ForgeLoop commands; recovery/resume and action decisions are displayed as copy-only/read-only information.
 
@@ -79,7 +104,7 @@ The demo is a real ForgeLoop project fixture: every `.forgeloop/` artifact valid
 |---|---|
 | TASK-001 | Complete successful lifecycle |
 | TASK-002 | Verification/review in progress |
-| TASK-003 | Active execution |
+| TASK-003 | Active execution and responsibility constraints |
 | TASK-004 | Durable recovery (resume required) and cross-harness continuity |
 | TASK-005 | Planned performance work |
 | TASK-006 | Security policy and successful completion |
@@ -91,6 +116,26 @@ Regenerate it with `npm run demo:generate` (deterministic; CI fails on drift via
 ## Implementation specification
 
 See [`FORGELOOP_STUDIO_IMPLEMENTATION_SPEC.md`](./FORGELOOP_STUDIO_IMPLEMENTATION_SPEC.md) for the complete architecture, security model, UI system, data model, feature scope, testing strategy, implementation order and MVP definition of done.
+
+## Documentation
+
+Use [`docs/README.md`](docs/README.md) as the documentation index. It maps
+current product, protocol, operational, release and trust-boundary guidance to
+its canonical implementation source and identifies historical records.
+
+## Roadmap
+
+Future work is intentionally separate from the current read-only release
+surface: historical replay, richer task comparison and analytics, optional Git
+context, exportable engineering reports and an explicitly separated operator
+mode remain candidates. None of these are required for Studio to remain a
+read-only visual consumer.
+
+## Contributing
+
+Keep current documentation aligned with the canonical implementation sources,
+preserve historical records, and run `npm run docs:check` together with the
+relevant validation gates before opening a pull request.
 
 ## ForgeLoop
 

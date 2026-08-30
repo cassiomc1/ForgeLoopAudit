@@ -1,5 +1,7 @@
 # ForgeLoop Studio Post-1.6.1 Corrections Implementation Plan
 
+> Historical record. This document describes the repository state and implementation target at the time it was written. It is not the current ForgeLoop Studio specification. See the [current documentation index](../../README.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans (or equivalent inline execution) to implement this plan task-by-task. Steps use checkbox syntax for tracking.
 
 **Goal:** Make isolation presentation follow negotiated capability support, remove stale current-policy wording, and preserve an auditable verification record without changing the already-correct ForgeLoop 1.6.1 alignment.

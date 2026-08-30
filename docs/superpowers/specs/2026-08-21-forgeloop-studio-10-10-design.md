@@ -1,5 +1,7 @@
 # ForgeLoop Studio 10/10 Engineering Readiness Design
 
+> Historical record. This document describes the repository state and implementation target at the time it was written. It is not the current ForgeLoop Studio specification. See the [current documentation index](../../README.md).
+
 ## Scope
 
 This design executes the attached `FORGELOOP_STUDIO_10_OUT_OF_10_IMPLEMENTATION_PLAN_V2.md` inline, without subagents. It covers Tasks 1–26 and 29–32. Tasks 27–28 remain optional because they require external signing credentials and are not required for the unsigned-preview target.

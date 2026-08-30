@@ -1,5 +1,7 @@
 # ForgeLoop Studio 10/10 Implementation Plan
 
+> Historical record. This document describes the repository state and implementation target at the time it was written. It is not the current ForgeLoop Studio specification. See the [current documentation index](../../README.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Execute this plan inline with verification checkpoints; do not dispatch subagents. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Implement the required unsigned-preview 10/10 engineering gates for ForgeLoop Studio and publish an evidence-backed immutable RC3.

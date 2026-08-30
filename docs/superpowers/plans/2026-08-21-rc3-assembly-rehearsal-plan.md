@@ -1,5 +1,7 @@
 # RC3 Assembly Rehearsal Implementation Plan
 
+> Historical record. This document describes the repository state and implementation target at the time it was written. It is not the current ForgeLoop Studio specification. See the [current documentation index](../../README.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Make the RC3 release rehearsal execute the same combined artifact assembly, SBOM generation, and release-asset verification used by a real tag release.
@@ -57,4 +59,3 @@
 - [ ] Push `codex/rc3-release-assembly`, open a non-draft PR against `main`, wait for required checks, and merge using the verified head SHA.
 - [ ] Verify the merge commit, remote branch state, and local checkout after merge.
 - [ ] Dispatch the Release workflow from the merged current `main` and verify the manual rehearsal reaches platform builds, `assemble`, SBOM generation, and release-asset verification.
-

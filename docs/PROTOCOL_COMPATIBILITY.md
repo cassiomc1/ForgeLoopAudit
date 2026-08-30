@@ -1,6 +1,13 @@
 # ForgeLoop Protocol Compatibility
 
-ForgeLoop Studio supports protocol version 1 and schema version 1 from the pinned ForgeLoop source revision recorded in `schemas/provenance.json` (ForgeLoop **1.6.4**, commit `24f50f9eefe5055cec053f075c748542b42e4ea2`). The runtime artifact registry and `SUPPORTED_PROTOCOL.requiredSchemas` are contract-tested to remain identical.
+ForgeLoop Studio supports protocol v1, schema v1 and Integration API v1 from
+the pinned ForgeLoop source revision recorded in `schemas/provenance.json`
+(ForgeLoop **1.6.4**, commit
+`24f50f9eefe5055cec053f075c748542b42e4ea2`). The runtime artifact registry
+and `SUPPORTED_PROTOCOL.requiredSchemas` are contract-tested to remain
+identical. See the [trusted schema boundary](../schemas/README.md) and
+[vendored runtime lineage](../vendor/README.md) for their verification
+procedures.
 
 ## Compatibility matrix
 
@@ -76,4 +83,8 @@ node scripts/generate-schema-provenance.mjs \
 npm run protocol:schemas:verify
 ```
 
-The trusted set includes `task-recovery.schema.json`, `execution.schema.json`, `action.schema.json`, `approval.schema.json`, `capability-policy.schema.json`, `trajectory-evaluation.schema.json`, `workspace-binding.schema.json`, `handoff-envelope.schema.json`, `responsibility.schema.json`, `verification-scope.schema.json`, `code-manifest.schema.json`, `code-attestation.schema.json`, `in-toto-statement.schema.json` and `attestation-verification-result.schema.json`, together with their safe local `$ref` dependencies. Project-controlled `.forgeloop/schemas` content is never a Studio trust authority. The external Sigstore bundle is intentionally not assigned a ForgeLoop schema. Signed distribution is not required for the current unsigned RC preview policy; checksums, provenance, and public post-publish verification are required instead.
+The trusted set includes `task-recovery.schema.json`, `execution.schema.json`, `action.schema.json`, `approval.schema.json`, `capability-policy.schema.json`, `trajectory-evaluation.schema.json`, `workspace-binding.schema.json`, `handoff-envelope.schema.json`, `responsibility.schema.json`, `verification-scope.schema.json`, `code-manifest.schema.json`, `code-attestation.schema.json`, `in-toto-statement.schema.json` and `attestation-verification-result.schema.json`, together with their safe local `$ref` dependencies. Project-controlled `.forgeloop/schemas` content is never a Studio trust authority. The external Sigstore bundle is intentionally not assigned a ForgeLoop schema. Signed distribution is not required for the current unsigned preview policy; checksums, provenance, and public post-publish verification are required instead.
+
+Release publication and verification are documented separately in the
+[release model](RELEASE_MODEL.md); a compatible local project is not evidence
+that a public release has been published.

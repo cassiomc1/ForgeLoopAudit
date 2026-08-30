@@ -11,7 +11,9 @@ xcrun stapler validate "/Applications/ForgeLoop Studio.app"
 "/Applications/ForgeLoop Studio.app/Contents/MacOS/ForgeLoop Studio"
 ```
 
-Unsigned RC2 preview builds may be rejected by Gatekeeper. This is expected for the current release policy; signing and notarization are deferred to a future distribution milestone.
+Unsigned preview builds may be rejected by Gatekeeper. This is expected for
+the current release policy; signing and notarization are deferred to a future
+distribution milestone.
 
 If macOS shows “Malware Blocked and Moved to Trash” for `Electron.app`, the local Electron runtime was quarantined or rejected before ForgeLoop Studio started. Reinstall the dependency from a trusted source and verify the signed/notarized release artifact; do not disable Gatekeeper as a project release strategy.
 
@@ -33,7 +35,11 @@ Settings → Diagnostics reports the negotiated `ForgeLoopCompatibilityMode` ver
 
 ## Ownership shows "OWNERSHIP UNAVAILABLE"
 
-Canonical ownership comes exclusively from the bundled ForgeLoop 1.6 Integration API (`task/ownership`). When the Integration API is unavailable, Studio degrades to `ARTIFACT_ONLY` mode: raw artifacts stay readable for inspection but ownership facts are shown as unavailable instead of being guessed from `task.json` or the legacy CLI.
+Canonical ownership comes exclusively from the bundled ForgeLoop 1.6.4
+Integration API (`task/ownership`). When the Integration API is unavailable,
+Studio degrades to `ARTIFACT_ONLY` mode: raw artifacts stay readable for
+inspection but ownership facts are shown as unavailable instead of being
+guessed from `task.json` or the legacy CLI.
 
 ## Diagnostics or Actions says "unavailable"
 

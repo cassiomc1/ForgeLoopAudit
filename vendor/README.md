@@ -12,5 +12,14 @@ The archive is pinned to the immutable ForgeLoop v1.6.4 release commit so
 packaged Studio builds do not depend on a sibling ForgeLoop checkout, a
 floating branch, or network package resolution at runtime.
 
+Verify the complete package, lockfile, archive and schema lineage with:
+
+```bash
+npm run verify:forgeloop-lineage
+npm run protocol:schemas:verify
+```
+
 To regenerate, check out the pinned ForgeLoop commit, run `npm pack`, replace
 the archive, update the SHA-256 above and regenerate `schemas/provenance.json`.
+Run both verification commands again before committing. The vendored archive
+must remain controlled, local and immutable from Studio's point of view.

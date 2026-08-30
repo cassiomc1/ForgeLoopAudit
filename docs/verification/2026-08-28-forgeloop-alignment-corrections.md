@@ -1,5 +1,7 @@
 # ForgeLoop Alignment Corrections Verification
 
+> Historical record. This document records a specific verification run and repository state. It is not the current ForgeLoop Studio specification. See the [current documentation index](../README.md).
+
 **Date:** 2026-08-28 09:51 BRT
 **Scope:** Post-1.6.1 alignment corrections from `FORGELOOP_STUDIO_POST_1_6_1_CORRECTIONS.md`
 

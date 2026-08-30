@@ -1,5 +1,7 @@
 # RC3 Final Tag Gate Implementation Plan
 
+> Historical record. This document describes the repository state and implementation target at the time it was written. It is not the current ForgeLoop Studio specification. See the [current documentation index](../../README.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Make the Release workflow self-verifying and bind public release evidence to the commit resolved from its Git tag.
