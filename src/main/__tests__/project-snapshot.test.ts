@@ -13,6 +13,7 @@ describe('ProjectSnapshotBuilder observations', () => {
         new PathBoundary(root),
         {
           readConfig: () => ({ schemaVersion: 1, protocolVersion: 1, projectName: 'Fixture' }),
+          tryReadConfig: () => ({ schemaVersion: 1, protocolVersion: 1, projectName: 'Fixture' }),
           listTaskKeys: () => ['task-1'],
           readTaskSummaryArtifacts: () => ({
             'task.json': { taskId: 'task-1' },
@@ -46,6 +47,7 @@ describe('ProjectSnapshotBuilder observations', () => {
         new PathBoundary(root),
         {
           readConfig: () => ({ schemaVersion: 1, protocolVersion: 1, projectName: 'Fixture' }),
+          tryReadConfig: () => ({ schemaVersion: 1, protocolVersion: 1, projectName: 'Fixture' }),
           listTaskKeys: () => ['task-1'],
           readTaskSummaryArtifacts: () => ({
             'task.json': { taskId: 'task-1' },

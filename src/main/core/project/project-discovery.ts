@@ -1,6 +1,9 @@
 import { lstat, readdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { ForgeLoopStudioError } from '@shared/errors';
+import { CONFIG_FILE, MANIFEST_FILE, LEGACY_MANIFEST_FILE } from '@shared/constants';
+
+const PROJECT_MARKER_FILES = [CONFIG_FILE, MANIFEST_FILE, LEGACY_MANIFEST_FILE];
 
 const IGNORED_DIRECTORY_NAMES = new Set([
   '.git',
@@ -17,8 +20,15 @@ async function isForgeLoopProject(directory: string): Promise<boolean> {
     const forgeLoopDirectory = await lstat(join(directory, '.forgeloop'));
     if (!forgeLoopDirectory.isDirectory()) return false;
 
-    const config = await lstat(join(directory, '.forgeloop', 'config.json'));
-    return config.isFile();
+    for (const marker of PROJECT_MARKER_FILES) {
+      try {
+        const markerStat = await lstat(join(directory, '.forgeloop', marker));
+        if (markerStat.isFile()) return true;
+      } catch {
+        // marker absent; try the next one
+      }
+    }
+    return false;
   } catch {
     return false;
   }

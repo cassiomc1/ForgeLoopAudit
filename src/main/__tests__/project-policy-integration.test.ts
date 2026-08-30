@@ -60,6 +60,7 @@ describe('project policy through the canonical runtime', () => {
       new PathBoundary(root),
       {
         readConfig: () => ({ schemaVersion: 1, protocolVersion: 1, complianceMode: 'standard' }),
+        tryReadConfig: () => ({ schemaVersion: 1, protocolVersion: 1, complianceMode: 'standard' }),
         listTaskKeys: () => [],
         listSessions: () => [],
         readGlobalPolicy: () => ({}),
@@ -97,6 +98,7 @@ describe('project policy through the canonical runtime', () => {
       new PathBoundary(root),
       {
         readConfig: () => ({ schemaVersion: 1, protocolVersion: 1, complianceMode: 'standard' }),
+        tryReadConfig: () => ({ schemaVersion: 1, protocolVersion: 1, complianceMode: 'standard' }),
         listTaskKeys: () => [],
         listSessions: () => [],
         readGlobalPolicy: () => ({ 'rules.json': { schemaVersion: 1, rules: [] } }),

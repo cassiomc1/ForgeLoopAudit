@@ -125,6 +125,7 @@ describe('canonical discovery authority over snapshot tasks', () => {
       new PathBoundary(root),
       {
         readConfig: () => ({ schemaVersion: 1, protocolVersion: 1 }),
+        tryReadConfig: () => ({ schemaVersion: 1, protocolVersion: 1 }),
         listTaskKeys: () => [KEY, 'c'.repeat(64)],
         readTaskSummaryArtifacts: () => ({
           'task.json': { taskId: 'TASK-001' },
@@ -152,6 +153,7 @@ describe('canonical discovery authority over snapshot tasks', () => {
       new PathBoundary(root),
       {
         readConfig: () => ({ schemaVersion: 1, protocolVersion: 1 }),
+        tryReadConfig: () => ({ schemaVersion: 1, protocolVersion: 1 }),
         listTaskKeys: () => [],
         readTaskSummaryArtifacts: () => ({}),
         readTaskDescriptor: () => { throw new Error('missing'); },
@@ -174,6 +176,7 @@ describe('canonical discovery authority over snapshot tasks', () => {
       new PathBoundary(root),
       {
         readConfig: () => ({ schemaVersion: 1, protocolVersion: 1 }),
+        tryReadConfig: () => ({ schemaVersion: 1, protocolVersion: 1 }),
         listTaskKeys: () => ['d'.repeat(64)],
         readTaskSummaryArtifacts: () => {
           throw new Error('task.json is not valid JSON');
@@ -200,6 +203,7 @@ describe('canonical discovery authority over snapshot tasks', () => {
       new PathBoundary(root),
       {
         readConfig: () => ({ schemaVersion: 1, protocolVersion: 1 }),
+        tryReadConfig: () => ({ schemaVersion: 1, protocolVersion: 1 }),
         listTaskKeys: () => [KEY],
         readTaskSummaryArtifacts: () => ({}),
         readTaskDescriptor: () => ({ taskId: 'TASK-001' }),

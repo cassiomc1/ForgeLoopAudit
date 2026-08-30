@@ -1,6 +1,8 @@
 export const FORGELOOP_DIR_NAME = '.forgeloop';
 export const CONFIG_FILE = 'config.json';
 export const SOURCES_FILE = 'sources.json';
+export const MANIFEST_FILE = 'manifest.json';
+export const LEGACY_MANIFEST_FILE = '.manifest.json';
 export const TASK_STATE_DIR = 'task-state';
 export const SESSIONS_DIR = 'sessions';
 export const POLICY_DIR = 'policy';
