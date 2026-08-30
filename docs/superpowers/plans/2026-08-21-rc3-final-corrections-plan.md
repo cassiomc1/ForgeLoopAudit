@@ -1,5 +1,7 @@
 # ForgeLoop Studio RC3 Final Corrections Implementation Plan
 
+> Historical record. This document describes the repository state and implementation target at the time it was written. It is not the current ForgeLoop Studio specification. See the [current documentation index](../../README.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox syntax for tracking.
 
 **Goal:** Turn the remaining RC3 verification gaps into executable, CI-enforced, release-verifiable gates without creating the `v0.1.0-rc.3` tag.

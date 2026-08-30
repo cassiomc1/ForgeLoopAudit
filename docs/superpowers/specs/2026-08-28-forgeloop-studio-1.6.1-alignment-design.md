@@ -1,5 +1,7 @@
 # ForgeLoop Studio 1.6.1 Alignment Design
 
+> Historical record. This document describes the repository state and implementation target at the time it was written. It is not the current ForgeLoop Studio specification. See the [current documentation index](../../README.md).
+
 **Date:** 2026-08-28
 **Status:** Approved for implementation
 **Source:** `FORGELOOP_STUDIO_UPDATE_1_6_1.md` supplied for this task

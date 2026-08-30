@@ -1,0 +1,90 @@
+{
+  "manifestVersion": 1,
+  "sourceProject": "demo",
+  "sourceProjectName": "ForgeShop",
+  "studioVersion": "0.1.0-rc.6",
+  "forgeLoopVersion": "1.6.4",
+  "forgeLoopCommit": "24f50f9eefe5055cec053f075c748542b42e4ea2",
+  "protocolVersion": 1,
+  "schemaVersion": 1,
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "theme": "dark",
+  "captureScript": "scripts/capture-readme-screenshots.mjs",
+  "screenshots": [
+    {
+      "file": "overview.png",
+      "page": "Overview",
+      "taskId": "TASK-003",
+      "scenario": "Project health and selected-task boundaries"
+    },
+    {
+      "file": "tasks.png",
+      "page": "Tasks",
+      "taskId": null,
+      "scenario": "Six ForgeShop tasks with mixed lifecycle states"
+    },
+    {
+      "file": "lifecycle-flow.png",
+      "page": "Flow",
+      "taskId": "TASK-004",
+      "scenario": "Blocked lifecycle with recovery context"
+    },
+    {
+      "file": "contract-inspector.png",
+      "page": "Contract",
+      "taskId": "TASK-006",
+      "scenario": "Security-review contract and verification requirements"
+    },
+    {
+      "file": "evidence-matrix.png",
+      "page": "Evidence",
+      "taskId": "TASK-002",
+      "scenario": "AUTO to CHANGED verification scope and attestation boundary"
+    },
+    {
+      "file": "event-ledger.png",
+      "page": "Events",
+      "taskId": "TASK-004",
+      "scenario": "Canonical event ledger for the recovery scenario"
+    },
+    {
+      "file": "continuity.png",
+      "page": "Continuity",
+      "taskId": "TASK-004",
+      "scenario": "Mutable continuity with an immutable canonical handoff"
+    },
+    {
+      "file": "diagnostics.png",
+      "page": "Diagnostics",
+      "taskId": "TASK-004",
+      "scenario": "Canonical history, trace, reflection and evaluation signals"
+    },
+    {
+      "file": "actions.png",
+      "page": "Actions",
+      "taskId": "TASK-002",
+      "scenario": "Durable actions and approvals in read-only mode"
+    },
+    {
+      "file": "policy.png",
+      "page": "Policy",
+      "taskId": "TASK-006",
+      "scenario": "Project capability policy and selected-task policy state"
+    },
+    {
+      "file": "settings.png",
+      "page": "Settings",
+      "taskId": null,
+      "scenario": "Studio preferences and ForgeLoop capability metadata"
+    },
+    {
+      "file": "task-boundaries.png",
+      "page": "Overview",
+      "taskId": "TASK-003",
+      "scenario": "Workspace binding mismatch and invalid responsibility"
+    }
+  ]
+}

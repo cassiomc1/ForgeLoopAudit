@@ -1,9 +1,53 @@
 # Release model
 
-ForgeLoop Studio releases are read-only unsigned previews until signing credentials are intentionally introduced. Public assets are produced per operating system, checksummed after staging, and accompanied by SBOM and release evidence tied to the lockfile, source commit, protocol schema provenance, platform, architecture, and signing policy.
+ForgeLoop Studio currently produces unsigned preview artifacts. The release
+contract is defined by stable invariants rather than by a particular release
+candidate number, and [`docs/releases/release-matrix.json`](releases/release-matrix.json)
+remains the machine-readable authority for the public asset matrix.
 
-## RC3 release invariant
+## Public release contract
 
-`docs/releases/release-matrix.json` is the source of truth for the public asset matrix. A release is not complete unless every expected artifact exists exactly once, every artifact appears in exactly one platform checksum manifest, and every artifact has one evidence JSON whose filename, SHA-256, platform, architecture, version, commit, and unsigned-preview policy match the downloaded bytes. `SBOM-cyclonedx.json` is mandatory.
+A public release must satisfy all of the following:
 
-The release workflow is intentionally split into platform jobs and a publish job. Each native platform job runs `verify:full` and independently reads back the packaged Electron fuses after the native build. `workflow_dispatch` is a rehearsal path; the tag-triggered path is the only publication path. Public verification resolves the tag commit independently and requires every evidence file to reference that commit. RC3 must reach green native CI and a successful rehearsal before a release tag is created.
+- platform-specific assets are produced for the matrix entry and staged
+  without unexpected files;
+- each staged asset is covered exactly once by the matching platform checksum
+  manifest;
+- release evidence binds the asset filename, SHA-256, platform, architecture,
+  Studio version, source commit, ForgeLoop lineage and unsigned-preview policy;
+- the lockfile SBOM is generated and normalized as `SBOM-cyclonedx.json`;
+- Electron fuses are applied and read back from the packaged application;
+- the source commit resolved from the release tag is the commit named by the
+  release evidence; and
+- only the tag-triggered workflow publishes a GitHub Release.
+
+Linux, macOS and Windows assets are unsigned previews for the current release
+line. Signing and notarization are intentionally outside this release
+contract. Users should expect operating-system security warnings and should
+verify the published checksums and evidence before using an artifact.
+
+## Verification boundaries
+
+These stages are intentionally separate:
+
+| Stage | What it proves | What it does not prove |
+|---|---|---|
+| Local verification | The shared `verify:full` contract passes in the current checkout | That a public release exists or that every native runner passed |
+| Pull-request CI | The shared contract and native smoke/package checks pass on the configured matrix | Publication or tag identity |
+| Packaged verification | The unpacked/native package launches, opens the demo, and has the expected fuses | Signing, notarization or public availability |
+| Rehearsal (`workflow_dispatch`) | Platform staging, assembly, checksums, SBOM and evidence can be produced | GitHub Release publication |
+| Tag workflow | The tag-bound asset bundle is published after the same verification and assembly gates | Signing/notarization unless a future contract adds them |
+
+The platform jobs run `npm run verify:full`, build the unsigned platform
+package, exercise packaged smoke and demo-open checks, verify Electron fuses,
+validate the release matrix and upload staged assets. The `assemble` job merges
+those assets, removes staging-only metadata, generates the lockfile SBOM and
+verifies the flat bundle. The `publish` job runs only for a Git tag and
+publishes the assembled files.
+
+Do not infer publication, signing, notarization or production availability from
+a local build, a green pull request, or a successful workflow rehearsal.
+
+See [Quality gates](QUALITY_GATES.md) for the verification contract and the
+[release evidence schema](releases/release-evidence.schema.json) for the
+machine-validated evidence shape.

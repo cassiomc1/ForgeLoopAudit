@@ -76,6 +76,33 @@ Use restrained font weights. Prefer whitespace and alignment over oversized head
 └──────────────┴───────────────────────────────────────────────────────┘
 ```
 
+## Current navigation and trust surfaces
+
+The current shell exposes these surfaces in order: Overview, Tasks, Flow,
+Contract, Evidence, Events, Executions, Continuity, Diagnostics, Actions,
+Policy and Settings. Task Boundaries is presented on the selected-task Overview
+surface rather than as a separate navigation item. Verification Scope and Code
+Attestation are presented in Evidence, while Workspace Binding, Responsibility
+Constraints and Canonical Handoffs are presented through the Task Boundaries and
+Continuity surfaces.
+
+Trust states must remain explicit and must never rely on color alone:
+
+| State | Presentation guidance |
+|---|---|
+| `UNAVAILABLE` | Neutral warning with the missing capability or resource and no inferred value |
+| `UNKNOWN` | Neutral unresolved value; distinguish missing knowledge from a negative result |
+| `UNBOUND` | Neutral informational state; no workspace binding was recorded |
+| `UNRESOLVED` | Warning state for a canonical verification-scope result that ForgeLoop could not resolve |
+| `INVALID` | Strong danger state with the canonical error code/message and fail-closed semantics |
+| `VERIFIED` | Positive trust label only when the canonical attestation result says so |
+| `ATTESTED` | Strongest trust label only when the canonical completion-ledger-bound attestation says so |
+
+`PROCESSED`, `VERIFIED` and `ATTESTED` are attestation trust levels, not
+verification-scope values. Handoffs and Continuity are context surfaces, not
+completion or review evidence. Optional capability failure should degrade only
+the affected surface and leave the core protocol mode visible.
+
 ## Signature view
 
 The lifecycle graph is the product identity.

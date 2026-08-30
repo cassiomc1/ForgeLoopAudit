@@ -144,12 +144,16 @@ export function Contract({ snapshot, selectedTaskId, onSelectedTaskChange }: Con
             <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-10 p-4">
               <h3 className="text-xs font-semibold text-forge-text-muted uppercase tracking-wider mb-2">Verification Requirements</h3>
               <div className="space-y-2">
-                {contract.verification.map((v: any, i: number) => (
-                  <div key={i} className="p-2 bg-forge-secondary-surface rounded-6">
-                    <p className="text-xs font-medium text-forge-text-primary">{v.id || v.text}</p>
-                    {v.text && v.id && <p className="text-xs text-forge-text-muted mt-1">{v.text}</p>}
-                  </div>
-                ))}
+                {contract.verification.map((v: any, i: number) => {
+                  const id = typeof v === 'string' ? v : v?.id;
+                  const text = typeof v === 'object' && v !== null ? v.text : undefined;
+                  return (
+                    <div key={i} className="p-2 bg-forge-secondary-surface rounded-6">
+                      <p className="text-xs font-medium text-forge-text-primary">{id || text || 'Unspecified verification requirement'}</p>
+                      {text && id && text !== id && <p className="text-xs text-forge-text-muted mt-1">{text}</p>}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

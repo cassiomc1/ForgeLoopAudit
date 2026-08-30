@@ -2,16 +2,22 @@
 
 **Repository:** `cassiomc1/ForgeLoopStudio`  
 **Product:** ForgeLoop Studio  
-**Status:** Implementation specification  
+**Status:** Current implementation and design reference
 **Primary stack:** Electron + Node.js + React + TypeScript  
 **Target ForgeLoop protocol:** v1  
 **Default product mode:** Local, read-only observer  
+
+The current release line is `0.1.0-rc.6`, aligned to ForgeLoop `1.6.4` at
+source commit `24f50f9eefe5055cec053f075c748542b42e4ea2` with protocol v1,
+schema v1 and Integration API v1. This document describes the implemented
+observer boundary and identifies genuine future work explicitly.
 
 ---
 
 ## 1. Product Vision
 
-ForgeLoop Studio is a desktop application that turns the state of a ForgeLoop-enabled project into a live visual engineering dashboard.
+ForgeLoop Studio is a desktop application that turns the state of a
+ForgeLoop-enabled project into a live visual engineering dashboard.
 
 The application must let a user:
 
@@ -33,15 +39,15 @@ The canonical source of truth remains the ForgeLoop protocol state stored inside
 ForgeLoop Studio is an observer and visualization layer.
 
 ```text
-ForgeLoop Protocol
+ForgeLoop project
        │
-       │ canonical state
+       │ Integration API + bounded trusted artifacts
        ▼
-  .forgeloop/
+Studio canonical adapters
        │
-       │ read-only observation
+       │ narrow IPC
        ▼
-ForgeLoop Studio
+read-only ForgeLoop Studio renderer
 ```
 
 ---
@@ -52,7 +58,7 @@ ForgeLoop Studio
 
 The UI must represent actual ForgeLoop protocol concepts and artifacts. It must not invent hidden lifecycle states, undocumented completion rules, synthetic evidence, or alternative transitions.
 
-### 2.1a ForgeLoop 1.6.4 Integration boundary (RC6+)
+### 2.1a ForgeLoop 1.6.4 Integration boundary
 
 Semantic facts come exclusively from the bundled `@cassiomc1/forgeloop/integration` public subpath (ForgeLoop 1.6.4, Integration API v1, protocol v1, schema v1):
 
@@ -62,7 +68,7 @@ Semantic facts come exclusively from the bundled `@cassiomc1/forgeloop/integrati
 - `task/status`, `task/contract`, `task/continuity` — canonical per-task reads;
 - read commands (`next`, `progress`, `audit`, `report`, `policy-status`, `validate-state`, `validate-receipt`) run through a Studio allowlist guard that refuses any invocation whose classification is not strictly `READ_ONLY`, `mutatesProtocol === false` and `executesExternalProcess === false`.
 
-Compatibility modes: `INTEGRATION_V1`, `ARTIFACT_ONLY`, `INCOMPATIBLE`. Capability drift fails closed. In `INTEGRATION_V1`, `project/tasks` drives semantic task existence, policy status runs through the Integration API, snapshot and GET_TASK share one canonical task read service, and the execution provenance reader enforces realpath/symlink boundaries on both the executions directory and each file. A legacy CLI mode is intentionally absent from the public mode set: no artifact-level signal reliably identifies older projects, so the Studio never infers legacy semantics. Operational state is derived from canonical ownership (`ACTIVE`, `RECOVERY_RESUME_REQUIRED`, `COMPLETED_RELEASED`, `BLOCKED`, `OWNERSHIP_INCONSISTENT`, `READ_ONLY_UNKNOWN`) — phase alone never proves claim release. The legacy external CLI remains an isolated read-only compatibility adapter for older projects; the normal `INTEGRATION_V1` snapshot never spawns it.
+Compatibility modes: `INTEGRATION_V1`, `ARTIFACT_ONLY`, `INCOMPATIBLE`. Capability drift fails closed. In `INTEGRATION_V1`, `project/tasks` drives semantic task existence, policy status and the canonical `next` action run through the Integration API, snapshot and GET_TASK share one canonical task read service, and the execution provenance reader enforces realpath/symlink boundaries on both the executions directory and each file. A legacy CLI mode is intentionally absent from the public mode set: no artifact-level signal reliably identifies older projects, so the Studio never infers legacy semantics. Operational state is derived from canonical ownership (`ACTIVE`, `RECOVERY_RESUME_REQUIRED`, `COMPLETED_RELEASED`, `BLOCKED`, `OWNERSHIP_INCONSISTENT`, `READ_ONLY_UNKNOWN`) — phase alone never proves claim release. The legacy external CLI remains an isolated read-only compatibility adapter for older projects; the normal `INTEGRATION_V1` snapshot never spawns it.
 
 ### 2.1b ForgeLoop 1.6.4 boundary features
 
@@ -97,7 +103,10 @@ forgeloop report --task <id> --json
 forgeloop policy-status --json
 ```
 
-The application must not execute mutating lifecycle commands in the MVP.
+The application must not execute mutating lifecycle commands. In
+`INTEGRATION_V1`, canonical status, policy and next-action reads use the
+Integration API; the allowlisted external CLI is isolated to older
+artifact-only compatibility paths and remains read-only.
 
 Examples prohibited in v1:
 
@@ -487,6 +496,12 @@ The primary desktop layout should be:
 │  project path                                         connection    │
 └──────────────────────────────────────────────────────────────────────┘
 ```
+
+The implemented navigation order is Overview, Tasks, Flow, Contract, Evidence,
+Events, Executions, Continuity, Diagnostics, Actions, Policy and Settings. Task
+Boundaries is a selected-task Overview surface; Verification Scope and Code
+Attestation are Evidence surfaces. The older shell sketch above is retained as
+a layout sketch, while this list is the current navigation authority.
 
 ## 8.1 Sidebar
 
@@ -1025,7 +1040,7 @@ Expanded details:
 ```text
 Check: integration
 Status: failed
-Command: npm run test:integration
+Command: npm test
 Exit code: 1
 Started: ...
 Finished: ...
@@ -1149,9 +1164,13 @@ If continuity reconciliation is required, display a visible warning.
 
 ---
 
-# 24. Sessions View
+# 24. Sessions within Continuity and Diagnostics
 
-Display ForgeLoop activation sessions.
+The current renderer presents recorded ForgeLoop activation sessions in the
+Continuity surface alongside canonical continuity and handoff context. There
+is no separate Sessions navigation item. If ForgeLoop does not expose enough
+information to identify a session as current, Studio labels it conservatively
+instead of inferring false state.
 
 Example:
 
@@ -1621,17 +1640,20 @@ Studio caches belong in the application's own user data directory.
 
 ## 36.1 Handshake
 
-On every project open:
-
-```bash
-forgeloop protocol-info --path <project> --json
-```
-
-Use the result to determine compatibility.
+On every project open, the main process loads ForgeLoop's bundled Integration
+API and reads the canonical `protocol/info` resource. The compatibility block
+provides `protocolVersion` and `schemaVersion`; Studio does not read a
+nonexistent top-level schema field. It then negotiates the advertised
+Integration API version, executor parity, durable recovery contract and
+required core resources. Unknown protocol/schema versions or core capability
+drift fail closed to `INCOMPATIBLE`; an unavailable Integration API degrades to
+`ARTIFACT_ONLY` without guessing ownership.
 
 ## 36.2 Supported protocol registry
 
-Create an explicit compatibility registry:
+The current v1 compatibility registry is implemented at
+`src/main/core/protocol/protocol-capabilities.ts` and is kept separate from
+renderer components:
 
 ```ts
 const supportedProtocols = {
@@ -1644,10 +1666,10 @@ Do not scatter protocol-version conditionals through UI components.
 ## 36.3 Adapter boundary
 
 ```text
-ForgeLoop filesystem/CLI
+ForgeLoop project
           │
           ▼
-ProtocolV1Adapter
+Integration API + trusted artifact readers
           │
           ▼
 Studio domain model
@@ -1675,17 +1697,28 @@ continuity.json
 execution-receipt.json
 policy-snapshot.json
 events.ndjson
+recovery.json
+execution.json
+workspace-binding.json
+responsibility.json
+verification-scope.json
+handoff.json
+code-manifest.json
+attestation-statement.json
 ```
 
-Do not expose arbitrary project file browsing in v1.
+These are bounded, allowlisted detail views. Canonical semantic facts come
+from the Integration API, collection paths are validated against the selected
+project boundary, and oversized or symlinked content is withheld. Do not
+expose arbitrary project file browsing in v1.
 
 ---
 
 # 38. Settings
 
-Keep settings minimal.
-
-Recommended v1 settings:
+The current Settings surface keeps UI preferences local to the renderer and
+exposes privacy-safe diagnostics plus read-only runtime/protocol metadata.
+Current controls include:
 
 ```text
 Appearance
@@ -1702,7 +1735,10 @@ Developer
   Show raw protocol artifacts
 ```
 
-Dark theme should be the default and flagship appearance.
+The protocol section also displays ForgeLoop package, protocol/schema versions,
+compatibility mode and independently negotiated 1.6.4 boundary capabilities.
+Protocol state and project policy remain read-only. Dark theme is the default
+and flagship appearance.
 
 A light theme is not required for the MVP.
 
@@ -1726,40 +1762,35 @@ Esc                Close inspector/dialog
 
 ---
 
-# 40. MVP Scope
+# 40. Current release surface
 
-The first public release should include only the features needed to prove the product.
+The current release line implements the read-only observer contract across the
+following surfaces:
 
-## Required
+- secure Electron shell, typed preload bridge, project discovery and recent
+  project handling;
+- protocol/schema validation, Integration API capability negotiation and the
+  `INTEGRATION_V1`, `ARTIFACT_ONLY` and `INCOMPATIBLE` modes;
+- multi-task Overview and Tasks views with lifecycle Flow, Contract, Evidence,
+  Events, Executions, Continuity, Diagnostics, Actions, Policy and Settings;
+- canonical ownership, durable recovery, observability, gates, checks,
+  evidence, policy, next-action, execution provenance and bounded raw-artifact
+  detail;
+- independently degraded Workspace Binding, Canonical Handoffs,
+  Responsibility Constraints, Differential Verification Scope and Code
+  Attestation presentations;
+- selective live updates, path/symlink/resource limits, read-only command
+  allowlisting, keyboard/focus support, reduced motion and automated tests;
+  and
+- unsigned preview packaging with shared verification, native smoke and
+  release-evidence contracts.
 
-- Electron shell;
-- secure preload bridge;
-- folder picker;
-- ForgeLoop project detection;
-- protocol compatibility check;
-- recent projects;
-- task list;
-- selected task state;
-- live lifecycle flow;
-- current phase;
-- blockers;
-- failures;
-- selected guides;
-- gates;
-- checks;
-- evidence matrix;
-- event timeline;
-- continuity view;
-- policy health;
-- project health;
-- `forgeloop next` visualization;
-- live file watcher;
-- raw artifact inspector;
-- polished dark UI;
-- keyboard navigation;
-- automated tests.
+The five 1.6.4 boundary features remain read-only. Studio does not create
+tasks, mutate lifecycle state, bind workspaces, create handoffs, set
+responsibility, compute verification scope, create/sign attestations or invoke
+external signing-provider verification automatically.
 
-## Not required in MVP
+## Future / non-current
 
 - write/operator mode;
 - task creation;
@@ -1826,6 +1857,12 @@ The UI must never fabricate successful completion after issuing a command.
 ---
 
 # 43. Testing Strategy
+
+The current repository implements unit, integration-style fixture, renderer,
+Electron smoke, Playwright and packaged verification coverage. The detailed
+test files and the executable [`npm run verify:full`](docs/QUALITY_GATES.md)
+contract are the current verification authority; the examples below describe
+the coverage intent rather than an unchecked future backlog.
 
 ## 43.1 Unit tests
 
@@ -1894,7 +1931,8 @@ Required test cases:
 
 # 44. CI
 
-Recommended GitHub Actions pipeline:
+The current GitHub Actions CI runs the shared verification contract and native
+Electron checks on Ubuntu, macOS and Windows:
 
 ```text
 install
@@ -1920,7 +1958,9 @@ Run on:
 - macOS;
 - Windows where practical.
 
-Release packaging can initially target macOS + Windows first if desired.
+The release workflow additionally stages native unsigned assets for all three
+platforms, verifies the release matrix and assembles checksummed, SBOM-backed
+release evidence before the tag-only publish job.
 
 ---
 
@@ -1940,29 +1980,31 @@ Linux
   AppImage
 ```
 
-Code signing and notarization should be handled before claiming production-ready desktop distribution.
+The current platform artifacts are unsigned previews. Code signing and
+notarization are future distribution work and are not implied by local, CI or
+packaged verification. See [`docs/RELEASE_MODEL.md`](docs/RELEASE_MODEL.md)
+for the public release contract.
 
 ---
 
 # 46. README Requirements
 
-The repository README should eventually include:
+The current repository README includes:
 
-1. hero image;
+1. a screenshot gallery sourced from the generated ForgeShop fixture;
 2. one-line value proposition;
-3. animated screenshot/GIF;
-4. feature summary;
-5. supported ForgeLoop protocol version;
-6. installation instructions;
-7. local development commands;
-8. security model;
-9. read-only guarantee for current release;
-10. architecture summary;
-11. roadmap;
-12. contribution instructions;
-13. ForgeLoop repository link.
+3. feature and trust-model summary;
+4. supported ForgeLoop protocol version;
+5. installation instructions;
+6. local development commands;
+7. security model;
+8. read-only guarantee for current release;
+9. architecture summary;
+10. roadmap;
+11. contribution instructions; and
+12. ForgeLoop repository link.
 
-Recommended tagline:
+The following product copy remains canonical:
 
 > **A real-time visual interface for the ForgeLoop engineering protocol.**
 
@@ -2032,9 +2074,11 @@ Before calling the UI finished, verify all of the following:
 
 ---
 
-# 49. Implementation Order
+# 49. Implementation history and maintenance order
 
-Recommended implementation sequence:
+The phased sequence below is retained as implementation history and a
+maintenance orientation map. The current source, tests and `verify:full`
+contract are authoritative; this section is not an unchecked future backlog.
 
 ## Phase A — Foundation
 
@@ -2194,6 +2238,16 @@ Its role is deliberately focused:
 
 > visualize and explain the real state of a ForgeLoop engineering process.
 
+## Documentation governance
+
+`README.md`, this specification and the documents indexed by
+[`docs/README.md`](docs/README.md) describe the current implementation and
+must trace machine facts to code, schemas, provenance, package scripts or
+workflows. Dated records under `docs/verification/` and
+`docs/superpowers/` preserve the repository state from the time they were
+written. They are historical records, not current product requirements, and
+must not be rewritten to adopt later versions, commits or test results.
+
 ---
 
 # 52. Final Architecture Decision
@@ -2218,7 +2272,10 @@ Keep ForgeLoop Studio in a separate repository from ForgeLoop core.
 
 Keep v1 read-only.
 
-Treat `.forgeloop/` plus read-only ForgeLoop CLI responses as the source of truth.
+Treat ForgeLoop's Integration API and canonical project state as the semantic
+source of truth. Bounded `.forgeloop/` artifacts and the isolated read-only CLI
+adapter for older compatibility paths provide detail or degraded observation;
+they never replace the Integration API's authority in `INTEGRATION_V1`.
 
 Use a protocol-adapter boundary so future ForgeLoop protocol versions can be supported without rewriting the application.
 

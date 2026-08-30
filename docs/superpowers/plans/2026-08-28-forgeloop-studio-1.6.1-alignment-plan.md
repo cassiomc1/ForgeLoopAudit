@@ -1,6 +1,8 @@
 
 # ForgeLoop Studio 1.6.1 Alignment Implementation Plan
 
+> Historical record. This document describes the repository state and implementation target at the time it was written. It is not the current ForgeLoop Studio specification. See the [current documentation index](../../README.md).
+
 > For agentic workers: REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox syntax for tracking.
 
 **Goal:** Align Studio's vendored ForgeLoop runtime, trusted schemas, read-only execution reader, optional capability model, Executions presentation, demo fixtures, and current-version documentation with ForgeLoop v1.6.1 at commit f331100cff175a4ce990fa843b397fcf720b40f5.

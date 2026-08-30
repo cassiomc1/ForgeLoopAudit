@@ -1,5 +1,7 @@
 # ForgeLoop Studio RC3 Release Readiness Final Corrections Implementation Plan
 
+> Historical record. This document describes the repository state and implementation target at the time it was written. It is not the current ForgeLoop Studio specification. See the [current documentation index](../../README.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:executing-plans` to implement this plan task-by-task. The user explicitly requires inline execution without subagents.
 
 **Goal:** Make RC3 release readiness evidence strict, architecture-correct, diagnostically useful, and green-before-merge without publishing the RC3 tag.
