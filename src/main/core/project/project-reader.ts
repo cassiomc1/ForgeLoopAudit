@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync, lstatSync, existsSync, openSync, readSync, closeSync, fstatSync } from 'fs';
 import { join } from 'path';
 import { ForgeLoopStudioError } from '@shared/errors';
-import { parseJsonSafely } from '@main/security/resource-limits';
+import { parseJsonSafely, RESOURCE_LIMITS } from '@main/security/resource-limits';
 import { PathBoundary } from '@main/security/path-boundary';
 import { CONFIG_FILE, SOURCES_FILE, TASK_STATE_DIR, SESSIONS_DIR, POLICY_DIR } from '@shared/constants';
 import type { ProjectDetectionResult, RawCollectionArtifactRequest } from '@shared/domain';
@@ -14,6 +14,13 @@ export interface ForgeLoopConfig {
   protocolVersion: number;
   projectName?: string;
   complianceMode?: string;
+  attestation?: {
+    mode?: 'off' | 'optional' | 'required' | string;
+    signing?: {
+      provider?: string;
+      required?: boolean;
+    };
+  };
 }
 
 export interface ForgeLoopSources {
@@ -32,6 +39,15 @@ function isCanonicalArtifact(name: string, value: unknown): boolean {
   if (name === 'work-state.json') return value.phase === undefined || typeof value.phase === 'string';
   if (name === 'policy.lock') return typeof value.digest === 'string' || typeof value.rulesDigest === 'string' || typeof value.baselineDigest === 'string';
   return true;
+}
+
+function assertJsonFileSize(relativePath: string, size: number): void {
+  if (size > RESOURCE_LIMITS.JSON_MAX_SIZE_BYTES) {
+    throw ForgeLoopStudioError.artifactInvalid(
+      relativePath,
+      `JSON artifact exceeds maximum size of ${RESOURCE_LIMITS.JSON_MAX_SIZE_BYTES} bytes`,
+    );
+  }
 }
 
 const SCHEMA_BY_FILE: Record<string, string> = {
@@ -97,6 +113,11 @@ export class ProjectDetector {
     try {
       forgeLoopRoot = this.pathBoundary.validateForgeLoopPath('');
       const configPath = this.pathBoundary.validateForgeLoopPath(CONFIG_FILE);
+      const configStat = lstatSync(configPath);
+      if (!configStat.isFile() || configStat.isSymbolicLink()) {
+        throw ForgeLoopStudioError.artifactInvalid(CONFIG_FILE, 'Symbolic links and non-file config artifacts are not allowed');
+      }
+      assertJsonFileSize(CONFIG_FILE, configStat.size);
       const content = readFileSync(configPath, 'utf8');
       config = parseJsonSafely<ForgeLoopConfig>(content);
       const validation = this.validator.validate(ARTIFACT_SCHEMAS['config.json'], config);
@@ -163,6 +184,11 @@ export class ProjectReader {
   readConfig(): ForgeLoopConfig {
     const configPath = join(this.forgeLoopRoot, CONFIG_FILE);
     const validatedPath = this.pathBoundary.validatePath(configPath);
+    const stat = lstatSync(validatedPath);
+    if (!stat.isFile() || stat.isSymbolicLink()) {
+      throw ForgeLoopStudioError.artifactInvalid(CONFIG_FILE, 'Symbolic links and non-file config artifacts are not allowed');
+    }
+    assertJsonFileSize(CONFIG_FILE, stat.size);
     const content = readFileSync(validatedPath, 'utf8');
     const config = parseJsonSafely<ForgeLoopConfig>(content);
     const validated = this.validateArtifact('config.json', config);
@@ -176,6 +202,11 @@ export class ProjectReader {
   readSources(): ForgeLoopSources {
     const sourcesPath = join(this.forgeLoopRoot, SOURCES_FILE);
     const validatedPath = this.pathBoundary.validatePath(sourcesPath);
+    const stat = lstatSync(validatedPath);
+    if (!stat.isFile() || stat.isSymbolicLink()) {
+      throw ForgeLoopStudioError.artifactInvalid(SOURCES_FILE, 'Symbolic links and non-file source artifacts are not allowed');
+    }
+    assertJsonFileSize(SOURCES_FILE, stat.size);
     const content = readFileSync(validatedPath, 'utf8');
     const sources = parseJsonSafely<ForgeLoopSources>(content);
     const validated = this.validateArtifact('sources.json', sources);
@@ -208,6 +239,7 @@ export class ProjectReader {
     const taskPath = join(this.forgeLoopRoot, TASK_STATE_DIR, taskKey, 'task.json');
     const stat = lstatSync(taskPath);
     if (!stat.isFile() || stat.isSymbolicLink()) throw ForgeLoopStudioError.artifactInvalid('task.json', 'Symbolic links and non-file descriptors are not allowed');
+    assertJsonFileSize('task.json', stat.size);
     const parsed = parseJsonSafely(readFileSync(this.pathBoundary.validatePath(taskPath), 'utf8'));
     const validated = this.validateArtifact('task.json', parsed);
     if (validated.error) throw ForgeLoopStudioError.artifactInvalid('task.json', validated.error);
@@ -236,6 +268,7 @@ export class ProjectReader {
           errors.push(`${entry}: symbolic links and non-file artifacts are not allowed`);
           continue;
         }
+        assertJsonFileSize(entry, stat.size);
         const safePath = this.pathBoundary.validatePath(filePath);
         const content = readFileSync(safePath, 'utf8');
         if (entry.endsWith('.json')) {
@@ -288,6 +321,11 @@ export class ProjectReader {
   readSession(sessionId: string): Record<string, unknown> {
     const sessionPath = join(this.forgeLoopRoot, SESSIONS_DIR, `${sessionId}.json`);
     const validatedPath = this.pathBoundary.validatePath(sessionPath);
+    const stat = lstatSync(validatedPath);
+    if (!stat.isFile() || stat.isSymbolicLink()) {
+      throw ForgeLoopStudioError.artifactInvalid('session.json', 'Symbolic links and non-file session artifacts are not allowed');
+    }
+    assertJsonFileSize('session.json', stat.size);
     const content = readFileSync(validatedPath, 'utf8');
     const parsed = parseJsonSafely(content);
     const validated = this.validateArtifact('session.json', parsed);
@@ -330,6 +368,7 @@ export class ProjectReader {
 
     if (lstatSync(snapshotPath).isSymbolicLink()) throw ForgeLoopStudioError.artifactInvalid('policy-snapshot.json', 'Symbolic links are not allowed');
     const validatedPath = this.pathBoundary.validatePath(snapshotPath);
+    assertJsonFileSize('policy-snapshot.json', lstatSync(snapshotPath).size);
     const parsed = parseJsonSafely(readFileSync(validatedPath, 'utf8'));
     const validated = this.validateArtifact('policy-snapshot.json', parsed);
     if (validated.error) throw ForgeLoopStudioError.artifactInvalid('policy-snapshot.json', validated.error);
@@ -353,6 +392,7 @@ export class ProjectReader {
       if (!stat.isFile() || stat.isSymbolicLink()) {
         throw ForgeLoopStudioError.artifactInvalid(relativePath, 'Symbolic links and non-file artifacts are not allowed');
       }
+      assertJsonFileSize(relativePath, stat.size);
       const validatedPath = this.pathBoundary.validatePath(candidate);
       const content = readFileSync(validatedPath, 'utf8');
       const parsed = parseJsonSafely(content);
@@ -404,6 +444,7 @@ export class ProjectReader {
     if (!stat.isFile() || stat.isSymbolicLink()) {
       throw ForgeLoopStudioError.artifactInvalid(relativePath, 'Symbolic links and non-file artifacts are not allowed');
     }
+    assertJsonFileSize(relativePath, stat.size);
     const validatedPath = this.pathBoundary.validatePath(candidate);
     const content = readFileSync(validatedPath, 'utf8');
     const parsed = parseJsonSafely(content);
@@ -426,6 +467,7 @@ export class ProjectReader {
     if (!stat.isFile() || stat.isSymbolicLink()) {
       throw ForgeLoopStudioError.artifactInvalid(relativePath, 'Symbolic links and non-file artifacts are not allowed');
     }
+    assertJsonFileSize(relativePath, stat.size);
     const validatedPath = this.pathBoundary.validatePath(candidate);
     const content = readFileSync(validatedPath, 'utf8');
     const parsed = parseJsonSafely(content);
@@ -446,6 +488,7 @@ export class ProjectReader {
       try {
         const stat = lstatSync(candidate);
         if (!stat.isFile() || stat.isSymbolicLink()) throw new Error('symbolic links and non-file artifacts are not allowed');
+        assertJsonFileSize(join(POLICY_DIR, name), stat.size);
         const parsed = parseJsonSafely(readFileSync(this.pathBoundary.validatePath(candidate), 'utf8'));
         const validated = this.validateArtifact(name, parsed);
         result[name] = validated.error ? { _invalid: true, _schemaInvalid: true, _error: validated.error } : validated.value;

@@ -10,7 +10,8 @@ type RecordValue = Record<string, unknown>;
 interface DiagnosticsProps {
   snapshot: ProjectSnapshot;
   selectedTaskId?: string | null;
-  refreshToken?: number;
+  genericTaskRefreshToken?: number;
+  evaluationsRefreshToken?: number;
   onSelectedTaskChange?: (taskId: string) => void;
 }
 
@@ -50,7 +51,7 @@ function MetricLine({ label, value }: { label: string; value: unknown }) {
   return <div className="flex items-center justify-between gap-4 text-sm"><span className="text-forge-text-muted">{label}</span><span className="text-forge-text-primary text-right break-words">{text(value)}</span></div>;
 }
 
-export function Diagnostics({ snapshot, selectedTaskId, refreshToken = 0, onSelectedTaskChange }: DiagnosticsProps) {
+export function Diagnostics({ snapshot, selectedTaskId, genericTaskRefreshToken = 0, evaluationsRefreshToken = 0, onSelectedTaskChange }: DiagnosticsProps) {
   const [selectedTask, setSelectedTask] = useState<TaskSummary | null>(snapshot.tasks.find((task) => task.taskId === selectedTaskId) || snapshot.tasks.find((task) => task.taskId === snapshot.activeTaskId) || snapshot.tasks[0] || null);
   const [views, setViews] = useState<DiagnosticViews>({ history: null, trace: null, reflection: null, inspection: null, metrics: null, evaluations: null });
   const [loading, setLoading] = useState(false);
@@ -79,7 +80,7 @@ export function Diagnostics({ snapshot, selectedTaskId, refreshToken = 0, onSele
     }).catch((reason: unknown) => { if (!cancelled) setError(reason instanceof Error ? reason.message : 'Canonical diagnostics are unavailable.'); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [selectedTask, features?.observability, features?.trajectoryMetrics, features?.trajectoryEvaluations, refreshToken]);
+  }, [selectedTask, features?.observability, features?.trajectoryMetrics, features?.trajectoryEvaluations, genericTaskRefreshToken, evaluationsRefreshToken]);
 
   if (!snapshot.tasks.length) return <EmptyState title="No tasks available" description="Open a ForgeLoop project with tasks to inspect canonical diagnostics." />;
 

@@ -7,12 +7,14 @@ import { AlertTriangle, FileCheck2, ShieldCheck } from 'lucide-react';
 interface EvidenceProps {
   snapshot: ProjectSnapshot;
   selectedTaskId?: string | null;
-  refreshToken?: number;
+  genericTaskRefreshToken?: number;
+  verificationScopeRefreshToken?: number;
+  attestationRefreshToken?: number;
   onSelectedTaskChange?: (taskId: string) => void;
   onOpenActions?: () => void;
 }
 
-export function Evidence({ snapshot, selectedTaskId, refreshToken = 0, onSelectedTaskChange, onOpenActions }: EvidenceProps) {
+export function Evidence({ snapshot, selectedTaskId, genericTaskRefreshToken = 0, verificationScopeRefreshToken = 0, attestationRefreshToken = 0, onSelectedTaskChange, onOpenActions }: EvidenceProps) {
   const [selectedTask, setSelectedTask] = useState<TaskSummary | null>(
     snapshot.tasks.find((t) => t.taskId === snapshot.activeTaskId) || snapshot.tasks[0] || null
   );
@@ -20,17 +22,19 @@ export function Evidence({ snapshot, selectedTaskId, refreshToken = 0, onSelecte
   const [executionReceipt, setExecutionReceipt] = useState<Record<string, unknown> | null>(null);
   const [verificationScope, setVerificationScope] = useState<VerificationScopeView | null>(null);
   const [attestation, setAttestation] = useState<TaskAttestationView | null>(null);
+  const selectedTaskKey = selectedTask?.taskId ?? null;
+  const scopeFeatureAvailable = snapshot.protocol.featureSupport?.differentialVerificationScope === true;
+  const attestationFeatureAvailable = snapshot.protocol.featureSupport?.codeAttestation === true;
   useEffect(() => {
-    if (!selectedTask) { setExecutionReceipt(null); return; }
+    if (!selectedTaskKey) { setExecutionReceipt(null); return; }
     let cancelled = false;
-    window.forgeLoopStudio.getTask(selectedTask.taskId).then((task) => { if (!cancelled) setExecutionReceipt(task.executionReceipt || null); }).catch(() => { if (!cancelled) setExecutionReceipt(null); });
+    window.forgeLoopStudio.getTask(selectedTaskKey).then((task) => { if (!cancelled) setExecutionReceipt(task.executionReceipt || null); }).catch(() => { if (!cancelled) setExecutionReceipt(null); });
     return () => { cancelled = true; };
-  }, [selectedTask, refreshToken]);
+  }, [genericTaskRefreshToken, selectedTaskKey]);
 
   useEffect(() => {
-    if (!selectedTask) { setVerificationScope(null); setAttestation(null); return; }
+    if (!selectedTaskKey) { setVerificationScope(null); return; }
     let cancelled = false;
-    const featureSupport = snapshot.protocol.featureSupport;
     const scopeUnavailable: VerificationScopeView = {
       available: false,
       source: 'UNAVAILABLE',
@@ -47,6 +51,16 @@ export function Evidence({ snapshot, selectedTaskId, refreshToken = 0, onSelecte
       createdAt: null,
       error: { code: 'E_FEATURE_UNAVAILABLE', message: 'Differential Verification Scope is not advertised by this ForgeLoop build.' },
     };
+    const scopePromise = scopeFeatureAvailable
+      ? window.forgeLoopStudio.getTaskVerificationScope(selectedTaskKey).catch(() => scopeUnavailable)
+      : Promise.resolve(scopeUnavailable);
+    scopePromise.then((scope) => { if (!cancelled) setVerificationScope(scope); });
+    return () => { cancelled = true; };
+  }, [scopeFeatureAvailable, selectedTaskKey, verificationScopeRefreshToken]);
+
+  useEffect(() => {
+    if (!selectedTaskKey) { setAttestation(null); return; }
+    let cancelled = false;
     const attestationUnavailable: TaskAttestationView = {
       available: false,
       source: 'UNAVAILABLE',
@@ -61,17 +75,12 @@ export function Evidence({ snapshot, selectedTaskId, refreshToken = 0, onSelecte
       subject: null,
       errors: [{ code: 'E_FEATURE_UNAVAILABLE', message: 'Code attestation is not advertised by this ForgeLoop build.' }],
     };
-    const scopePromise = featureSupport?.differentialVerificationScope === true
-      ? window.forgeLoopStudio.getTaskVerificationScope(selectedTask.taskId).catch(() => scopeUnavailable)
-      : Promise.resolve(scopeUnavailable);
-    const attestationPromise = featureSupport?.codeAttestation === true
-      ? window.forgeLoopStudio.getTaskAttestation(selectedTask.taskId).catch(() => attestationUnavailable)
+    const attestationPromise = attestationFeatureAvailable
+      ? window.forgeLoopStudio.getTaskAttestation(selectedTaskKey).catch(() => attestationUnavailable)
       : Promise.resolve(attestationUnavailable);
-    Promise.all([scopePromise, attestationPromise]).then(([scope, attestationView]) => {
-      if (!cancelled) { setVerificationScope(scope); setAttestation(attestationView); }
-    });
+    attestationPromise.then((attestationView) => { if (!cancelled) setAttestation(attestationView); });
     return () => { cancelled = true; };
-  }, [selectedTask, snapshot.protocol.featureSupport, refreshToken]);
+  }, [attestationFeatureAvailable, attestationRefreshToken, selectedTaskKey]);
 
   if (snapshot.tasks.length === 0) {
     return <NoEvidenceState />;
@@ -196,10 +205,12 @@ function BoundedEvidenceList({ label, values }: { label: string; values: string[
 
 export function VerificationScopeCard({ scope }: { scope: VerificationScopeView | null }) {
   const noPersistedScope = scope?.available === true && scope.requestedMode === 'UNKNOWN' && scope.resolvedMode === 'UNKNOWN' && !scope.fingerprint;
-  return <section className="rounded-10 border border-forge-border-subtle bg-forge-primary-surface p-4" aria-labelledby="verification-scope-heading">
+  const unresolved = scope?.resolvedMode === 'UNRESOLVED';
+  return <section className={cn('rounded-10 border bg-forge-primary-surface p-4', unresolved ? 'border-forge-warning/40' : 'border-forge-border-subtle')} aria-labelledby="verification-scope-heading">
     <div className="flex items-center gap-2"><FileCheck2 className="h-4 w-4 text-forge-accent" /><h2 id="verification-scope-heading" className="text-sm font-semibold text-forge-text-primary">Verification Scope</h2></div>
     <p className="mt-1 text-xs text-forge-text-muted">ForgeLoop's persisted pre-completion verification plan.</p>
     {!scope ? <p className="mt-4 text-sm text-forge-text-muted">Loading verification scope…</p> : scope.error ? <p className="mt-4 text-sm text-forge-warning">{scope.error.message}</p> : noPersistedScope ? <p className="mt-4 text-sm text-forge-text-muted">No persisted verification scope for this task.</p> : <div className="mt-4 space-y-4">
+      {unresolved && <p className="flex items-center gap-1.5 text-xs text-forge-warning"><AlertTriangle className="h-3.5 w-3.5" />ForgeLoop could not resolve a verification scope for this task.</p>}
       <div className="grid grid-cols-2 gap-3 text-xs md:grid-cols-4"><div><span className="text-forge-text-muted">Requested mode</span><p className="mt-1 font-mono text-forge-text-primary">{scope.requestedMode}</p></div><div><span className="text-forge-text-muted">Resolved mode</span><p className="mt-1 font-mono text-forge-text-primary">{scope.resolvedMode}</p></div><div><span className="text-forge-text-muted">Verification cycle</span><p className="mt-1 font-mono text-forge-text-primary">{scope.verificationCycle ?? 'Unknown'}</p></div><div><span className="text-forge-text-muted">Created at</span><p className="mt-1 text-forge-text-primary">{scope.createdAt || 'Unknown'}</p></div></div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2"><BoundedEvidenceList label="Changed paths" values={scope.changedPaths} /><BoundedEvidenceList label="Claimed paths" values={scope.claimedPaths} /><BoundedEvidenceList label="Selected paths" values={scope.selectedPaths} /><BoundedEvidenceList label="Reasons" values={scope.reasons} /></div>
       <div className="grid grid-cols-1 gap-2 text-xs text-forge-text-secondary"><p>Scope fingerprint: <span className="font-mono">{scope.fingerprint || 'Not recorded'}</span></p><p>Checker capability fingerprint: <span className="font-mono">{scope.checkerCapabilityFingerprint || 'Not recorded'}</span></p><p>Fallback: <span className="font-mono">{scope.fallback ? JSON.stringify(scope.fallback) : 'None'}</span></p></div>
@@ -220,6 +231,7 @@ export function AttestationCard({ attestation }: { attestation: TaskAttestationV
     <p className="mt-1 text-xs text-forge-text-muted">Canonical content and evidence provenance for the selected task.</p>
     {!attestation ? <p className="mt-4 text-sm text-forge-text-muted">Loading code attestation…</p> : <div className="mt-4 space-y-4">
       <div className="flex flex-wrap items-center gap-2"><span className={cn('text-sm font-semibold', attestationTone(attestation.level))}>{attestation.level}</span><span className="text-xs text-forge-text-muted">Status: {attestation.status}</span></div>
+      {attestation.readPolicy && !attestation.readPolicy.automaticCanonicalReadAllowed && <p className="flex items-center gap-1.5 text-xs text-forge-warning"><AlertTriangle className="h-3.5 w-3.5" />{attestation.readPolicy.reason === 'DISABLED' ? 'Automatic attestation reads are disabled by project policy.' : attestation.readPolicy.reason === 'CONFIG_UNAVAILABLE' ? 'Attestation policy could not be validated; automatic reads are disabled.' : 'External verification required.'}</p>}
       {attestation.status === 'INVALID' && <p className="flex items-center gap-1.5 text-xs text-forge-danger"><AlertTriangle className="h-3.5 w-3.5" />Canonical attestation reported an invalid result.</p>}
       {attestation.status === 'MISSING' && <p className="text-xs text-forge-text-muted">Attestation artifacts are missing for this task.</p>}
       {attestation.status === 'DISABLED' && <p className="text-xs text-forge-text-muted">Attestation is disabled by the project policy.</p>}

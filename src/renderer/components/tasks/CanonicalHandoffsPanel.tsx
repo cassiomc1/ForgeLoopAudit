@@ -5,14 +5,14 @@ import { Archive, CircleHelp } from 'lucide-react';
 interface CanonicalHandoffsPanelProps {
   taskId: string;
   featureSupport?: ForgeLoopFeatureSupport;
-  refreshToken?: number;
+  handoffRefreshToken?: number;
 }
 
 function unavailable(advertised: boolean): TaskHandoffsView {
   return {
     available: false,
     source: 'UNAVAILABLE',
-    count: 0,
+    count: null,
     handoffs: [],
     error: {
       code: 'E_FEATURE_UNAVAILABLE',
@@ -30,31 +30,33 @@ function recordString(value: unknown): string {
   return typeof value === 'string' && value.length > 0 ? value : 'Not recorded';
 }
 
-export function CanonicalHandoffsPanel({ taskId, featureSupport, refreshToken = 0 }: CanonicalHandoffsPanelProps) {
+export function CanonicalHandoffsPanel({ taskId, featureSupport, handoffRefreshToken = 0 }: CanonicalHandoffsPanelProps) {
   const [handoffs, setHandoffs] = useState<TaskHandoffsView | null>(null);
+  const advertised = featureSupport ? featureSupport.canonicalHandoffs === true : true;
 
   useEffect(() => {
     let cancelled = false;
-    const advertised = featureSupport ? featureSupport.canonicalHandoffs === true : true;
     const api = window.forgeLoopStudio;
     const read = advertised && typeof api?.getTaskHandoffs === 'function'
       ? api.getTaskHandoffs(taskId).catch(() => unavailable(true))
       : Promise.resolve(unavailable(advertised));
     read.then((result) => { if (!cancelled) setHandoffs(result); });
     return () => { cancelled = true; };
-  }, [featureSupport, refreshToken, taskId]);
+  }, [advertised, handoffRefreshToken, taskId]);
 
   return (
     <section className="rounded-10 border border-forge-border-subtle bg-forge-primary-surface p-4" aria-labelledby="canonical-handoffs-heading">
       <div className="flex items-center gap-2">
         <Archive className="h-4 w-4 text-forge-accent" />
         <h2 id="canonical-handoffs-heading" className="text-sm font-semibold text-forge-text-primary">Canonical Handoffs</h2>
-        {handoffs && <span className="ml-auto text-xs text-forge-text-muted">{handoffs.count} recorded</span>}
+        {handoffs && <span className="ml-auto text-xs text-forge-text-muted">{handoffs.available ? `${handoffs.count ?? 0} recorded` : 'Unavailable'}</span>}
       </div>
       <p className="mt-1 text-xs text-forge-text-muted">Immutable snapshots preserved by ForgeLoop for continuity between authorized harnesses.</p>
       {!handoffs ? <p className="mt-4 text-sm text-forge-text-muted">Loading canonical handoffs…</p> : (
         <>
-          {handoffs.handoffs.length === 0 ? (
+          {!handoffs.available ? (
+            <div className="mt-4 flex items-center gap-2 text-sm text-forge-warning"><CircleHelp className="h-4 w-4" />Canonical handoff snapshots are unavailable.</div>
+          ) : handoffs.handoffs.length === 0 ? (
             <div className="mt-4 flex items-center gap-2 text-sm text-forge-text-muted"><CircleHelp className="h-4 w-4" />No canonical handoff snapshots recorded.</div>
           ) : (
             <div className="mt-4 space-y-2">

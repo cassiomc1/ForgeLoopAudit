@@ -240,7 +240,7 @@ export interface CanonicalHandoffView {
 export interface TaskHandoffsView {
   available: boolean;
   source: CanonicalProjectionSource;
-  count: number;
+  count: number | null;
   handoffs: CanonicalHandoffView[];
   error: CanonicalProjectionError | null;
 }
@@ -261,13 +261,14 @@ export interface ResponsibilityView {
   errors: CanonicalProjectionError[];
 }
 
-export type VerificationScopeMode = 'AUTO' | 'CHANGED' | 'CLAIMED' | 'FULL' | 'UNKNOWN';
+export type VerificationScopeRequestedMode = 'AUTO' | 'CHANGED' | 'CLAIMED' | 'FULL' | 'UNKNOWN';
+export type VerificationScopeResolvedMode = 'CHANGED' | 'CLAIMED' | 'FULL' | 'UNRESOLVED' | 'UNKNOWN';
 
 export interface VerificationScopeView {
   available: boolean;
   source: CanonicalProjectionSource;
-  requestedMode: VerificationScopeMode;
-  resolvedMode: VerificationScopeMode;
+  requestedMode: VerificationScopeRequestedMode;
+  resolvedMode: VerificationScopeResolvedMode;
   verificationCycle: number | null;
   changedPaths: string[];
   claimedPaths: string[];
@@ -283,6 +284,20 @@ export interface VerificationScopeView {
 export type AttestationStatus = 'DISABLED' | 'MISSING' | 'VALID' | 'INVALID' | 'UNKNOWN';
 export type AttestationTrustLevel = 'PROCESSED' | 'VERIFIED' | 'ATTESTED' | 'UNKNOWN';
 
+export type AttestationReadPolicyReason =
+  | 'DISABLED'
+  | 'NO_EXTERNAL_SIGNING_PROVIDER'
+  | 'EXTERNAL_SIGNING_PROVIDER'
+  | 'UNKNOWN_PROVIDER'
+  | 'CONFIG_UNAVAILABLE';
+
+export interface AttestationReadPolicy {
+  automaticCanonicalReadAllowed: boolean;
+  reason: AttestationReadPolicyReason;
+  signingProvider: string | null;
+  signingRequired: boolean | null;
+}
+
 export interface TaskAttestationView {
   available: boolean;
   source: CanonicalProjectionSource;
@@ -296,6 +311,7 @@ export interface TaskAttestationView {
   files: number | null;
   subject: string | null;
   errors: CanonicalProjectionError[];
+  readPolicy?: AttestationReadPolicy;
 }
 
 export interface TaskBoundariesView {

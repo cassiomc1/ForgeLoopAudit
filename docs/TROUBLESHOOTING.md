@@ -81,11 +81,11 @@ Studio reads only the fixed `handoffs/handoff-*.json` collection through the For
 
 ## Verification scope is absent, stale or unresolved
 
-Studio displays the persisted canonical scope only. Supported modes are `AUTO`, `CHANGED`, `CLAIMED` and `FULL`; `IMPACTED` is not a supported Studio mode. Errors such as `E_VERIFICATION_SCOPE_INVALID`, `E_VERIFICATION_SCOPE_STALE` and `E_VERIFICATION_SCOPE_UNRESOLVED` are shown as canonical errors. Scope describes planned/resolved verification inputs and is not attestation coverage. Studio never runs `verify-scope` or computes a replacement.
+Studio displays the persisted canonical scope only. Requested modes are `AUTO`, `CHANGED`, `CLAIMED` and `FULL`; resolved modes are `CHANGED`, `CLAIMED`, `FULL` and `UNRESOLVED`; `IMPACTED` is not a supported Studio mode. Errors such as `E_VERIFICATION_SCOPE_INVALID`, `E_VERIFICATION_SCOPE_STALE` and `E_VERIFICATION_SCOPE_UNRESOLVED` are shown as canonical errors. Scope describes planned/resolved verification inputs and is not attestation coverage. Studio never runs `verify-scope` or computes a replacement.
 
 ## Code attestation is disabled, missing or invalid
 
-Attestation is loaded lazily for the selected task. `DISABLED`, `MISSING`, `VALID` and `INVALID` are status values; `PROCESSED`, `VERIFIED` and `ATTESTED` are separate trust levels and are never inferred. Revision-provider errors such as `E_REVISION_PROVIDER_*` and `E_REVISION_CONTENT_UNAVAILABLE`, along with `E_ATTESTATION_*`, remain visible. A `statement.sigstore.json` bundle is external data: its presence alone does not prove a valid signature or produce `ATTESTED`. Studio never runs `attestation-create`, signs data, stores signing tokens or automatically runs full/range verification.
+Attestation status is loaded lazily for the selected task. `DISABLED`, `MISSING`, `VALID` and `INVALID` are status values; `PROCESSED`, `VERIFIED` and `ATTESTED` are separate trust levels and are never inferred. Revision-provider errors such as `E_REVISION_PROVIDER_*` and `E_REVISION_CONTENT_UNAVAILABLE`, along with `E_ATTESTATION_*`, remain visible. A `statement.sigstore.json` bundle is external data: its presence alone does not prove a valid signature or produce `ATTESTED`. Studio never creates or signs attestations. It may request ForgeLoop's canonical local content verification when no external signing-provider execution is required; external signing-provider verification is never triggered automatically. Run the canonical ForgeLoop verification command explicitly when external verification is required.
 
 ## Boundary status changed after a file update
 

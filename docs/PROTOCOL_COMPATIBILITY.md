@@ -33,14 +33,14 @@ The optional resources are consumed from the ForgeLoop Integration API rather th
 | `task/workspace-binding` | Current binding status and bounded identity details | Studio never binds or rebinds a workspace |
 | `task/handoffs` | Immutable handoff snapshots in a separate Continuity surface | A handoff is not evidence, authority or delegation |
 | `task/responsibility` | Responsibility status, frozen inputs, changed paths and errors | Studio never sets responsibility |
-| `task/verification-scope` | Persisted `AUTO`, `CHANGED`, `CLAIMED` or `FULL` scope | Studio never computes scope and never presents `IMPACTED` |
-| `task/attestation` | Lazy status, trust level, signature state, signer and errors | Studio never creates, signs or automatically verifies attestations |
+| `task/verification-scope` | Persisted requested `AUTO`, `CHANGED`, `CLAIMED` or `FULL` mode and resolved `CHANGED`, `CLAIMED`, `FULL` or `UNRESOLVED` mode | Studio never computes scope and never presents `IMPACTED` |
+| `task/attestation` | Lazy status, trust level, signature state, signer and errors | Studio never creates or signs attestations; external signing-provider verification is never automatic |
 
 All five features degrade independently. A valid workspace or handoff resource remains visible if responsibility is invalid, verification scope is absent, or attestation is disabled.
 
 ## Verification Scope vs Attestation Coverage
 
-Verification scope records what ForgeLoop planned or resolved for a check. Attestation records the state of a code attestation and its completion-ledger binding. Scope is not coverage proof, and Studio never promotes `AUTO`, `CHANGED`, `CLAIMED` or `FULL` into `PROCESSED`, `VERIFIED` or `ATTESTED`. An optional external Sigstore bundle is displayed only as bounded external data; its presence alone never produces `ATTESTED`.
+Verification scope records what ForgeLoop planned or resolved for a check. Resolved `UNRESOLVED` remains distinct from an unknown Studio value. Attestation records the state of a code attestation and its completion-ledger binding. Scope is not coverage proof, and Studio never promotes `AUTO`, `CHANGED`, `CLAIMED` or `FULL` into `PROCESSED`, `VERIFIED` or `ATTESTED`. Studio never creates or signs attestations and may request canonical local content verification only when no external signing-provider execution is required. External signing-provider verification is never triggered automatically. An optional external Sigstore bundle is displayed only as bounded external data; its presence alone never produces `ATTESTED`.
 
 ## Continuity vs Canonical Handoff
 

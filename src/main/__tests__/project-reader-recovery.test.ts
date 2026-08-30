@@ -5,6 +5,7 @@ import { join } from 'path';
 import { PathBoundary } from '@main/security/path-boundary';
 import { SchemaValidator } from '@main/core/protocol/validator';
 import { createProjectReader } from '@main/core/project/project-reader';
+import { RESOURCE_LIMITS } from '@main/security/resource-limits';
 
 const CONFIG = {
   schemaVersion: 1,
@@ -263,6 +264,30 @@ describe('project-reader recovery artifact', () => {
     expect(JSON.parse(reader.readRawCollectionArtifact(KEY, { kind: 'code-manifest', taskId: 'TASK-001' })).taskId).toBe('TASK-001');
     expect(JSON.parse(reader.readRawCollectionArtifact(KEY, { kind: 'attestation-statement', taskId: 'TASK-001' }))._type).toBe('https://in-toto.io/Statement/v1');
     expect(JSON.parse(reader.readRawCollectionArtifact(KEY, { kind: 'attestation-bundle', taskId: 'TASK-001' })).external).toBe(true);
+  });
+
+  it('rejects oversized signature bundles and handoffs before JSON parsing', () => {
+    const taskDir = join(root, '.forgeloop', 'task-state', KEY);
+    mkdirSync(join(taskDir, 'handoffs'), { recursive: true });
+    mkdirSync(join(taskDir, 'attestations'), { recursive: true });
+    const oversized = `${' '.repeat(RESOURCE_LIMITS.JSON_MAX_SIZE_BYTES)}{}`;
+    writeFileSync(join(taskDir, 'attestations', 'statement.sigstore.json'), oversized);
+    writeFileSync(join(taskDir, 'handoffs', 'handoff-recovery.json'), oversized);
+
+    let bundleError: unknown;
+    try {
+      reader.readRawCollectionArtifact(KEY, { kind: 'attestation-bundle', taskId: 'TASK-001' });
+    } catch (error) {
+      bundleError = error;
+    }
+    let handoffError: unknown;
+    try {
+      reader.readRawCollectionArtifact(KEY, { kind: 'handoff', taskId: 'TASK-001', handoffId: 'handoff-recovery' });
+    } catch (error) {
+      handoffError = error;
+    }
+    expect(bundleError).toMatchObject({ details: expect.stringContaining('JSON artifact exceeds maximum size') });
+    expect(handoffError).toMatchObject({ details: expect.stringContaining('JSON artifact exceeds maximum size') });
   });
 
   it('rejects collection path traversal and symbolic links', () => {

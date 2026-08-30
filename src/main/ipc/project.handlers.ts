@@ -445,7 +445,13 @@ async function openProject(projectRoot: string, projectKind: ProjectKind = 'PROJ
   currentObservability = createCanonicalObservabilityService({ integration, featureSupport: negotiation.featureSupport });
   currentActions = createCanonicalActionsService({ integration, featureSupport: negotiation.featureSupport });
   currentTrajectory = createCanonicalTrajectoryService({ integration, featureSupport: negotiation.featureSupport });
-  currentTaskBoundaries = createCanonicalTaskBoundariesService({ integration, featureSupport: negotiation.featureSupport });
+  currentTaskBoundaries = createCanonicalTaskBoundariesService({
+    integration,
+    featureSupport: negotiation.featureSupport,
+    // The policy reader returns a trusted, schema-validated config. It only
+    // gates automatic attestation reads; project config is not host authority.
+    readAttestationConfig: () => currentProjectReader?.readConfig() ?? null,
+  });
   detectionResult.forgeLoopVersion = canonicalProtocolInfo?.packageVersion ?? detectionResult.forgeLoopVersion;
   detectionResult.compatibilityMode = negotiation.mode;
   detectionResult.warnings = [

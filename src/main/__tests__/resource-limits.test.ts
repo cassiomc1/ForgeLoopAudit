@@ -33,6 +33,14 @@ describe('security/resource-limits', () => {
       const huge = 'x'.repeat(RESOURCE_LIMITS.JSON_MAX_SIZE_BYTES + 100);
       expect(() => parseJsonSafely(`"${huge}"`)).toThrow();
     });
+
+    it('accepts JSON at the exact maximum and rejects one byte beyond it', () => {
+      const exact = `${' '.repeat(RESOURCE_LIMITS.JSON_MAX_SIZE_BYTES - 2)}{}`;
+      const over = `${' '.repeat(RESOURCE_LIMITS.JSON_MAX_SIZE_BYTES - 1)}{}`;
+      expect(Buffer.byteLength(exact, 'utf8')).toBe(RESOURCE_LIMITS.JSON_MAX_SIZE_BYTES);
+      expect(parseJsonSafely(exact)).toEqual({});
+      expect(() => parseJsonSafely(over)).toThrow(/maximum size/);
+    });
   });
 
   describe('parseNdjsonSafely', () => {

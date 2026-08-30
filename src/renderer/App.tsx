@@ -16,6 +16,11 @@ import { Actions } from './pages/Actions';
 import { Settings } from './pages/Settings';
 import { EmptyState } from './components/ui/EmptyState';
 import { LoadingState } from './components/ui/LoadingState';
+import {
+  createProjectionRefreshEpochs,
+  reduceProjectionRefresh,
+  taskProjectionRefreshEpoch,
+} from './projection-refresh';
 
 export const NAV_ITEMS = [
   { id: 'overview', label: 'Overview', icon: 'layout-dashboard' },
@@ -48,7 +53,7 @@ export function App() {
   const [watcherStatus, setWatcherStatus] = useState<WatcherStatus>({ active: false });
   const [isLoading, setIsLoading] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  const [projectionRefreshKey, setProjectionRefreshKey] = useState(0);
+  const [projectionRefreshEpochs, setProjectionRefreshEpochs] = useState(createProjectionRefreshEpochs);
 
   const api = getApi();
 
@@ -62,12 +67,12 @@ export function App() {
   }, [api]);
 
   const handleProjectUpdate = useCallback((update: ProjectUpdate) => {
+    setProjectionRefreshEpochs((current) => reduceProjectionRefresh(current, update));
     switch (update.type) {
       case 'project-opened':
         if (update.detection) setDetectionResult(update.detection);
         if (update.snapshot) setSnapshot(update.snapshot);
         setActiveNav('overview');
-        setProjectionRefreshKey((value) => value + 1);
         break;
       case 'snapshot-refreshed':
         if (update.snapshot) {
@@ -84,23 +89,6 @@ export function App() {
           setError(update.data as StudioError);
           setTimeout(() => setError(null), 5000);
         }
-        break;
-      case 'task-updated':
-      case 'task-added':
-      case 'task-removed':
-      case 'project-health-changed':
-      case 'policy-changed':
-      case 'session-changed':
-      case 'action-changed':
-      case 'approval-changed':
-      case 'evaluation-changed':
-      case 'capability-policy-changed':
-      case 'workspace-binding-changed':
-      case 'handoff-changed':
-      case 'responsibility-changed':
-      case 'verification-scope-changed':
-      case 'attestation-changed':
-        setProjectionRefreshKey((value) => value + 1);
         break;
     }
   }, []);
@@ -174,6 +162,7 @@ export function App() {
       setDetectionResult(null);
       setSnapshot(null);
       setActiveNav('overview');
+      setProjectionRefreshEpochs(createProjectionRefreshEpochs());
     } catch (err) {
       console.error('Failed to close project:', err);
     }
@@ -193,6 +182,11 @@ export function App() {
   }
 
   const isDemoProject = detectionResult.projectKind === 'DEMO';
+  const selectedProjectionTaskId = snapshot
+    ? selectedTaskId || snapshot.activeTaskId || snapshot.tasks[0]?.taskId || null
+    : null;
+  const taskRefresh = (key: Parameters<typeof taskProjectionRefreshEpoch>[1]) =>
+    taskProjectionRefreshEpoch(projectionRefreshEpochs, key, selectedProjectionTaskId);
 
   const renderPage = () => {
     if (!snapshot) {
@@ -201,7 +195,20 @@ export function App() {
 
     switch (activeNav) {
       case 'overview':
-        return <Overview snapshot={snapshot} watcherStatus={watcherStatus} selectedTaskId={selectedTaskId} refreshToken={projectionRefreshKey} onTaskSelect={(taskId) => { setSelectedTaskId(taskId); setActiveNav('flow'); }} onViewAllTasks={() => setActiveNav('tasks')} />;
+        return <Overview
+          snapshot={snapshot}
+          watcherStatus={watcherStatus}
+          selectedTaskId={selectedTaskId}
+          genericTaskRefreshToken={projectionRefreshEpochs.genericTask}
+          actionsRefreshToken={taskRefresh('actions')}
+          taskBoundaryRefreshTokens={{
+            workspaceBinding: taskRefresh('workspaceBinding'),
+            handoffs: taskRefresh('handoffs'),
+            responsibility: taskRefresh('responsibility'),
+          }}
+          onTaskSelect={(taskId) => { setSelectedTaskId(taskId); setActiveNav('flow'); }}
+          onViewAllTasks={() => setActiveNav('tasks')}
+        />;
       case 'tasks':
         return <Tasks snapshot={snapshot} isDemoProject={isDemoProject} onTaskSelect={(taskId) => { setSelectedTaskId(taskId); setActiveNav('flow'); }} />;
       case 'flow':
@@ -209,19 +216,27 @@ export function App() {
       case 'contract':
         return <Contract snapshot={snapshot} selectedTaskId={selectedTaskId} onSelectedTaskChange={setSelectedTaskId} />;
       case 'evidence':
-        return <Evidence snapshot={snapshot} selectedTaskId={selectedTaskId} refreshToken={projectionRefreshKey} onSelectedTaskChange={setSelectedTaskId} onOpenActions={() => setActiveNav('actions')} />;
+        return <Evidence
+          snapshot={snapshot}
+          selectedTaskId={selectedTaskId}
+          genericTaskRefreshToken={projectionRefreshEpochs.genericTask}
+          verificationScopeRefreshToken={taskRefresh('verificationScope')}
+          attestationRefreshToken={taskRefresh('attestation')}
+          onSelectedTaskChange={setSelectedTaskId}
+          onOpenActions={() => setActiveNav('actions')}
+        />;
       case 'events':
         return <Events snapshot={snapshot} selectedTaskId={selectedTaskId} onSelectedTaskChange={setSelectedTaskId} />;
       case 'executions':
         return <Executions snapshot={snapshot} selectedTaskId={selectedTaskId} onSelectedTaskChange={setSelectedTaskId} />;
       case 'continuity':
-        return <Continuity snapshot={snapshot} selectedTaskId={selectedTaskId} refreshToken={projectionRefreshKey} onSelectedTaskChange={setSelectedTaskId} onOpenDiagnostics={() => setActiveNav('diagnostics')} />;
+        return <Continuity snapshot={snapshot} selectedTaskId={selectedTaskId} handoffRefreshToken={taskRefresh('handoffs')} onSelectedTaskChange={setSelectedTaskId} onOpenDiagnostics={() => setActiveNav('diagnostics')} />;
       case 'diagnostics':
-        return <Diagnostics snapshot={snapshot} selectedTaskId={selectedTaskId} refreshToken={projectionRefreshKey} onSelectedTaskChange={setSelectedTaskId} />;
+        return <Diagnostics snapshot={snapshot} selectedTaskId={selectedTaskId} genericTaskRefreshToken={projectionRefreshEpochs.genericTask} evaluationsRefreshToken={taskRefresh('evaluations')} onSelectedTaskChange={setSelectedTaskId} />;
       case 'actions':
-        return <Actions snapshot={snapshot} selectedTaskId={selectedTaskId} refreshToken={projectionRefreshKey} onSelectedTaskChange={setSelectedTaskId} />;
+        return <Actions snapshot={snapshot} selectedTaskId={selectedTaskId} actionsRefreshToken={taskRefresh('actions')} onSelectedTaskChange={setSelectedTaskId} />;
       case 'policy':
-        return <Policy snapshot={snapshot} selectedTaskId={selectedTaskId} refreshToken={projectionRefreshKey} onSelectedTaskChange={setSelectedTaskId} />;
+        return <Policy snapshot={snapshot} selectedTaskId={selectedTaskId} capabilityPolicyRefreshToken={projectionRefreshEpochs.capabilityPolicy} onSelectedTaskChange={setSelectedTaskId} />;
       case 'settings':
         return <Settings snapshot={snapshot} detection={detectionResult} />;
       default:
