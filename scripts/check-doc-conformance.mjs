@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { basename, dirname, extname, join, relative, resolve } from 'node:path';
+import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 
 const FORGELOOP_PACKAGE = '@cassiomc1/forgeloop';
 const CURRENT_DOCS = [
@@ -69,6 +69,11 @@ function isExternalReference(reference) {
   return /^(?:https?:|mailto:|tel:|data:|#)/iu.test(reference);
 }
 
+function isWithinRoot(rootPath, targetPath) {
+  const relativePath = relative(rootPath, targetPath);
+  return relativePath === '' || (!isAbsolute(relativePath) && relativePath !== '..' && !relativePath.startsWith(`..${sep}`));
+}
+
 function validateLocalReferences(root, file, content) {
   const references = [];
   for (const match of content.matchAll(/!?\[[^\]]*\]\((?:<([^>]+)>|([^\s)]+))/gu)) {
@@ -85,7 +90,7 @@ function validateLocalReferences(root, file, content) {
     if (!reference) continue;
     assertCondition(!reference.startsWith('/') && !/^[A-Z]:[\\/]/iu.test(reference), `${file} contains an absolute reference: ${rawReference}`);
     const target = resolve(fileDirectory, reference);
-    assertCondition(target === rootPath || target.startsWith(`${rootPath}/`), `${file} reference escapes the repository: ${rawReference}`);
+    assertCondition(isWithinRoot(rootPath, target), `${file} reference escapes the repository: ${rawReference}`);
     assertCondition(existsSync(target), `${file} references a missing local path: ${rawReference}`);
   }
 }
@@ -207,8 +212,9 @@ export function runDocConformance(root = process.cwd(), { validateLineage: shoul
   const provenance = readJson(root, 'schemas/provenance.json');
   const dependency = packageJson.dependencies?.[FORGELOOP_PACKAGE];
   assertCondition(typeof dependency === 'string' && dependency.startsWith('file:'), `${FORGELOOP_PACKAGE} must remain a local file dependency`);
-  const archivePath = resolve(root, dependency.slice('file:'.length));
-  assertCondition(archivePath.startsWith(`${resolve(root)}/`), 'vendored ForgeLoop dependency escapes the repository');
+  const rootPath = resolve(root);
+  const archivePath = resolve(rootPath, dependency.slice('file:'.length));
+  assertCondition(isWithinRoot(rootPath, archivePath) && archivePath !== rootPath, 'vendored ForgeLoop dependency escapes the repository');
   assertCondition(existsSync(archivePath), `vendored ForgeLoop archive is missing: ${dependency}`);
   const archiveName = basename(archivePath);
   const archiveSha256 = createHash('sha256').update(readFileSync(archivePath)).digest('hex');
