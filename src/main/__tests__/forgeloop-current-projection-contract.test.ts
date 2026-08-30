@@ -100,6 +100,32 @@ describe('real vendored ForgeLoop projection contract', () => {
     });
   });
 
+  describe('ForgeLoop 1.6.4 boundary resource contract', () => {
+    it('reads all five canonical resources from the vendored Integration API', async () => {
+      const workspace = await adapter.readTaskWorkspaceBinding!(DEMO_ROOT, 'TASK-003');
+      expect(workspace).toMatchObject({ taskId: 'TASK-003', status: 'MISMATCH' });
+      expect(workspace).toHaveProperty('binding.mode', 'GIT_WORKTREE');
+
+      const handoffs = await adapter.readTaskHandoffs!(DEMO_ROOT, 'TASK-004');
+      expect(handoffs).toMatchObject({ taskId: 'TASK-004', count: 1 });
+      expect((handoffs.handoffs as Array<Record<string, unknown>>)[0]).toMatchObject({
+        handoffId: 'handoff-harness-a-to-b',
+        taskId: 'TASK-004',
+      });
+
+      const responsibility = await adapter.readTaskResponsibility!(DEMO_ROOT, 'TASK-003');
+      expect(responsibility).toMatchObject({ taskId: 'TASK-003', status: 'INVALID' });
+      expect(responsibility).toHaveProperty('errors.0.code', 'E_ROUTE_REASON_MISSING');
+
+      const scope = await adapter.readTaskVerificationScope!(DEMO_ROOT, 'TASK-002');
+      expect(scope).toHaveProperty('scope.requestedMode', 'AUTO');
+      expect(scope).toHaveProperty('scope.resolvedMode', 'CHANGED');
+
+      const attestation = await adapter.readTaskAttestation!(DEMO_ROOT, 'TASK-001');
+      expect(attestation).toMatchObject({ status: 'DISABLED', level: 'PROCESSED', signature: 'NOT_CHECKED' });
+    });
+  });
+
   describe('actions, approvals, metrics, and evaluations contract', () => {
     it('locks fields consumed from task/actions', async () => {
       const actionsData = await adapter.readTaskActions!(DEMO_ROOT, 'TASK-002');

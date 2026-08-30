@@ -95,6 +95,11 @@ export function App() {
       case 'approval-changed':
       case 'evaluation-changed':
       case 'capability-policy-changed':
+      case 'workspace-binding-changed':
+      case 'handoff-changed':
+      case 'responsibility-changed':
+      case 'verification-scope-changed':
+      case 'attestation-changed':
         setProjectionRefreshKey((value) => value + 1);
         break;
     }
@@ -196,7 +201,7 @@ export function App() {
 
     switch (activeNav) {
       case 'overview':
-        return <Overview snapshot={snapshot} watcherStatus={watcherStatus} refreshToken={projectionRefreshKey} onTaskSelect={(taskId) => { setSelectedTaskId(taskId); setActiveNav('flow'); }} onViewAllTasks={() => setActiveNav('tasks')} />;
+        return <Overview snapshot={snapshot} watcherStatus={watcherStatus} selectedTaskId={selectedTaskId} refreshToken={projectionRefreshKey} onTaskSelect={(taskId) => { setSelectedTaskId(taskId); setActiveNav('flow'); }} onViewAllTasks={() => setActiveNav('tasks')} />;
       case 'tasks':
         return <Tasks snapshot={snapshot} isDemoProject={isDemoProject} onTaskSelect={(taskId) => { setSelectedTaskId(taskId); setActiveNav('flow'); }} />;
       case 'flow':
@@ -210,7 +215,7 @@ export function App() {
       case 'executions':
         return <Executions snapshot={snapshot} selectedTaskId={selectedTaskId} onSelectedTaskChange={setSelectedTaskId} />;
       case 'continuity':
-        return <Continuity snapshot={snapshot} selectedTaskId={selectedTaskId} onSelectedTaskChange={setSelectedTaskId} onOpenDiagnostics={() => setActiveNav('diagnostics')} />;
+        return <Continuity snapshot={snapshot} selectedTaskId={selectedTaskId} refreshToken={projectionRefreshKey} onSelectedTaskChange={setSelectedTaskId} onOpenDiagnostics={() => setActiveNav('diagnostics')} />;
       case 'diagnostics':
         return <Diagnostics snapshot={snapshot} selectedTaskId={selectedTaskId} refreshToken={projectionRefreshKey} onSelectedTaskChange={setSelectedTaskId} />;
       case 'actions':
@@ -218,7 +223,7 @@ export function App() {
       case 'policy':
         return <Policy snapshot={snapshot} selectedTaskId={selectedTaskId} refreshToken={projectionRefreshKey} onSelectedTaskChange={setSelectedTaskId} />;
       case 'settings':
-        return <Settings />;
+        return <Settings snapshot={snapshot} detection={detectionResult} />;
       default:
         return <EmptyState title="Unknown page" />;
     }

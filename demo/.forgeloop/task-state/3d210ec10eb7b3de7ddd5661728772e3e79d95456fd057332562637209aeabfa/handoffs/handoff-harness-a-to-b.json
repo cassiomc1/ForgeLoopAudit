@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 1,
+  "handoffId": "handoff-harness-a-to-b",
+  "taskId": "TASK-004",
+  "createdAt": "2026-08-06T11:21:00.000Z",
+  "intent": {
+    "recipientHint": "harness-b",
+    "note": "Resume after the accessibility gate failure; keep mutations blocked until task-resume."
+  },
+  "state": {
+    "phase": "BLOCKED",
+    "revision": 1,
+    "verificationCycle": 1,
+    "contractFingerprint": "c54a4b5c3f20bb9e9fe8172f8759a188b749a1a6f35359b32e73466e489441fa",
+    "routeFingerprint": "10cbd89b0d8aced5b3b22f9638e984c9c5a804cff7c65ea30e971a0ff72ca80b",
+    "repositoryFingerprint": {
+      "branch": "main",
+      "head": "3f9c1d2e77a4b5089c6e12ab34f5d6e7890abcde"
+    },
+    "writeClaims": [],
+    "changedPaths": [
+      "src/catalog.ts"
+    ]
+  },
+  "evidence": {
+    "executionRefs": [],
+    "checkIds": [
+      "accessibility-audit"
+    ]
+  },
+  "continuity": {
+    "ref": "continuity.json",
+    "fingerprint": "0d558136bba246a0f1a1683e24cd207fe8c59f4da8e1817b8396e96560824341"
+  },
+  "artifactDigest": "cfd532b6dedebff5d44614e62bca1d642b16919650ac9791163127cee1039df4"
+}

@@ -1,10 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Settings as SettingsIcon, Monitor, Moon, Sun, Code, Palette } from 'lucide-react';
 import { cn } from '../lib/utils';
+import type { ProjectDetectionResult, ProjectSnapshot } from '@shared/domain';
 
-interface SettingsProps {}
+interface SettingsProps {
+  snapshot?: ProjectSnapshot;
+  detection?: ProjectDetectionResult | null;
+}
 
-export function Settings({}: SettingsProps) {
+export function Settings({ snapshot, detection }: SettingsProps) {
   const api = (window as any).forgeLoopStudio;
   const [settings, setSettings] = useState({
     theme: 'dark',
@@ -218,6 +222,24 @@ export function Settings({}: SettingsProps) {
               Read-only observer mode. ForgeLoop remains the source of truth.
             </p>
           </div>
+        </div>
+
+        <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-10 p-4">
+          <h3 className="text-sm font-semibold text-forge-text-primary mb-4">ForgeLoop protocol</h3>
+          <div className="grid grid-cols-2 gap-3 text-xs md:grid-cols-4">
+            <div><p className="text-forge-text-muted">Package</p><p className="mt-1 font-mono text-forge-text-primary">{snapshot?.protocol.packageVersion || detection?.forgeLoopVersion || 'Unknown'}</p></div>
+            <div><p className="text-forge-text-muted">Protocol</p><p className="mt-1 font-mono text-forge-text-primary">v{snapshot?.protocol.protocolVersion ?? detection?.protocolVersion ?? 'Unknown'}</p></div>
+            <div><p className="text-forge-text-muted">Schema</p><p className="mt-1 font-mono text-forge-text-primary">v{snapshot?.protocol.schemaVersion ?? detection?.schemaVersion ?? 'Unknown'}</p></div>
+            <div><p className="text-forge-text-muted">Compatibility</p><p className="mt-1 font-mono text-forge-text-primary">{snapshot?.protocol.compatibilityMode || (snapshot?.protocol.compatible ? 'COMPATIBLE' : 'UNKNOWN')}</p></div>
+          </div>
+          <p className="mt-4 text-xs text-forge-text-muted">ForgeLoop remains the source of truth. Protocol settings are read-only here; Studio does not execute or edit project checkers, bindings, responsibilities, or attestation policy.</p>
+          {snapshot?.protocol.featureSupport && <div className="mt-4 grid grid-cols-1 gap-2 md:grid-cols-2">{[
+            ['Workspace binding', snapshot.protocol.featureSupport.workspaceBinding],
+            ['Canonical handoffs', snapshot.protocol.featureSupport.canonicalHandoffs],
+            ['Responsibility constraints', snapshot.protocol.featureSupport.responsibilityConstraints],
+            ['Differential verification scope', snapshot.protocol.featureSupport.differentialVerificationScope],
+            ['Code attestation', snapshot.protocol.featureSupport.codeAttestation],
+          ].map(([label, supported]) => <div key={String(label)} className="flex items-center justify-between rounded-8 bg-forge-secondary-surface px-3 py-2 text-xs"><span className="text-forge-text-secondary">{label}</span><span className={supported ? 'text-forge-success' : 'text-forge-text-muted'}>{supported ? 'Supported' : 'Unavailable'}</span></div>)}</div>}
         </div>
       </div>
     </div>

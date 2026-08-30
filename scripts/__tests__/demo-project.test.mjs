@@ -34,6 +34,21 @@ test('demo executions include current ForgeLoop isolation provenance', () => {
   )));
 });
 
+test('demo includes representative 1.6.4 boundary artifacts without fake trust', () => {
+  const { files } = generateDemoFiles();
+  const paths = [...files.keys()];
+  assert.ok(paths.some((path) => path.endsWith('/workspace-binding.json')));
+  assert.ok(paths.some((path) => path.endsWith('/responsibility.json')));
+  assert.ok(paths.some((path) => path.endsWith('/verification-scope.json')));
+  assert.ok(paths.some((path) => path.includes('/handoffs/handoff-')));
+  assert.ok(paths.some((path) => path.endsWith('/attestations/code-manifest.json')));
+  assert.ok(paths.some((path) => path.endsWith('/attestations/statement.json')));
+  const config = JSON.parse(files.get('.forgeloop/config.json'));
+  assert.equal(config.verification.checkers[0].scopeMode, 'PATH_ARGUMENTS');
+  assert.equal(config.attestation.mode, 'off');
+  assert.equal(config.attestation.signing.provider, 'none');
+});
+
 test('committed demo matches generator output exactly', () => {
   const result = demoHasDrift();
   assert.equal(result.drift, false, `committed demo/ has drifted from the generator: ${result.reason}`);
@@ -57,7 +72,7 @@ test('canonical demo contains no INVALID artifacts', () => {
   }
 });
 
-test('demo represents every registered artifact category (17/17)', () => {
+test('demo represents every registered artifact category (29/29)', () => {
   const result = verifyDemoProject(DEMO_ROOT);
   const coverage = result.stats.artifactCoverage;
   assert.ok(coverage, 'verifier did not report artifact coverage');

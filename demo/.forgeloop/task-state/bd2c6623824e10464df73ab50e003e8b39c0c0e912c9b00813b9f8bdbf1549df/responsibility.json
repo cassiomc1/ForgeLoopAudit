@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 1,
+  "taskId": "TASK-003",
+  "label": "checkout implementation",
+  "createdAt": "2026-08-05T08:25:00.000Z",
+  "allowedPaths": [
+    "."
+  ],
+  "readOnlyPaths": [],
+  "requiredCheckIds": [],
+  "frozenInputs": {
+    "contract": false,
+    "route": false,
+    "claims": false
+  },
+  "baseline": {
+    "contractFingerprint": "47a1842cce5b1d5ea332cafa57309fcf9c60e012836257608e0bc23453d280d5",
+    "routeFingerprint": "d7ed75ad0321bbe95abdd9ce48d1546e01a2c7745f015be82e14c1d6de92533a",
+    "claimsFingerprint": "5082cdde4d2c45512edc8f07f823cde0c69f2c38608400968768e09230a1ccbd"
+  }
+}

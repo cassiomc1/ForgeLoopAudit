@@ -7,7 +7,7 @@ import { ForgeLoopStudioError } from '@shared/errors';
 import { WATCHER_RETRY_MS, WATCHER_MAX_RETRIES } from '@shared/constants';
 
 export interface WatcherEvent {
-  type: 'artifact-changed' | 'task-added' | 'task-removed' | 'event-appended' | 'policy-changed' | 'session-changed' | 'execution-changed' | 'action-changed' | 'approval-changed' | 'evaluation-changed' | 'capability-policy-changed';
+  type: 'artifact-changed' | 'task-added' | 'task-removed' | 'event-appended' | 'policy-changed' | 'session-changed' | 'execution-changed' | 'action-changed' | 'approval-changed' | 'evaluation-changed' | 'capability-policy-changed' | 'workspace-binding-changed' | 'handoff-changed' | 'responsibility-changed' | 'verification-scope-changed' | 'attestation-changed';
   taskKey?: string;
   artifact?: string;
   path: string;
@@ -122,11 +122,24 @@ export class ProjectWatcher {
   }
 
   private handleCoalescedChanges(changes: CoalescedChange[]): void {
+    const attestationChanges = new Map<string, CoalescedChange>();
     for (const change of changes) {
       const event = this.classifyChange(change);
       if (event) {
+        if (event.type === 'attestation-changed' && event.taskKey) {
+          attestationChanges.set(event.taskKey, change);
+          continue;
+        }
         this.onEvent(event);
       }
+    }
+    for (const [taskKey, change] of attestationChanges) {
+      this.onEvent({
+        type: 'attestation-changed',
+        taskKey,
+        artifact: 'attestations',
+        path: change.path,
+      });
     }
   }
 
@@ -182,6 +195,52 @@ export class ProjectWatcher {
             type: 'evaluation-changed',
             taskKey,
             artifact: parts[parts.length - 1],
+            path: change.path,
+          };
+        }
+
+        if (parts.length >= 3 && parts[2] === 'handoffs' && /^handoff-[A-Za-z0-9_-]+\.json$/.test(parts[parts.length - 1])) {
+          return {
+            type: 'handoff-changed',
+            taskKey,
+            artifact: parts[parts.length - 1],
+            path: change.path,
+          };
+        }
+
+        if (parts.length >= 3 && parts[2] === 'attestations'
+          && ['code-manifest.json', 'statement.json', 'statement.sigstore.json'].includes(parts[parts.length - 1])) {
+          return {
+            type: 'attestation-changed',
+            taskKey,
+            artifact: parts[parts.length - 1],
+            path: change.path,
+          };
+        }
+
+        if (parts.length === 3 && change.path.endsWith('workspace-binding.json')) {
+          return {
+            type: 'workspace-binding-changed',
+            taskKey,
+            artifact: 'workspace-binding.json',
+            path: change.path,
+          };
+        }
+
+        if (parts.length === 3 && change.path.endsWith('responsibility.json')) {
+          return {
+            type: 'responsibility-changed',
+            taskKey,
+            artifact: 'responsibility.json',
+            path: change.path,
+          };
+        }
+
+        if (parts.length === 3 && change.path.endsWith('verification-scope.json')) {
+          return {
+            type: 'verification-scope-changed',
+            taskKey,
+            artifact: 'verification-scope.json',
             path: change.path,
           };
         }

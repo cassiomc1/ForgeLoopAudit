@@ -27,6 +27,8 @@ describe('core/integration/studio-read-commands', () => {
         'action-show',
         'audit',
         'history',
+        'handoff-list',
+        'handoff-show',
         'inspect',
         'metrics',
         'next',

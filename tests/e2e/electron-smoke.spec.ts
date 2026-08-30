@@ -5,6 +5,8 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+const DEMO_PROJECT = join(process.cwd(), 'demo');
+
 test('built Electron app launches and exposes the preload bridge', async () => {
   const app = await electron.launch({ args: ['.'], env: { ...process.env, NODE_ENV: 'production', FORGELOOP_STUDIO_SMOKE: '1' } });
   try {
@@ -103,5 +105,46 @@ test('fixture project flows through the functional v0.1 renderer surfaces', asyn
   } finally {
     await app.close();
     rmSync(fixture, { recursive: true, force: true });
+  }
+});
+
+test('demo exposes the 1.6.4 boundary surfaces without mutation controls', async () => {
+  const app = await electron.launch({
+    args: ['.'],
+    env: { ...process.env, NODE_ENV: 'production', FORGELOOP_STUDIO_SMOKE: '1', FORGELOOP_STUDIO_FIXTURE_PROJECT: DEMO_PROJECT },
+  });
+  try {
+    const window = await app.firstWindow();
+    await expect(window.getByRole('heading', { name: 'Project Overview' })).toBeVisible();
+    await expect(window.getByRole('heading', { name: 'Task Boundaries' })).toBeVisible();
+
+    await window.getByLabel('Main navigation').getByRole('button', { name: 'Tasks', exact: true }).click();
+    await window.getByText('TASK-003').click();
+    await expect(window.locator('h1').filter({ hasText: 'Lifecycle Flow' })).toBeVisible();
+    await window.getByLabel('Main navigation').getByRole('button', { name: 'Overview', exact: true }).click();
+    await expect(window.getByRole('heading', { name: 'Workspace Binding' })).toBeVisible();
+    await expect(window.getByText('MISMATCH', { exact: true })).toBeVisible();
+    await expect(window.getByRole('heading', { name: 'Responsibility' })).toBeVisible();
+    await expect(window.getByText('INVALID', { exact: true })).toBeVisible();
+
+    await window.getByLabel('Main navigation').getByRole('button', { name: 'Tasks', exact: true }).click();
+    await window.getByText('TASK-004').click();
+    await window.getByLabel('Main navigation').getByRole('button', { name: 'Continuity', exact: true }).click();
+    await expect(window.getByRole('heading', { name: 'Canonical Handoffs' })).toBeVisible();
+    await expect(window.getByText('handoff-harness-a-to-b')).toBeVisible();
+    await expect(window.getByText(/Immutable protocol snapshot — not review, completion, delegation, or authority evidence/)).toBeVisible();
+
+    await window.getByLabel('Main navigation').getByRole('button', { name: 'Evidence', exact: true }).click();
+    await expect(window.getByRole('heading', { name: 'Verification Scope' })).toBeVisible();
+    await window.getByRole('combobox').selectOption('TASK-002');
+    await expect(window.getByText('CHANGED', { exact: true })).toBeVisible();
+    await expect(window.getByText(/not revision-range attestation coverage/)).toBeVisible();
+    await window.getByRole('combobox').selectOption('TASK-001');
+    await expect(window.getByRole('heading', { name: 'Code Attestation' })).toBeVisible();
+    await expect(window.getByText(/Status: DISABLED/)).toBeVisible();
+    await expect(window.getByText(/does not claim security, authorship, or bug-free code/)).toBeVisible();
+    await expect(window.getByRole('button', { name: /workspace-bind|handoff-create|responsibility-set|verify-scope|attestation-create/i })).toHaveCount(0);
+  } finally {
+    await app.close();
   }
 });

@@ -19,6 +19,11 @@ import type {
   TrajectoryMetricsView,
   TrajectoryEvaluationsView,
   CapabilityPolicyView,
+  WorkspaceBindingView,
+  TaskHandoffsView,
+  ResponsibilityView,
+  VerificationScopeView,
+  TaskAttestationView,
 } from './domain';
 import type { StudioDiagnostics } from './diagnostics';
 
@@ -44,6 +49,11 @@ export interface ForgeLoopStudioAPI {
   getTaskMetrics(taskId: string): Promise<TrajectoryMetricsView>;
   getTaskEvaluations(taskId: string): Promise<TrajectoryEvaluationsView>;
   getCapabilityPolicy(): Promise<CapabilityPolicyView>;
+  getTaskWorkspaceBinding(taskId: string): Promise<WorkspaceBindingView>;
+  getTaskHandoffs(taskId: string): Promise<TaskHandoffsView>;
+  getTaskResponsibility(taskId: string): Promise<ResponsibilityView>;
+  getTaskVerificationScope(taskId: string): Promise<VerificationScopeView>;
+  getTaskAttestation(taskId: string): Promise<TaskAttestationView>;
   getTaskExecutions(taskId: string, limit?: number): Promise<ExecutionPage>;
   getRecentProjects(): Promise<RecentProject[]>;
   addRecentProject(project: RecentProject): Promise<void>;
@@ -60,7 +70,7 @@ export interface ForgeLoopStudioAPI {
 }
 
 export interface ProjectUpdate {
-  type: 'task-added' | 'task-updated' | 'task-removed' | 'project-health-changed' | 'policy-changed' | 'session-changed' | 'action-changed' | 'approval-changed' | 'evaluation-changed' | 'capability-policy-changed' | 'snapshot-refreshed' | 'project-opened' | 'watcher-status' | 'error';
+  type: 'task-added' | 'task-updated' | 'task-removed' | 'project-health-changed' | 'policy-changed' | 'session-changed' | 'action-changed' | 'approval-changed' | 'evaluation-changed' | 'capability-policy-changed' | 'workspace-binding-changed' | 'handoff-changed' | 'responsibility-changed' | 'verification-scope-changed' | 'attestation-changed' | 'snapshot-refreshed' | 'project-opened' | 'watcher-status' | 'error';
   taskId?: string;
   snapshot?: ProjectSnapshot;
   detection?: ProjectDetectionResult;
@@ -103,6 +113,11 @@ export const IPC_CHANNELS = {
   GET_TASK_METRICS: 'studio:get-task-metrics',
   GET_TASK_EVALUATIONS: 'studio:get-task-evaluations',
   GET_CAPABILITY_POLICY: 'studio:get-capability-policy',
+  GET_TASK_WORKSPACE_BINDING: 'studio:get-task-workspace-binding',
+  GET_TASK_HANDOFFS: 'studio:get-task-handoffs',
+  GET_TASK_RESPONSIBILITY: 'studio:get-task-responsibility',
+  GET_TASK_VERIFICATION_SCOPE: 'studio:get-task-verification-scope',
+  GET_TASK_ATTESTATION: 'studio:get-task-attestation',
   GET_TASK_EXECUTIONS: 'studio:get-task-executions',
   GET_RECENT_PROJECTS: 'studio:get-recent-projects',
   ADD_RECENT_PROJECT: 'studio:add-recent-project',

@@ -255,6 +255,150 @@ function executionRecord({
   };
 }
 
+function workspaceBinding(taskId) {
+  return {
+    schemaVersion: 1,
+    protocolVersion: 1,
+    taskId,
+    mode: 'GIT_WORKTREE',
+    // The portable demo deliberately uses a deterministic identity. On a
+    // user's checkout ForgeLoop will therefore surface the real MATCH,
+    // MISMATCH or UNAVAILABLE result instead of the fixture pretending to
+    // know the user's worktree.
+    repositoryIdentity: fingerprint('demo-repository-identity'),
+    workspaceIdentity: fingerprint(`demo-workspace:${taskId}`),
+    branchAtBind: BRANCH,
+    headAtBind: HEAD,
+    boundAt: '2026-08-05T08:20:00.000Z',
+    metadata: { fixture: true },
+  };
+}
+
+function responsibility(taskId, label) {
+  return {
+    schemaVersion: 1,
+    protocolVersion: 1,
+    taskId,
+    label,
+    createdAt: '2026-08-05T08:25:00.000Z',
+    // A demo-wide boundary keeps the fixture valid regardless of which
+    // generated source files the host repository reports as changed.
+    allowedPaths: ['.'],
+    readOnlyPaths: [],
+    requiredCheckIds: [],
+    frozenInputs: { contract: false, route: false, claims: false },
+    baseline: {
+      contractFingerprint: fingerprint(`responsibility-contract:${taskId}`),
+      routeFingerprint: fingerprint(`responsibility-route:${taskId}`),
+      claimsFingerprint: fingerprint(`responsibility-claims:${taskId}`),
+    },
+  };
+}
+
+function verificationScope(taskId, changedPaths, resolvedMode = 'CHANGED') {
+  return {
+    schemaVersion: 1,
+    protocolVersion: 1,
+    taskId,
+    requestedMode: 'AUTO',
+    resolvedMode,
+    verificationCycle: 1,
+    changedPaths,
+    claimedPaths: changedPaths,
+    selectedPaths: resolvedMode === 'FULL' ? [] : changedPaths,
+    reasons: resolvedMode === 'FULL'
+      ? ['The fixture records an explicit full verification fallback.']
+      : ['Selected exact canonical changed paths inside effective task claims.'],
+    fallback: resolvedMode === 'FULL' ? { from: 'CHANGED', to: 'FULL', reason: 'Fixture fallback example.' } : null,
+    contractFingerprint: fingerprint(`contract:${taskId}`),
+    repositoryFingerprint: repositoryFingerprint(),
+    claimsFingerprint: fingerprint(`claims:${taskId}`),
+    checkerCapabilityFingerprint: fingerprint('checker-capability:unit-tests'),
+    createdAt: '2026-08-04T11:05:00.000Z',
+  };
+}
+
+function canonicalHandoff(taskId) {
+  const body = {
+    schemaVersion: 1,
+    protocolVersion: 1,
+    handoffId: 'handoff-harness-a-to-b',
+    taskId,
+    createdAt: '2026-08-06T11:21:00.000Z',
+    intent: {
+      recipientHint: 'harness-b',
+      note: 'Resume after the accessibility gate failure; keep mutations blocked until task-resume.',
+    },
+    state: {
+      phase: 'BLOCKED',
+      revision: 1,
+      verificationCycle: 1,
+      contractFingerprint: fingerprint(`contract:${taskId}`),
+      routeFingerprint: fingerprint(`route:${taskId}`),
+      repositoryFingerprint: repositoryFingerprint(),
+      writeClaims: [],
+      changedPaths: ['src/catalog.ts'],
+    },
+    evidence: {
+      executionRefs: [],
+      checkIds: ['accessibility-audit'],
+    },
+    continuity: {
+      ref: 'continuity.json',
+      fingerprint: fingerprint(`continuity:${taskId}`),
+    },
+  };
+  return { ...body, artifactDigest: canonicalFingerprint(body) };
+}
+
+function codeManifest(taskId) {
+  const entries = [];
+  return {
+    schemaVersion: 1,
+    protocolVersion: 1,
+    taskId,
+    verificationCycle: 1,
+    capture: {
+      mode: 'WORKTREE',
+      revisionProvider: 'git',
+      baseRevision: null,
+      observedRevision: HEAD,
+      providerMetadata: { fixture: true },
+    },
+    bindings: {
+      contractFingerprint: fingerprint(`contract:${taskId}`),
+      routeFingerprint: fingerprint(`route:${taskId}`),
+      stateFingerprint: fingerprint(`state:${taskId}`),
+      receiptFingerprint: fingerprint(`receipt:${taskId}`),
+      ledgerSeq: 1,
+      ledgerHash: fingerprint(`ledger:${taskId}`),
+    },
+    entries,
+    contentDigest: canonicalFingerprint(entries),
+  };
+}
+
+function attestationStatement(taskId, manifest) {
+  return {
+    schemaVersion: 1,
+    _type: 'https://in-toto.io/Statement/v1',
+    subject: [{ name: `forgeloop-task:${taskId}`, digest: { sha256: manifest.contentDigest } }],
+    predicateType: 'https://forgeloop.dev/attestation/v1',
+    predicate: {
+      schemaVersion: 1,
+      protocol: { name: 'ForgeLoop', protocolVersion: 1 },
+      task: { taskId, verificationCycle: manifest.verificationCycle },
+      content: {
+        manifestFingerprint: canonicalFingerprint(manifest),
+        contentDigest: manifest.contentDigest,
+        coveredPaths: [],
+      },
+      evidence: { ...manifest.bindings },
+      verification: { completion: 'VALID', audit: 'VALID' },
+    },
+  };
+}
+
 function normalizeDiagnosticText(value) {
   return String(value).trim().replace(/\s+/gu, ' ').toLowerCase();
 }
@@ -375,7 +519,43 @@ function finalizeTaskArtifacts(artifacts) {
       continuityArtifact.workStateFingerprint = stateFingerprint;
     }
     if (artifacts['execution-receipt.json']) artifacts['execution-receipt.json'].stateFingerprint = stateFingerprint;
+    if (artifacts['verification-scope.json']) {
+      artifacts['verification-scope.json'].contractFingerprint = contractFingerprint;
+    }
+    if (artifacts['responsibility.json']) {
+      artifacts['responsibility.json'].baseline.contractFingerprint = contractFingerprint;
+      artifacts['responsibility.json'].baseline.routeFingerprint = routingFingerprint(artifacts);
+    }
+    const manifest = artifacts['attestations/code-manifest.json'];
+    const receipt = artifacts['execution-receipt.json'];
+    if (manifest) {
+      manifest.bindings.contractFingerprint = contractFingerprint;
+      manifest.bindings.routeFingerprint = routingFingerprint(artifacts);
+      manifest.bindings.stateFingerprint = stateFingerprint;
+      manifest.bindings.receiptFingerprint = receipt ? canonicalFingerprint(receipt) : manifest.bindings.receiptFingerprint;
+    }
   }
+  return artifacts;
+}
+
+function routingFingerprint(artifacts) {
+  return artifacts['routing-result.json'] ? canonicalFingerprint(artifacts['routing-result.json']) : null;
+}
+
+function finalizeAttestationArtifacts(artifacts, ledger) {
+  const manifest = artifacts['attestations/code-manifest.json'];
+  const statement = artifacts['attestations/statement.json'];
+  if (!manifest || !statement) return artifacts;
+  const completion = [...ledger.events].reverse().find((event) => event.event === 'COMPLETION_VALIDATED');
+  if (completion) {
+    manifest.bindings.ledgerSeq = completion.seq;
+    manifest.bindings.ledgerHash = completion.hash;
+  }
+  manifest.contentDigest = canonicalFingerprint(manifest.entries);
+  statement.subject[0].digest.sha256 = manifest.contentDigest;
+  statement.predicate.content.manifestFingerprint = canonicalFingerprint(manifest);
+  statement.predicate.content.contentDigest = manifest.contentDigest;
+  statement.predicate.evidence = { ...manifest.bindings };
   return artifacts;
 }
 
@@ -503,6 +683,9 @@ function buildCatalogTask() {
     ],
     evidenceCoverage: coverage,
   });
+  const manifest = codeManifest(taskId);
+  artifacts['attestations/code-manifest.json'] = manifest;
+  artifacts['attestations/statement.json'] = attestationStatement(taskId, manifest);
   artifacts['gates/unit-tests.json'] = gate(taskId, 'unit-tests', 'satisfied', [{ kind: 'OBSERVED', source: 'vitest run', result: '14 passed' }]);
   artifacts['gates/typecheck.json'] = gate(taskId, 'typecheck', 'satisfied', [{ kind: 'OBSERVED', source: 'tsc --noEmit', result: 'clean' }]);
   artifacts['gates/lint.json'] = gate(taskId, 'lint', 'satisfied', [{ kind: 'OBSERVED', source: 'eslint', result: 'clean' }]);
@@ -710,6 +893,7 @@ function buildCartTask() {
     evidence: [{ kind: 'OBSERVED', source: 'vitest run', result: 'cart unit tests: 8 passed' }, { kind: 'NOT_VERIFIED', source: 'manual observation', result: 'Corrupted persisted carts are not yet discarded safely.' }],
     evidenceCoverage: coverage,
   });
+  artifacts['verification-scope.json'] = verificationScope(taskId, ['src/cart.ts', 'tests/cart.test.ts']);
   return { taskId, ledger, artifacts };
 }
 
@@ -772,6 +956,8 @@ function buildCheckoutTask() {
     inspectFirst: ['src/checkout.ts'],
     resumeNote: 'Execution in progress; integration tests green, retry policy next.',
   });
+  artifacts['workspace-binding.json'] = workspaceBinding(taskId);
+  artifacts['responsibility.json'] = responsibility(taskId, 'checkout implementation');
   const executions = [
     executionRecord({ executionId: 'exec-checkout-integration-tests', taskId, checkId: 'checkout-integration-tests', requirement: 'Checkout integration tests pass', argv: ['npx', 'vitest', 'run', 'tests/checkout.test.ts'], startedAt: '2026-08-05T09:07:00.000Z', finishedAt: '2026-08-05T09:10:00.000Z' }),
   ].map((record) => [`executions/${record.executionId}.json`, record]);
@@ -782,6 +968,7 @@ function buildA11yTask() {
   const t = TASKS.a11y;
   const taskId = t.id;
   const releasedClaims = ['src/catalog.ts'];
+  const handoff = canonicalHandoff(t.id);
   const ledger = new EventLedgerBuilder(taskId, { startAt: t.startAt });
   ledger.append('TASK_CREATED', { title: t.title });
   ledger.append('CONTRACT_VALIDATED', { objective: t.title });
@@ -791,7 +978,14 @@ function buildA11yTask() {
   ledger.append('CHECK_FAILED', { check: 'keyboard-navigation', finding: '2 keyboard navigation findings in grid pagination' });
   ledger.append('TASK_BLOCKED', { reason: 'ACCESSIBILITY_GATE_FAILED' });
   ledger.append('RECOVERY_ROUTE_SELECTED', { route: 'correct-and-resume', decidedBy: 'harness-a' });
-  ledger.append('HANDOFF_CREATED', { from: 'harness-a', to: 'harness-b', note: 'Resume after fixing grid pagination focus trap' });
+  ledger.append('HANDOFF_CREATED', {
+    from: 'harness-a',
+    to: 'harness-b',
+    note: 'Resume after fixing grid pagination focus trap',
+    handoffId: handoff.handoffId,
+    artifact: `handoffs/${handoff.handoffId}.json`,
+    digest: handoff.artifactDigest,
+  });
   ledger.append('SESSION_ACTIVATED', { harness: 'harness-b' });
   ledger.append('RESUMED_FROM_CONTINUITY', { harness: 'harness-b', phase: 'CORRECTING' });
   const recoveryEvent = recoveryRecorded(ledger, {
@@ -873,6 +1067,7 @@ function buildA11yTask() {
     inspectFirst: ['src/catalog.ts'],
     resumeNote: 'Recovered from a stale claim lock after the harness-a → harness-b handoff; mutations stay blocked until an authorized harness performs task-resume.',
   });
+  artifacts['handoffs/handoff-harness-a-to-b.json'] = handoff;
   artifacts['policy-snapshot.json'] = {
     schemaVersion: 1,
     policyDigest: fingerprint('policy:' + DEMO_PROJECT_ID),
@@ -1167,6 +1362,25 @@ export function buildForgeShopProject() {
     complianceMode: 'standard',
     requiredGates: ['unit-tests', 'typecheck', 'lint'],
     requiredEvidence: ['OBSERVED'],
+    verification: {
+      checkers: [{
+        checkId: 'unit-tests',
+        scopeMode: 'PATH_ARGUMENTS',
+        argvPrefix: ['npx', 'vitest', 'run'],
+        pathInsertion: 'APPEND',
+      }],
+    },
+    attestation: {
+      mode: 'off',
+      revisionProvider: 'git',
+      requireCompleteCoverage: false,
+      coverage: { exclude: ['.forgeloop/**'] },
+      signing: {
+        provider: 'none',
+        required: false,
+        policy: { identities: [], requireTransparencyLog: false },
+      },
+    },
   }, 'config.json');
 
   put('.forgeloop/sources.json', {
@@ -1206,7 +1420,7 @@ export function buildForgeShopProject() {
   let eventCount = 0;
   for (const build of builders) {
     const { taskId, ledger, artifacts: rawArtifacts, executions = [] } = build();
-    const artifacts = finalizeTaskArtifacts(rawArtifacts);
+    const artifacts = finalizeAttestationArtifacts(finalizeTaskArtifacts(rawArtifacts), ledger);
     const key = taskKeyFor(taskId);
     for (const [name, value] of Object.entries(artifacts)) {
       const artifactName = name === 'events.ndjson'
@@ -1219,6 +1433,12 @@ export function buildForgeShopProject() {
               ? 'approval.json'
               : name.startsWith('evaluations/')
                 ? 'trajectory-evaluation.json'
+                : name.startsWith('handoffs/')
+                  ? 'handoff.json'
+                : name === 'attestations/code-manifest.json'
+                  ? 'code-manifest.json'
+                : name === 'attestations/statement.json'
+                  ? 'attestation-statement.json'
           : name;
       put(`.forgeloop/task-state/${key}/${name}`, value, artifactName);
     }

@@ -15,6 +15,7 @@ import { PHASE_ORDER } from '@shared/domain';
 import { FlowNode } from '../components/flow/FlowNode';
 import { OwnershipBadge } from '../components/task/OwnershipBadge';
 import { InspectorPanel } from '../components/inspectors/InspectorPanel';
+import { Shield } from 'lucide-react';
 
 interface FlowProps {
   snapshot: ProjectSnapshot;
@@ -184,6 +185,21 @@ export function Flow({ snapshot, selectedTaskId, onSelectedTaskChange }: FlowPro
             </select>
           </div>
         </div>
+
+        {selectedTask && (
+          <div className="mb-4 rounded-10 border border-forge-border-subtle bg-forge-primary-surface px-4 py-3" aria-label="Contextual task boundaries">
+            <div className="flex items-center gap-2"><Shield className="h-4 w-4 text-forge-accent" /><span className="text-xs font-semibold uppercase tracking-wider text-forge-text-muted">Contextual evidence</span></div>
+            <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
+              <span className="rounded-6 bg-forge-secondary-surface px-2 py-1 text-forge-text-secondary">Task + Claims</span>
+              {snapshot.protocol.featureSupport?.workspaceBinding === true && <span className="rounded-6 bg-forge-secondary-surface px-2 py-1 text-forge-text-secondary">Optional Workspace Binding</span>}
+              {snapshot.protocol.featureSupport?.responsibilityConstraints === true && <span className="rounded-6 bg-forge-secondary-surface px-2 py-1 text-forge-text-secondary">Optional Responsibility</span>}
+              {snapshot.protocol.featureSupport?.differentialVerificationScope === true && <span className="rounded-6 bg-forge-secondary-surface px-2 py-1 text-forge-text-secondary">Verification Scope</span>}
+              <span className="rounded-6 bg-forge-secondary-surface px-2 py-1 text-forge-text-secondary">Execution Evidence</span>
+              <span className="rounded-6 bg-forge-secondary-surface px-2 py-1 text-forge-text-secondary">Completion Validation</span>
+              {snapshot.protocol.featureSupport?.codeAttestation === true && <span className="rounded-6 bg-forge-secondary-surface px-2 py-1 text-forge-text-secondary">Optional Attestation</span>}
+            </div>
+          </div>
+        )}
 
         <div className="flex-1 bg-forge-primary-surface border border-forge-border-subtle rounded-10 overflow-hidden">
           <ReactFlow

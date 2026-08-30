@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { isAbsolute, join, relative, resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { getTrustedSchemaNames } from './schema-provenance.mjs';
 
@@ -23,9 +23,14 @@ if (sourcePackage.version !== expectedPackageVersion) {
 }
 
 const schemas = {};
+const sourceSchemaRoot = resolve(sourceRoot, 'schemas');
 mkdirSync(join(repoRoot, 'schemas'), { recursive: true });
-for (const name of getTrustedSchemaNames(repoRoot)) {
-  const sourcePath = join(sourceRoot, 'schemas', name);
+for (const name of getTrustedSchemaNames(repoRoot, sourceSchemaRoot)) {
+  const sourcePath = resolve(sourceSchemaRoot, name);
+  const sourceRelative = relative(sourceSchemaRoot, sourcePath);
+  if (sourceRelative.startsWith('..') || isAbsolute(sourceRelative)) {
+    throw new Error(`Trusted schema path escapes ForgeLoop source: ${name}`);
+  }
   const destinationPath = join(repoRoot, 'schemas', name);
   const bytes = readFileSync(sourcePath);
   copyFileSync(sourcePath, destinationPath);

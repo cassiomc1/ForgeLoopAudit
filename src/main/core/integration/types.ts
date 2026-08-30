@@ -30,6 +30,45 @@ export interface ForgeLoopVerificationExecutionIsolationFeatureSummary {
   protocolProjectRootSeparateFromExecutionCwd: boolean;
 }
 
+export interface ForgeLoopWorkspaceBindingFeatureSummary {
+  version: number;
+  supported: boolean;
+  optional: boolean;
+  explicitRebinding: boolean;
+}
+
+export interface ForgeLoopCanonicalHandoffsFeatureSummary {
+  version: number;
+  supported: boolean;
+  immutable: boolean;
+  lifecycleAuthority: boolean;
+}
+
+export interface ForgeLoopResponsibilityConstraintsFeatureSummary {
+  version: number;
+  supported: boolean;
+  immutableDuringPass: boolean;
+  completionEnforced: boolean;
+}
+
+export type ForgeLoopVerificationScopeMode = 'AUTO' | 'CHANGED' | 'CLAIMED' | 'FULL';
+
+export interface ForgeLoopDifferentialVerificationScopeFeatureSummary {
+  version: number;
+  supported: boolean;
+  modes: ForgeLoopVerificationScopeMode[];
+  impactedMode: boolean;
+}
+
+export interface ForgeLoopCodeAttestationFeatureSummary {
+  version: number;
+  supported: boolean;
+  modes: Array<'off' | 'optional' | 'required'>;
+  revisionProviders: string[];
+  signingProviders: string[];
+  completionLedgerBound: boolean;
+}
+
 export interface ForgeLoopCommandCapabilitySummary {
   name: string;
   baseRiskClass?: string;
@@ -47,6 +86,11 @@ export interface ForgeLoopCapabilitiesSummary {
     durableActions?: ForgeLoopDurableActionsFeatureSummary;
     trajectoryEvaluation?: ForgeLoopTrajectoryEvaluationFeatureSummary;
     verificationExecutionIsolation?: ForgeLoopVerificationExecutionIsolationFeatureSummary;
+    workspaceBinding?: ForgeLoopWorkspaceBindingFeatureSummary;
+    canonicalHandoffs?: ForgeLoopCanonicalHandoffsFeatureSummary;
+    responsibilityConstraints?: ForgeLoopResponsibilityConstraintsFeatureSummary;
+    differentialVerificationScope?: ForgeLoopDifferentialVerificationScopeFeatureSummary;
+    codeAttestation?: ForgeLoopCodeAttestationFeatureSummary;
   };
   resources: string[];
   commands?: ForgeLoopCommandCapabilitySummary[];
@@ -79,6 +123,7 @@ export type CanonicalOwnershipResource = {
 export interface ForgeLoopCanonicalError {
   code: string;
   message: string;
+  next?: string;
 }
 
 export interface ForgeLoopReadOnlyResult<T> {

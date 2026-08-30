@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from 'fs';
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join, resolve } from 'path';
 import { PathBoundary } from '@main/security/path-boundary';
@@ -37,6 +37,25 @@ function validWorkState(): Record<string, unknown> {
 }
 
 describe('sixth review protocol hardening', () => {
+  it('keeps 1.6.4 boundary IPC narrow, sender-checked and read-only', () => {
+    const source = readFileSync(join(process.cwd(), 'src', 'main', 'ipc', 'project.handlers.ts'), 'utf8');
+    for (const channel of [
+      'GET_TASK_WORKSPACE_BINDING',
+      'GET_TASK_HANDOFFS',
+      'GET_TASK_RESPONSIBILITY',
+      'GET_TASK_VERIFICATION_SCOPE',
+      'GET_TASK_ATTESTATION',
+    ]) {
+      const handler = source.slice(source.indexOf(`IPC_CHANNELS.${channel}`), source.indexOf(`IPC_CHANNELS.${channel}`) + 900);
+      expect(handler).toContain('assertTrustedSender(event)');
+      expect(handler).toContain('TaskIdSchema.parse(taskId)');
+    }
+    for (const mutatingCommand of ['workspace-bind', 'handoff-create', 'responsibility-set', 'verify-scope', 'attestation-create']) {
+      expect(source).not.toContain(`'${mutatingCommand}'`);
+    }
+    expect(source).not.toMatch(/readForgeLoopIntegrationResource\([^,]+,\s*[^)]*uri/);
+  });
+
   it('validates project config through the real-path boundary and trusted schema', () => {
     const root = makeProject();
     try {

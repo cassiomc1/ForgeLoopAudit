@@ -16,6 +16,10 @@ ForgeLoop Studio is a local-first desktop companion for ForgeLoop. Open a ForgeL
 | Policy | Settings | |
 | <img src="screen/policy.png" alt="Policy view" width="420"> | <img src="screen/settings.png" alt="Settings view" width="420"> | |
 
+### ForgeLoop 1.6.4 boundary surfaces
+
+<img src="screen/task-boundaries.png" alt="Task Boundaries surface" width="840">
+
 ## Project selection
 
 Use **Open ForgeLoop Project** to select either a ForgeLoop project directory
@@ -30,7 +34,7 @@ common dependency/build folders are not followed during discovery.
 
 ## Status
 
-Release candidate — the read-only Studio runtime, trusted protocol validation, functional fixture E2E and multi-platform release staging are implemented. The current development target is `v0.1.0-rc.6`, aligned to the vendored ForgeLoop `1.6.1` Integration API v1 (canonical ownership, durable recovery, observability, durable actions, approvals, capability policy, trajectory metrics, evaluations and verification-execution provenance). Earlier RCs remain immutable at their tagged commits.
+Release candidate — the read-only Studio runtime, trusted protocol validation, functional fixture E2E and multi-platform release staging are implemented. The current development target is `v0.1.0-rc.6`, aligned to the vendored ForgeLoop `1.6.4` Integration API v1 (canonical ownership, durable recovery, observability, durable actions, approvals, capability policy, trajectory metrics, evaluations, verification-execution provenance, workspace binding, canonical handoffs, responsibility constraints, differential verification scope and code attestation). Earlier RCs remain immutable at their tagged commits.
 
 For the current release-candidate policy, Linux, macOS and Windows builds are unsigned preview artifacts. Validate the published checksums and expect normal operating-system security warnings; signed/notarized distribution is not part of this release candidate.
 
@@ -47,7 +51,7 @@ For the current release-candidate policy, Linux, macOS and Windows builds are un
 - Ajv
 - Vitest
 - Playwright
-- `@cassiomc1/forgeloop` 1.6.1 (vendored from the trusted source commit in `schemas/provenance.json`, read-only)
+- `@cassiomc1/forgeloop` 1.6.4 (vendored from the trusted source commit in `schemas/provenance.json`, read-only)
 
 ## Product direction
 
@@ -55,9 +59,11 @@ ForgeLoop Studio is designed as a **read-only observer by default**. ForgeLoop r
 
 ## Current ForgeLoop compatibility
 
-Studio consumes the bundled `@cassiomc1/forgeloop/integration` public subpath as its semantic boundary: canonical task discovery, canonical claim ownership (`claimState`, `mutationAllowed`, `ownershipValid`, historical vs effective write claims), durable recovery state, execution provenance, observability projections, durable actions, approvals, capability policy, trajectory metrics and trajectory evaluations. Direct `.forgeloop/` artifact reading remains available for bounded detail views and diagnostics only — it never determines current ownership, action readiness or authority. The Studio never executes mutable ForgeLoop commands; recovery/resume and action decisions are displayed as copy-only/read-only information.
+The current vendored ForgeLoop baseline is `1.6.4` at immutable source commit `24f50f9eefe5055cec053f075c748542b42e4ea2` (protocol v1, schema v1, Integration API v1).
 
-The Diagnostics, Actions and verification-execution provenance views are explicitly capability-negotiated. Missing optional resources degrade the affected feature to an honest **unavailable** state while retaining `INTEGRATION_V1`; `COMMIT_UNKNOWN`, unresolved requirements and unknown usage remain visible rather than being inferred or silently reconciled. Studio displays the isolation metadata persisted by ForgeLoop and never creates or verifies execution sandboxes. The capability policy is displayed as project policy context; it never grants host authority to Studio.
+Studio consumes the bundled `@cassiomc1/forgeloop/integration` public subpath as its semantic boundary: canonical task discovery, canonical claim ownership (`claimState`, `mutationAllowed`, `ownershipValid`, historical vs effective write claims), durable recovery state, execution provenance, observability projections, durable actions, approvals, capability policy, trajectory metrics, trajectory evaluations, workspace binding, canonical handoffs, responsibility constraints, differential verification scope and code attestation. Direct `.forgeloop/` artifact reading remains available for bounded detail views and diagnostics only — it never determines current ownership, action readiness or authority. The Studio never executes mutable ForgeLoop commands; recovery/resume and action decisions are displayed as copy-only/read-only information.
+
+The Diagnostics, Actions, verification-execution provenance and 1.6.4 boundary views are explicitly capability-negotiated. Missing optional resources degrade the affected feature to an honest **unavailable** state while retaining `INTEGRATION_V1`; `COMMIT_UNKNOWN`, unresolved requirements and unknown usage remain visible rather than being inferred or silently reconciled. Workspace status, responsibility constraints, immutable handoffs, persisted verification scope and attestation status are read lazily for the selected task. Studio displays the isolation and attestation metadata persisted by ForgeLoop and never creates bindings, handoffs, scopes, attestations or execution sandboxes. Verification scope is not attestation coverage, handoff snapshots are not evidence, and the capability policy is displayed as project policy context; it never grants host authority to Studio.
 
 Compatibility modes: `INTEGRATION_V1` (full support), `ARTIFACT_ONLY` (visual reading with ownership unavailable; also the degraded mode for ForgeLoop <= 1.3 projects), and `INCOMPATIBLE` (fail closed). There is deliberately no inferred legacy mode — without an explicit project-level signal, downgrading a broken integration into "legacy" would mask regressions. See [docs/PROTOCOL_COMPATIBILITY.md](docs/PROTOCOL_COMPATIBILITY.md) for the full matrix.
 

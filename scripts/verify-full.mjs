@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
 const gates = [
+  ['forgeloop-vendor-lineage', 'npm', ['run', 'verify:forgeloop-lineage']],
   ['version-lineage', 'node', ['scripts/verify-version-lineage.mjs']],
   ['dependency-policy', 'node', ['scripts/dependency-policy.mjs']],
   ['audit-production', 'npm', ['run', 'audit:prod']],

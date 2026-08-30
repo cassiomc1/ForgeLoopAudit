@@ -9,5 +9,37 @@
   ],
   "requiredEvidence": [
     "OBSERVED"
-  ]
+  ],
+  "verification": {
+    "checkers": [
+      {
+        "checkId": "unit-tests",
+        "scopeMode": "PATH_ARGUMENTS",
+        "argvPrefix": [
+          "npx",
+          "vitest",
+          "run"
+        ],
+        "pathInsertion": "APPEND"
+      }
+    ]
+  },
+  "attestation": {
+    "mode": "off",
+    "revisionProvider": "git",
+    "requireCompleteCoverage": false,
+    "coverage": {
+      "exclude": [
+        ".forgeloop/**"
+      ]
+    },
+    "signing": {
+      "provider": "none",
+      "required": false,
+      "policy": {
+        "identities": [],
+        "requireTransparencyLog": false
+      }
+    }
+  }
 }
