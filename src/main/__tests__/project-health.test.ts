@@ -41,6 +41,7 @@ describe('project health vs canonical ownership', () => {
       new PathBoundary(root),
       {
         readConfig: () => ({ schemaVersion: 1, protocolVersion: 1, complianceMode: 'standard' }),
+        tryReadConfig: () => ({ schemaVersion: 1, protocolVersion: 1, complianceMode: 'standard' }),
         listTaskKeys: () => [KEY],
         readTaskSummaryArtifacts: () => ({
           'task.json': { taskId: 'TASK-001', taskKey: KEY },

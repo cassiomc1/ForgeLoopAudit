@@ -180,8 +180,8 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
       policyResult = cliStatus;
     }
     if (!policyResult.success) return null;
-    const config = currentProjectReader.readConfig();
-    return normalizePolicyStatus(policyResult.data, typeof config.complianceMode === 'string' ? config.complianceMode : 'Unknown', 'POLICY_STATUS');
+    const config = currentProjectReader.tryReadConfig();
+    return normalizePolicyStatus(policyResult.data, config && typeof config.complianceMode === 'string' ? config.complianceMode : 'Unknown', 'POLICY_STATUS');
   });
 
   ipcMain.handle(IPC_CHANNELS.GET_TASK_EVENTS, async (event, taskId: string, cursor?: string, limit?: number): Promise<any> => {
@@ -450,7 +450,8 @@ async function openProject(projectRoot: string, projectKind: ProjectKind = 'PROJ
     featureSupport: negotiation.featureSupport,
     // The policy reader returns a trusted, schema-validated config. It only
     // gates automatic attestation reads; project config is not host authority.
-    readAttestationConfig: () => currentProjectReader?.readConfig() ?? null,
+    // Layout v2 projects have no config.json, so read tolerantly.
+    readAttestationConfig: () => currentProjectReader?.tryReadConfig() ?? null,
   });
   detectionResult.forgeLoopVersion = canonicalProtocolInfo?.packageVersion ?? detectionResult.forgeLoopVersion;
   detectionResult.compatibilityMode = negotiation.mode;

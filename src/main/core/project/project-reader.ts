@@ -3,7 +3,7 @@ import { join } from 'path';
 import { ForgeLoopStudioError } from '@shared/errors';
 import { parseJsonSafely, RESOURCE_LIMITS } from '@main/security/resource-limits';
 import { PathBoundary } from '@main/security/path-boundary';
-import { CONFIG_FILE, SOURCES_FILE, TASK_STATE_DIR, SESSIONS_DIR, POLICY_DIR } from '@shared/constants';
+import { CONFIG_FILE, SOURCES_FILE, MANIFEST_FILE, LEGACY_MANIFEST_FILE, TASK_STATE_DIR, SESSIONS_DIR, POLICY_DIR } from '@shared/constants';
 import type { ProjectDetectionResult, RawCollectionArtifactRequest } from '@shared/domain';
 import { checkProtocolCompatibility } from '@main/core/protocol/compatibility';
 import { SchemaValidator } from '@main/core/protocol/validator';
@@ -100,6 +100,13 @@ const FIXED_COLLECTION_ARTIFACTS = {
   'attestation-bundle': { relativePath: 'attestations/statement.sigstore.json', schema: null },
 } as const;
 
+export interface ForgeLoopManifest {
+  schemaVersion: number;
+  layoutVersion?: number;
+  packageName?: string;
+  packageVersion?: string;
+}
+
 export class ProjectDetector {
   constructor(
     private readonly pathBoundary: PathBoundary,
@@ -108,10 +115,57 @@ export class ProjectDetector {
 
   detect(): ProjectDetectionResult {
     const projectRoot = this.pathBoundary.getProjectRoot();
-    let forgeLoopRoot: string;
-    let config: ForgeLoopConfig;
+    const forgeLoopRoot = this.pathBoundary.validateForgeLoopPath('');
+
+    const warnings: string[] = [];
+    let forgeLoopVersion: string | undefined;
+    let protocolVersion: number;
+    let schemaVersion: number;
+
+    const config = this.tryDetectFromConfig();
+    if (config) {
+      protocolVersion = config.protocolVersion;
+      schemaVersion = config.schemaVersion;
+    } else {
+      // Layout v2 projects (forgeloop 1.6.x) ship manifest.json instead of
+      // config.json. The manifest is the trusted identity marker; protocol
+      // facts are later re-negotiated through the bundled integration.
+      const manifest = this.readDetectionManifest();
+      if (!manifest) {
+        throw ForgeLoopStudioError.projectNotForgeLoop(projectRoot);
+      }
+      protocolVersion = 1;
+      schemaVersion = manifest.schemaVersion;
+      forgeLoopVersion = manifest.packageVersion;
+      warnings.push('No config.json found; project detected from manifest.json (ForgeLoop layout v2).');
+    }
+
+    const protocolResult = checkProtocolCompatibility({
+      protocolVersion,
+      schemaVersion,
+      compatible: true,
+    });
+
+    if (!protocolResult.compatible) {
+      warnings.push(`Protocol version ${protocolVersion} may have limited support`);
+    }
+
+    return {
+      projectRoot,
+      forgeLoopRoot,
+      protocolVersion,
+      schemaVersion,
+      forgeLoopVersion,
+      compatible: protocolResult.compatible,
+      warnings,
+      projectKind: 'PROJECT',
+    };
+  }
+
+  private tryDetectFromConfig(): ForgeLoopConfig | null {
+    const candidate = this.pathBoundary.resolveForgeLoopPathLexically(CONFIG_FILE);
+    if (!existsSync(candidate)) return null;
     try {
-      forgeLoopRoot = this.pathBoundary.validateForgeLoopPath('');
       const configPath = this.pathBoundary.validateForgeLoopPath(CONFIG_FILE);
       const configStat = lstatSync(configPath);
       if (!configStat.isFile() || configStat.isSymbolicLink()) {
@@ -119,36 +173,43 @@ export class ProjectDetector {
       }
       assertJsonFileSize(CONFIG_FILE, configStat.size);
       const content = readFileSync(configPath, 'utf8');
-      config = parseJsonSafely<ForgeLoopConfig>(content);
+      const config = parseJsonSafely<ForgeLoopConfig>(content);
       const validation = this.validator.validate(ARTIFACT_SCHEMAS['config.json'], config);
       if (!validation.valid) {
         throw ForgeLoopStudioError.artifactInvalid(CONFIG_FILE, validation.errors?.join('; ') || 'Config schema validation failed');
       }
+      return config;
     } catch (error) {
       if (error instanceof ForgeLoopStudioError) throw error;
       throw ForgeLoopStudioError.artifactInvalid(CONFIG_FILE, `Failed to parse config: ${error instanceof Error ? error.message : String(error)}`);
     }
+  }
 
-    const protocolResult = checkProtocolCompatibility({
-      protocolVersion: config.protocolVersion,
-      schemaVersion: config.schemaVersion,
-      compatible: true,
-    });
-
-    const warnings: string[] = [];
-    if (!protocolResult.compatible) {
-      warnings.push(`Protocol version ${config.protocolVersion} may have limited support`);
+  private readDetectionManifest(): ForgeLoopManifest | null {
+    for (const name of [MANIFEST_FILE, LEGACY_MANIFEST_FILE]) {
+      const candidate = this.pathBoundary.resolveForgeLoopPathLexically(name);
+      if (!existsSync(candidate)) continue;
+      try {
+        const stat = lstatSync(candidate);
+        if (!stat.isFile() || stat.isSymbolicLink()) {
+          throw ForgeLoopStudioError.artifactInvalid(name, 'Symbolic links and non-file manifest artifacts are not allowed');
+        }
+        assertJsonFileSize(name, stat.size);
+        const parsed = parseJsonSafely<Record<string, unknown>>(readFileSync(this.pathBoundary.validatePath(candidate), 'utf8'));
+        if (!isRecord(parsed) || typeof parsed.schemaVersion !== 'number') {
+          throw ForgeLoopStudioError.artifactInvalid(name, 'Manifest does not satisfy the canonical layout shape');
+        }
+        const manifest: ForgeLoopManifest = { schemaVersion: parsed.schemaVersion };
+        if (typeof parsed.layoutVersion === 'number') manifest.layoutVersion = parsed.layoutVersion;
+        if (typeof parsed.packageName === 'string') manifest.packageName = parsed.packageName;
+        if (typeof parsed.packageVersion === 'string') manifest.packageVersion = parsed.packageVersion;
+        return manifest;
+      } catch (error) {
+        if (error instanceof ForgeLoopStudioError) throw error;
+        throw ForgeLoopStudioError.artifactInvalid(name, `Failed to parse manifest: ${error instanceof Error ? error.message : String(error)}`);
+      }
     }
-
-    return {
-      projectRoot,
-      forgeLoopRoot,
-      protocolVersion: config.protocolVersion,
-      schemaVersion: config.schemaVersion,
-      compatible: protocolResult.compatible,
-      warnings,
-      projectKind: 'PROJECT',
-    };
+    return null;
   }
 }
 
@@ -197,6 +258,14 @@ export class ProjectReader {
       throw ForgeLoopStudioError.artifactInvalid(CONFIG_FILE, 'Config does not satisfy the canonical protocol shape');
     }
     return config;
+  }
+
+  /** Layout v2 projects carry no config.json until tasks run; callers that
+   *  only need best-effort config metadata use this tolerant variant. */
+  tryReadConfig(): ForgeLoopConfig | null {
+    const candidate = this.pathBoundary.resolveForgeLoopPathLexically(CONFIG_FILE);
+    if (!existsSync(candidate)) return null;
+    return this.readConfig();
   }
 
   readSources(): ForgeLoopSources {

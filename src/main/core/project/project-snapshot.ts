@@ -50,7 +50,7 @@ export class ProjectSnapshotBuilder {
   }
 
   async build(): Promise<ProjectSnapshot> {
-    const config = this.projectReader.readConfig();
+    const config = this.projectReader.tryReadConfig();
     const fsTaskKeys = this.projectReader.listTaskKeys();
     const diagnostics: string[] = [];
     const integrationMode = Boolean(this.integration && this.compatibilityContext?.compatibilityMode === 'INTEGRATION_V1');
@@ -105,8 +105,8 @@ export class ProjectSnapshotBuilder {
     }
 
     const protocolSummary: ProtocolSummary = checkProtocolCompatibility({
-      protocolVersion: this.compatibilityContext?.protocolVersion ?? config.protocolVersion,
-      schemaVersion: this.compatibilityContext?.schemaVersion ?? config.schemaVersion,
+      protocolVersion: this.compatibilityContext?.protocolVersion ?? config?.protocolVersion ?? 1,
+      schemaVersion: this.compatibilityContext?.schemaVersion ?? config?.schemaVersion ?? 1,
       packageVersion: this.compatibilityContext?.packageVersion,
       compatible: true,
     });
@@ -115,7 +115,7 @@ export class ProjectSnapshotBuilder {
     protocolSummary.featureSupport = this.compatibilityContext?.featureSupport;
 
     const projectSummary: ProjectSummary = {
-      name: config.projectName || basename(this.pathBoundary.getProjectRoot()) || 'Unknown Project',
+      name: config?.projectName || basename(this.pathBoundary.getProjectRoot()) || 'Unknown Project',
       rootPath: this.pathBoundary.getProjectRoot(),
       branch: await this.getGitBranch(),
       head: await this.getGitHead(),
@@ -271,9 +271,9 @@ export class ProjectSnapshotBuilder {
   private async buildPolicy(): Promise<PolicySummary | undefined> {
     const policy = this.projectReader.readGlobalPolicy();
     const rules = policy['rules.json'];
-    const config = this.projectReader.readConfig();
+    const config = this.projectReader.tryReadConfig();
     const ruleCount = rules && typeof rules === 'object' && Array.isArray((rules as Record<string, unknown>).rules) ? ((rules as Record<string, unknown>).rules as unknown[]).length : undefined;
-    const complianceMode = typeof (config as unknown as Record<string, unknown>).complianceMode === 'string' ? String((config as unknown as Record<string, unknown>).complianceMode) : 'Unknown';
+    const complianceMode = config && typeof (config as unknown as Record<string, unknown>).complianceMode === 'string' ? String((config as unknown as Record<string, unknown>).complianceMode) : 'Unknown';
 
     if (this.integration && this.compatibilityContext?.compatibilityMode === 'INTEGRATION_V1') {
       // Canonical path: policy status comes from the bundled Integration API,
