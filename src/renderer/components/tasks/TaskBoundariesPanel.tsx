@@ -14,7 +14,9 @@ import { cn } from '../../lib/utils';
 interface TaskBoundariesPanelProps {
   task: TaskSummary;
   featureSupport?: ForgeLoopFeatureSupport;
-  refreshToken?: number;
+  workspaceBindingRefreshToken?: number;
+  handoffRefreshToken?: number;
+  responsibilityRefreshToken?: number;
 }
 
 export interface BoundaryData {
@@ -53,7 +55,7 @@ const unavailableResponsibility = (advertised: boolean): ResponsibilityView => (
 const unavailableHandoffs = (advertised: boolean): TaskHandoffsView => ({
   available: false,
   source: 'UNAVAILABLE',
-  count: 0,
+  count: null,
   handoffs: [],
   error: { code: 'E_FEATURE_UNAVAILABLE', message: advertised ? 'Canonical handoffs are unavailable.' : 'Canonical handoffs are not advertised by this ForgeLoop build.' },
 });
@@ -130,38 +132,58 @@ function HandoffRow({ handoff }: { handoff: CanonicalHandoffView }) {
   );
 }
 
-export function TaskBoundariesPanel({ task, featureSupport, refreshToken = 0 }: TaskBoundariesPanelProps) {
-  const [data, setData] = useState<BoundaryData | null>(null);
+export function TaskBoundariesPanel({
+  task,
+  featureSupport,
+  workspaceBindingRefreshToken = 0,
+  handoffRefreshToken = 0,
+  responsibilityRefreshToken = 0,
+}: TaskBoundariesPanelProps) {
+  const [workspace, setWorkspace] = useState<WorkspaceBindingView | null>(null);
+  const [responsibility, setResponsibility] = useState<ResponsibilityView | null>(null);
+  const [handoffs, setHandoffs] = useState<TaskHandoffsView | null>(null);
+  const workspaceAdvertised = featureEnabled(featureSupport, 'workspaceBinding');
+  const handoffsAdvertised = featureEnabled(featureSupport, 'canonicalHandoffs');
+  const responsibilityAdvertised = featureEnabled(featureSupport, 'responsibilityConstraints');
 
   useEffect(() => {
     let cancelled = false;
     const api = window.forgeLoopStudio;
-    const workspaceAdvertised = featureEnabled(featureSupport, 'workspaceBinding');
-    const handoffsAdvertised = featureEnabled(featureSupport, 'canonicalHandoffs');
-    const responsibilityAdvertised = featureEnabled(featureSupport, 'responsibilityConstraints');
-
     const workspacePromise = workspaceAdvertised && typeof api?.getTaskWorkspaceBinding === 'function'
       ? api.getTaskWorkspaceBinding(task.taskId).catch(() => unavailableWorkspace(true))
       : Promise.resolve(unavailableWorkspace(workspaceAdvertised));
+    workspacePromise.then((result) => { if (!cancelled) setWorkspace(result); });
+
+    return () => { cancelled = true; };
+  }, [task.taskId, workspaceAdvertised, workspaceBindingRefreshToken]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const api = window.forgeLoopStudio;
     const handoffsPromise = handoffsAdvertised && typeof api?.getTaskHandoffs === 'function'
       ? api.getTaskHandoffs(task.taskId).catch(() => unavailableHandoffs(true))
       : Promise.resolve(unavailableHandoffs(handoffsAdvertised));
+    handoffsPromise.then((result) => { if (!cancelled) setHandoffs(result); });
+
+    return () => { cancelled = true; };
+  }, [handoffsAdvertised, handoffRefreshToken, task.taskId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const api = window.forgeLoopStudio;
     const responsibilityPromise = responsibilityAdvertised && typeof api?.getTaskResponsibility === 'function'
       ? api.getTaskResponsibility(task.taskId).catch(() => unavailableResponsibility(true))
       : Promise.resolve(unavailableResponsibility(responsibilityAdvertised));
-
-    Promise.all([workspacePromise, responsibilityPromise, handoffsPromise]).then(([workspace, responsibility, handoffs]) => {
-      if (!cancelled) setData({ workspace, responsibility, handoffs });
-    });
+    responsibilityPromise.then((result) => { if (!cancelled) setResponsibility(result); });
 
     return () => { cancelled = true; };
-  }, [featureSupport, refreshToken, task.taskId]);
+  }, [responsibilityAdvertised, responsibilityRefreshToken, task.taskId]);
 
-  if (!data) {
+  if (!workspace || !responsibility || !handoffs) {
     return <div className="rounded-10 border border-forge-border-subtle bg-forge-primary-surface p-4 text-sm text-forge-text-muted">Loading task boundaries…</div>;
   }
 
-  return <TaskBoundariesContent task={task} data={data} />;
+  return <TaskBoundariesContent task={task} data={{ workspace, responsibility, handoffs }} />;
 }
 
 export function TaskBoundariesContent({ task, data }: { task: TaskSummary; data: BoundaryData }) {
@@ -226,16 +248,17 @@ export function TaskBoundariesContent({ task, data }: { task: TaskSummary; data:
             <BoundedList label="Current changed paths" values={responsibility.changedPaths} />
           </div>
           {responsibility.frozenInputs && <p className="mt-3 text-xs text-forge-text-muted">Frozen inputs: contract {String(responsibility.frozenInputs.contract)}, route {String(responsibility.frozenInputs.route)}, claims {String(responsibility.frozenInputs.claims)}</p>}
+          {responsibility.status === 'INVALID' && <p className="mt-3 flex items-center gap-1.5 text-xs text-forge-danger"><AlertTriangle className="h-3.5 w-3.5" />ForgeLoop rejected this responsibility contract; Studio preserves the canonical fail-closed result.</p>}
           {responsibility.errors.length > 0 && <div className="mt-3 space-y-1 text-xs text-forge-danger">{responsibility.errors.slice(0, 4).map((error, index) => <p key={`${error.code}-${index}`}>{error.code}: {error.message}</p>)}</div>}
         </div>
 
         <div className="rounded-10 border border-forge-border-subtle bg-forge-primary-surface p-4">
           <div className="flex items-center justify-between gap-3">
             <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-forge-text-muted"><Link2 className="h-4 w-4" />Canonical Handoffs</h3>
-            <BoundaryBadge label={`${handoffs.count} recorded`} />
+            <BoundaryBadge label={handoffs.available ? `${handoffs.count ?? 0} recorded` : 'Unavailable'} tone={handoffs.available ? 'neutral' : 'warning'} />
           </div>
           <div className="mt-3 space-y-2">
-            {handoffs.handoffs.length === 0 ? <p className="text-sm text-forge-text-muted">No canonical handoff snapshots recorded.</p> : handoffs.handoffs.slice(0, 5).map((handoff) => <HandoffRow key={handoff.handoffId || `${handoff.createdAt}-${handoff.revision}`} handoff={handoff} />)}
+            {!handoffs.available ? <p className="text-sm text-forge-warning">Canonical handoff snapshots are unavailable.</p> : handoffs.handoffs.length === 0 ? <p className="text-sm text-forge-text-muted">No canonical handoff snapshots recorded.</p> : handoffs.handoffs.slice(0, 5).map((handoff) => <HandoffRow key={handoff.handoffId || `${handoff.createdAt}-${handoff.revision}`} handoff={handoff} />)}
           </div>
           {handoffs.error && <p className="mt-3 text-xs text-forge-warning">{handoffs.error.message}</p>}
           <p className="mt-3 border-t border-forge-border-subtle/60 pt-3 text-[11px] text-forge-text-muted">Immutable protocol snapshot — not review, completion, delegation, or authority evidence.</p>

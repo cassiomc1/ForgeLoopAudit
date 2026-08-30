@@ -79,6 +79,11 @@ describe('canonical task boundary projections', () => {
       scope: { requestedMode: 'AUTO', resolvedMode: 'CHANGED', verificationCycle: 2, changedPaths: ['src/checkout.ts'], claimedPaths: ['src/checkout.ts'], selectedPaths: ['src/checkout.ts'], reasons: ['changed input'], fallback: null, checkerCapabilityFingerprint: 'd'.repeat(64), createdAt: '2026-08-02T00:00:00.000Z' },
       fingerprint: 'e'.repeat(64),
     })).toMatchObject({ requestedMode: 'AUTO', resolvedMode: 'CHANGED', verificationCycle: 2 });
+    expect(normalizeVerificationScope({ scope: { requestedMode: 'AUTO', resolvedMode: 'UNRESOLVED' } }).resolvedMode).toBe('UNRESOLVED');
+    expect(normalizeVerificationScope({ scope: { requestedMode: 'UNRESOLVED', resolvedMode: 'UNRESOLVED' } })).toMatchObject({
+      requestedMode: 'UNKNOWN',
+      resolvedMode: 'UNRESOLVED',
+    });
     expect(normalizeVerificationScope({ scope: { requestedMode: 'AUTO', resolvedMode: 'IMPACTED' } }).resolvedMode).toBe('UNKNOWN');
 
     expect(normalizeAttestation({
@@ -103,7 +108,11 @@ describe('canonical task boundary projections', () => {
       readTaskVerificationScope: vi.fn().mockRejectedValue({ code: 'E_VERIFICATION_SCOPE_INVALID', message: 'verification scope artifact missing' }),
       readTaskAttestation: vi.fn().mockRejectedValue(new Error('attestation provider unavailable')),
     });
-    const service = createCanonicalTaskBoundariesService({ integration: adapter, featureSupport: allFeatures });
+    const service = createCanonicalTaskBoundariesService({
+      integration: adapter,
+      featureSupport: allFeatures,
+      readAttestationConfig: () => ({ attestation: { mode: 'optional', signing: { provider: 'none', required: false } } }),
+    });
 
     const [workspace, responsibilityView, handoffs, scope, attestation] = await Promise.all([
       service.getWorkspaceBinding('/project', 'TASK-003'),
@@ -143,7 +152,7 @@ describe('canonical task boundary projections', () => {
       error: { code: 'E_WORKSPACE_BINDING_INVALID', message: 'Workspace binding status is invalid.' },
     });
 
-    expect(normalizeHandoffs(null)).toMatchObject({ available: false, count: 0 });
+    expect(normalizeHandoffs(null)).toMatchObject({ available: false, count: null });
     expect(normalizeHandoffs({ handoffs: [null, { handoffId: 'handoff-empty', createdAt: null }], count: 'not-a-number', error: { code: 'E_HANDOFF_INVALID' } })).toMatchObject({
       available: true,
       count: 2,

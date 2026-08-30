@@ -69,7 +69,23 @@ describe('Task Boundaries presentation', () => {
   it('keeps responsibility errors and the zero-handoff state explicit', () => {
     const html = markup({ workspace: workspace('MATCH'), responsibility: responsibility('INVALID'), handoffs: emptyHandoffs });
     expect(html).toContain('E_RESPONSIBILITY_SCOPE_VIOLATION');
+    expect(html).toContain('Studio preserves the canonical fail-closed result.');
     expect(html).toContain('No canonical handoff snapshots recorded.');
     expect(html).toContain('Immutable protocol snapshot — not review, completion, delegation, or authority evidence.');
+  });
+
+  it('does not present unavailable handoffs as an available empty collection', () => {
+    const unavailable: TaskHandoffsView = {
+      available: false,
+      source: 'UNAVAILABLE',
+      count: null,
+      handoffs: [],
+      error: { code: 'E_CANONICAL_HANDOFFS_UNAVAILABLE', message: 'Canonical handoffs are unavailable.' },
+    };
+    const html = markup({ workspace: workspace('MATCH'), responsibility: responsibility('VALID'), handoffs: unavailable });
+    expect(html).toContain('Canonical handoff snapshots are unavailable.');
+    expect(html).toContain('Unavailable');
+    expect(html).not.toContain('0 recorded');
+    expect(html).not.toContain('No canonical handoff snapshots recorded.');
   });
 });

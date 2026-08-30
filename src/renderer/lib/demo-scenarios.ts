@@ -37,7 +37,7 @@ export const DEMO_SCENARIOS: readonly DemoScenario[] = [
     taskId: 'TASK-003',
     expectedPhase: 'EXECUTING',
     label: 'Active execution',
-    summary: 'Intentionally shows an in-progress task with partial evidence and remaining retry/security work.',
+    summary: 'Intentionally shows an in-progress task with a canonical INVALID responsibility result, partial evidence, and remaining retry/security work.',
   },
   {
     taskId: 'TASK-004',

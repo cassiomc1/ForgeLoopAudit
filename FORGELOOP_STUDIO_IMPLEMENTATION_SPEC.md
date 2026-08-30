@@ -66,29 +66,17 @@ Compatibility modes: `INTEGRATION_V1`, `ARTIFACT_ONLY`, `INCOMPATIBLE`. Capabili
 
 ### 2.1b ForgeLoop 1.6.4 boundary features
 
-ForgeLoop 1.6.4 advertises five additive feature families through Integration API v1:
+ForgeLoop 1.6.4 advertises five additive, independently negotiated feature families:
 
 | Feature | Canonical resource | Studio contract |
 |---|---|---|
 | Workspace binding | `task/workspace-binding` | Display `UNBOUND`, `MATCH`, `MISMATCH`, `INVALID` or `UNAVAILABLE`; never bind or rebind |
 | Canonical handoffs | `task/handoffs` | Display immutable snapshots; never call `handoff-create` or label a handoff as evidence, authority or delegation |
 | Responsibility constraints | `task/responsibility` | Display `NOT_APPLICABLE`, `VALID` or `INVALID` with exact upstream errors; never call `responsibility-set` |
-| Differential verification scope | `task/verification-scope` | Display persisted `AUTO`, `CHANGED`, `CLAIMED` or `FULL`; never compute scope or render `IMPACTED` as supported |
-| Code attestation | `task/attestation` | Display status and independent `PROCESSED`, `VERIFIED` or `ATTESTED` trust levels; never create, sign or automatically verify |
+| Differential verification scope | `task/verification-scope` | Display requested `AUTO`, `CHANGED`, `CLAIMED` or `FULL` and resolved `CHANGED`, `CLAIMED`, `FULL` or `UNRESOLVED`; never compute scope or render `IMPACTED` as supported |
+| Code attestation | `task/attestation` | Display canonical status and independent `PROCESSED`, `VERIFIED` or `ATTESTED` trust levels; never create or sign attestations |
 
-These resources are read through narrow selected-task APIs. Their failures degrade independently and do not alter core project health. Attestation is lazy and panel-scoped; handoff snapshots remain separate from mutable Continuity; verification scope is never treated as attestation coverage. The external Sigstore bundle is bounded, untrusted data unless ForgeLoop's canonical resource says otherwise.
-
-### 2.1b ForgeLoop 1.6.4 boundary features
-
-ForgeLoop 1.6.4 advertises five additive, independently negotiated feature families:
-
-- workspace binding (`task/workspace-binding`) reports `UNBOUND`, `MATCH`, `MISMATCH`, `INVALID` or `UNAVAILABLE`;
-- canonical handoffs (`task/handoffs`) are immutable snapshots and are never labeled as evidence, authority or delegation by Studio;
-- responsibility constraints (`task/responsibility`) report `NOT_APPLICABLE`, `VALID` or `INVALID` with upstream errors preserved;
-- differential verification scope (`task/verification-scope`) displays only the canonical `AUTO`, `CHANGED`, `CLAIMED` and `FULL` modes;
-- code attestation (`task/attestation`) displays canonical `DISABLED`, `MISSING`, `VALID` and `INVALID` status plus the independent `PROCESSED`, `VERIFIED` and `ATTESTED` trust levels.
-
-The five resources are read through narrow, selected-task APIs and optional failures remain isolated. Attestation is lazy and panel-scoped; Studio never runs range verification automatically, creates or signs attestations, binds a workspace, creates a handoff, sets responsibility or computes verification scope. Verification scope is distinct from attestation coverage, and mutable Continuity remains separate from immutable canonical handoffs.
+The five resources are read through narrow, selected-task APIs and optional failures remain isolated. Attestation is lazy and panel-scoped. Studio never creates or signs attestations. Attestation status is loaded only for the selected task; Studio may request ForgeLoop's canonical local content verification when no external signing-provider execution is required. External signing-provider verification is never triggered automatically. Studio never binds a workspace, creates a handoff, sets responsibility or computes verification scope. Verification scope is distinct from attestation coverage, and mutable Continuity remains separate from immutable canonical handoffs.
 
 ### 2.2 Read-only by default
 

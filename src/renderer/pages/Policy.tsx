@@ -7,11 +7,11 @@ import { Shield, AlertTriangle, Lock, FileText, Activity } from 'lucide-react';
 interface PolicyProps {
   snapshot: ProjectSnapshot;
   selectedTaskId?: string | null;
-  refreshToken?: number;
+  capabilityPolicyRefreshToken?: number;
   onSelectedTaskChange?: (taskId: string) => void;
 }
 
-export function Policy({ snapshot, selectedTaskId, refreshToken = 0, onSelectedTaskChange }: PolicyProps) {
+export function Policy({ snapshot, selectedTaskId, capabilityPolicyRefreshToken = 0, onSelectedTaskChange }: PolicyProps) {
   const [selectedTask, setSelectedTask] = useState<TaskSummary | null>(
     snapshot.tasks.find((t) => t.taskId === snapshot.activeTaskId) || snapshot.tasks[0] || null
   );
@@ -39,7 +39,7 @@ export function Policy({ snapshot, selectedTaskId, refreshToken = 0, onSelectedT
       .then((result) => { if (!cancelled) setCapabilityPolicy(result); })
       .catch(() => { if (!cancelled) setCapabilityPolicy(null); });
     return () => { cancelled = true; };
-  }, [snapshot.protocol.featureSupport?.capabilityPolicy, refreshToken]);
+  }, [snapshot.protocol.featureSupport?.capabilityPolicy, capabilityPolicyRefreshToken]);
 
   if (snapshot.tasks.length === 0) {
     return <EmptyState title="No tasks available" description="Select a task to view policy information." />;

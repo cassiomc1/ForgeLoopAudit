@@ -23,11 +23,17 @@ interface OverviewProps {
   watcherStatus?: { active: boolean };
   onTaskSelect?: (taskId: string) => void;
   onViewAllTasks?: () => void;
-  refreshToken?: number;
+  genericTaskRefreshToken?: number;
+  actionsRefreshToken?: number;
+  taskBoundaryRefreshTokens?: {
+    workspaceBinding?: number;
+    handoffs?: number;
+    responsibility?: number;
+  };
   selectedTaskId?: string | null;
 }
 
-export function Overview({ snapshot, watcherStatus: _watcherStatus, onTaskSelect, onViewAllTasks, refreshToken = 0, selectedTaskId }: OverviewProps) {
+export function Overview({ snapshot, watcherStatus: _watcherStatus, onTaskSelect, onViewAllTasks, genericTaskRefreshToken = 0, actionsRefreshToken = 0, taskBoundaryRefreshTokens, selectedTaskId }: OverviewProps) {
   const [activeTask, setActiveTask] = useState<TaskSummary | null>(null);
   const [canonicalMetrics, setCanonicalMetrics] = useState<TrajectoryMetricsView | null>(null);
   const [canonicalActions, setCanonicalActions] = useState<TaskActionsView | null>(null);
@@ -50,7 +56,7 @@ export function Overview({ snapshot, watcherStatus: _watcherStatus, onTaskSelect
       featureSupport?.durableActions === true ? window.forgeLoopStudio.getTaskActions(activeTask.taskId) : Promise.resolve(null),
     ]).then(([metrics, actions]) => { if (!cancelled) { setCanonicalMetrics(metrics); setCanonicalActions(actions); } }).catch(() => { if (!cancelled) { setCanonicalMetrics(null); setCanonicalActions(null); } });
     return () => { cancelled = true; };
-  }, [activeTask, snapshot.protocol.featureSupport, refreshToken]);
+  }, [activeTask, snapshot.protocol.featureSupport, genericTaskRefreshToken, actionsRefreshToken]);
 
   const activeTasks = snapshot.tasks.filter((t) => t.phase !== 'COMPLETE' && t.phase !== 'BLOCKED');
   const blockedTasks = snapshot.tasks.filter((t) => t.phase === 'BLOCKED');
@@ -117,7 +123,9 @@ export function Overview({ snapshot, watcherStatus: _watcherStatus, onTaskSelect
         <TaskBoundariesPanel
           task={boundaryTask}
           featureSupport={snapshot.protocol.featureSupport}
-          refreshToken={refreshToken}
+          workspaceBindingRefreshToken={taskBoundaryRefreshTokens?.workspaceBinding}
+          handoffRefreshToken={taskBoundaryRefreshTokens?.handoffs}
+          responsibilityRefreshToken={taskBoundaryRefreshTokens?.responsibility}
         />
       )}
 

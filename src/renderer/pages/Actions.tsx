@@ -11,11 +11,11 @@ import { AlertTriangle, Shield } from 'lucide-react';
 interface ActionsProps {
   snapshot: ProjectSnapshot;
   selectedTaskId?: string | null;
-  refreshToken?: number;
+  actionsRefreshToken?: number;
   onSelectedTaskChange?: (taskId: string) => void;
 }
 
-export function Actions({ snapshot, selectedTaskId, refreshToken = 0, onSelectedTaskChange }: ActionsProps) {
+export function Actions({ snapshot, selectedTaskId, actionsRefreshToken = 0, onSelectedTaskChange }: ActionsProps) {
   const [selectedTask, setSelectedTask] = useState<TaskSummary | null>(snapshot.tasks.find((task) => task.taskId === selectedTaskId) || snapshot.tasks.find((task) => task.taskId === snapshot.activeTaskId) || snapshot.tasks[0] || null);
   const [view, setView] = useState<TaskActionsView | null>(null);
   const [selectedAction, setSelectedAction] = useState<DurableActionView | null>(null);
@@ -46,7 +46,7 @@ export function Actions({ snapshot, selectedTaskId, refreshToken = 0, onSelected
       .catch((reason: unknown) => { if (!cancelled) setError(reason instanceof Error ? reason.message : 'Canonical actions are unavailable.'); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [selectedTask, snapshot.protocol.featureSupport?.durableActions, refreshToken]);
+  }, [selectedTask, snapshot.protocol.featureSupport?.durableActions, actionsRefreshToken]);
 
   if (snapshot.tasks.length === 0) return <EmptyState title="No tasks available" description="Open a ForgeLoop project with tasks to inspect canonical actions." />;
 

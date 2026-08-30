@@ -47,6 +47,13 @@ describe('Evidence boundary presentation', () => {
     expect(html).not.toContain('IMPACTED');
   });
 
+  it('renders canonical UNRESOLVED as a warning without changing the requested mode', () => {
+    const html = renderToStaticMarkup(createElement(VerificationScopeCard, { scope: scope('AUTO', 'UNRESOLVED') }));
+    expect(html).toContain('AUTO');
+    expect(html).toContain('UNRESOLVED');
+    expect(html).toContain('could not resolve a verification scope');
+  });
+
   it('keeps attestation levels separate and exposes invalid errors without trust overclaims', () => {
     for (const level of ['PROCESSED', 'VERIFIED', 'ATTESTED'] as const) {
       const html = renderToStaticMarkup(createElement(AttestationCard, { attestation: attestation('VALID', level) }));

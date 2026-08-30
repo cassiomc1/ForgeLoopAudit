@@ -1,5 +1,10 @@
 import type { ForgeLoopIntegrationAdapter } from './forgeloop-integration';
+import {
+  attestationReadPolicyError,
+  readAttestationReadPolicy,
+} from './attestation-read-policy';
 import type {
+  AttestationReadPolicy,
   AttestationStatus,
   AttestationTrustLevel,
   CanonicalHandoffView,
@@ -9,7 +14,8 @@ import type {
   ResponsibilityView,
   TaskAttestationView,
   TaskHandoffsView,
-  VerificationScopeMode,
+  VerificationScopeRequestedMode,
+  VerificationScopeResolvedMode,
   VerificationScopeView,
   WorkspaceBindingStatus,
   WorkspaceBindingView,
@@ -73,7 +79,8 @@ const WORKSPACE_STATUSES: readonly WorkspaceBindingStatus[] = [
   'UNBOUND', 'MATCH', 'MISMATCH', 'INVALID', 'UNAVAILABLE',
 ];
 const RESPONSIBILITY_STATUSES: readonly ResponsibilityStatus[] = ['NOT_APPLICABLE', 'VALID', 'INVALID'];
-const VERIFICATION_MODES: readonly VerificationScopeMode[] = ['AUTO', 'CHANGED', 'CLAIMED', 'FULL'];
+const REQUESTED_VERIFICATION_MODES: readonly VerificationScopeRequestedMode[] = ['AUTO', 'CHANGED', 'CLAIMED', 'FULL'];
+const RESOLVED_VERIFICATION_MODES: readonly VerificationScopeResolvedMode[] = ['CHANGED', 'CLAIMED', 'FULL', 'UNRESOLVED'];
 const ATTESTATION_STATUSES: readonly AttestationStatus[] = ['DISABLED', 'MISSING', 'VALID', 'INVALID'];
 const ATTESTATION_LEVELS: readonly AttestationTrustLevel[] = ['PROCESSED', 'VERIFIED', 'ATTESTED'];
 
@@ -98,7 +105,7 @@ function handoffsUnavailable(featureSupport?: ForgeLoopFeatureSupport): TaskHand
   return {
     available: false,
     source: 'UNAVAILABLE',
-    count: 0,
+    count: null,
     handoffs: [],
     error: featureSupport?.canonicalHandoffs === false
       ? featureUnavailable('Canonical handoffs')
@@ -161,6 +168,15 @@ function attestationUnavailable(featureSupport?: ForgeLoopFeatureSupport): TaskA
     errors: [featureSupport?.codeAttestation === false
       ? featureUnavailable('Code attestation')
       : { code: 'E_CANONICAL_ATTESTATION_UNAVAILABLE', message: 'Canonical attestation resource is not available.' }],
+  };
+}
+
+function attestationReadBlocked(policy: AttestationReadPolicy): TaskAttestationView {
+  return {
+    ...attestationUnavailable(),
+    status: policy.reason === 'DISABLED' ? 'DISABLED' : 'UNKNOWN',
+    readPolicy: policy,
+    errors: [attestationReadPolicyError(policy)],
   };
 }
 
@@ -261,10 +277,10 @@ export function normalizeVerificationScope(value: unknown): VerificationScopeVie
   return {
     available: true,
     source: 'FORGELOOP_INTEGRATION',
-    requestedMode: VERIFICATION_MODES.includes(requestedValue as VerificationScopeMode)
-      ? requestedValue as VerificationScopeMode : 'UNKNOWN',
-    resolvedMode: VERIFICATION_MODES.includes(resolvedValue as VerificationScopeMode)
-      ? resolvedValue as VerificationScopeMode : 'UNKNOWN',
+    requestedMode: REQUESTED_VERIFICATION_MODES.includes(requestedValue as VerificationScopeRequestedMode)
+      ? requestedValue as VerificationScopeRequestedMode : 'UNKNOWN',
+    resolvedMode: RESOLVED_VERIFICATION_MODES.includes(resolvedValue as VerificationScopeResolvedMode)
+      ? resolvedValue as VerificationScopeResolvedMode : 'UNKNOWN',
     verificationCycle: numberValue(scope?.verificationCycle),
     changedPaths: stringArray(scope?.changedPaths),
     claimedPaths: stringArray(scope?.claimedPaths),
@@ -309,8 +325,9 @@ export interface CanonicalTaskBoundariesService {
 export function createCanonicalTaskBoundariesService(options: {
   integration: ForgeLoopIntegrationAdapter;
   featureSupport?: ForgeLoopFeatureSupport;
+  readAttestationConfig?: () => unknown;
 }): CanonicalTaskBoundariesService {
-  const { integration, featureSupport } = options;
+  const { integration, featureSupport, readAttestationConfig } = options;
 
   return {
     async getWorkspaceBinding(projectRoot, taskId): Promise<WorkspaceBindingView> {
@@ -381,11 +398,14 @@ export function createCanonicalTaskBoundariesService(options: {
     async getAttestation(projectRoot, taskId): Promise<TaskAttestationView> {
       if (featureSupport && featureSupport.codeAttestation !== true) return attestationUnavailable(featureSupport);
       if (!integration.readTaskAttestation) return attestationUnavailable(featureSupport);
+      const readPolicy = readAttestationReadPolicy(readAttestationConfig);
+      if (!readPolicy.automaticCanonicalReadAllowed) return attestationReadBlocked(readPolicy);
       try {
-        return normalizeAttestation(await integration.readTaskAttestation(projectRoot, taskId));
+        return { ...normalizeAttestation(await integration.readTaskAttestation(projectRoot, taskId)), readPolicy };
       } catch (error) {
         return {
           ...attestationUnavailable(featureSupport),
+          readPolicy,
           errors: [thrownError(error, 'E_CANONICAL_ATTESTATION_INVOCATION')],
         };
       }
