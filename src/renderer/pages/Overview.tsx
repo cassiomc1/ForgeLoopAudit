@@ -7,6 +7,7 @@ import { NextSafeAction } from '../components/ui/NextSafeAction';
 import { cn } from '../lib/utils';
 import { Provenance } from '../components/ui/Provenance';
 import { formatEvidenceSummary } from '../lib/evidence-display';
+import { TaskBoundariesPanel } from '../components/tasks/TaskBoundariesPanel';
 import {
   Activity,
   AlertTriangle,
@@ -23,9 +24,10 @@ interface OverviewProps {
   onTaskSelect?: (taskId: string) => void;
   onViewAllTasks?: () => void;
   refreshToken?: number;
+  selectedTaskId?: string | null;
 }
 
-export function Overview({ snapshot, watcherStatus: _watcherStatus, onTaskSelect, onViewAllTasks, refreshToken = 0 }: OverviewProps) {
+export function Overview({ snapshot, watcherStatus: _watcherStatus, onTaskSelect, onViewAllTasks, refreshToken = 0, selectedTaskId }: OverviewProps) {
   const [activeTask, setActiveTask] = useState<TaskSummary | null>(null);
   const [canonicalMetrics, setCanonicalMetrics] = useState<TrajectoryMetricsView | null>(null);
   const [canonicalActions, setCanonicalActions] = useState<TaskActionsView | null>(null);
@@ -54,6 +56,7 @@ export function Overview({ snapshot, watcherStatus: _watcherStatus, onTaskSelect
   const blockedTasks = snapshot.tasks.filter((t) => t.phase === 'BLOCKED');
   const completedTasks = snapshot.tasks.filter((t) => t.phase === 'COMPLETE');
   const totalTasks = snapshot.tasks.length;
+  const boundaryTask = (selectedTaskId ? snapshot.tasks.find((task) => task.taskId === selectedTaskId) : undefined) || activeTask;
 
   const avgCoverage = totalTasks > 0
     ? Math.round(snapshot.tasks.reduce((acc, t) => acc + t.evidenceCoverage.coveragePercent, 0) / totalTasks)
@@ -108,6 +111,14 @@ export function Overview({ snapshot, watcherStatus: _watcherStatus, onTaskSelect
           <MetricCard label="Trusted actions" value={canonicalActions?.readiness?.satisfied ?? 'Unknown'} icon={<CheckCircle className="w-4 h-4" />} color="success" />
           <MetricCard label="Ambiguous actions" value={canonicalActions?.readiness?.ambiguous ?? 'Unknown'} icon={<Shield className="w-4 h-4" />} color="danger" alert={(canonicalActions?.readiness?.ambiguous ?? 0) > 0} />
         </div>
+      )}
+
+      {boundaryTask && (
+        <TaskBoundariesPanel
+          task={boundaryTask}
+          featureSupport={snapshot.protocol.featureSupport}
+          refreshToken={refreshToken}
+        />
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

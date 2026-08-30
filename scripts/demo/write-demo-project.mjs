@@ -210,22 +210,31 @@ No external service, network access or build step is required.
 
 1. Launch ForgeLoop Studio.
 2. Choose **Open Demo Project** on the start screen (or **Open Project** and select this \`demo/\` directory).
-3. Explore Overview, Tasks, Flow, Contract, Evidence, Events, Continuity and Policy.
+3. Explore Overview, Tasks, Flow, Contract, Evidence, Events, Continuity and Policy. The active task's Overview includes the read-only Task Boundaries surface.
 
 ## Task map
 
 | Task | Title | Phase | Demonstrates |
 |---|---|---|---|
-| TASK-001 | Implement premium product catalog | COMPLETE | Full successful lifecycle with receipt and gates |
-| TASK-002 | Add shopping cart persistence | VERIFYING | Verification cycle with a rejected completion attempt |
-| TASK-003 | Implement checkout API integration | EXECUTING | Active execution with partial evidence |
-| TASK-004 | Accessibility and keyboard navigation audit | BLOCKED | Failed gate, recovery route and cross-harness continuity |
+| TASK-001 | Implement premium product catalog | COMPLETE | Full lifecycle plus unsigned code-attestation artifacts; policy does not claim a signature |
+| TASK-002 | Add shopping cart persistence | VERIFYING | Verification cycle with a rejected completion attempt and AUTO → CHANGED scope |
+| TASK-003 | Implement checkout API integration | EXECUTING | Portable workspace-binding warning plus Responsibility Contract |
+| TASK-004 | Accessibility and keyboard navigation audit | BLOCKED | Failed gate, recovery route, mutable continuity and canonical handoff |
 | TASK-005 | Improve image loading performance | PLANNED | Planned work with a recorded baseline |
-| TASK-006 | Security review of checkout flow | COMPLETE | Security policy gates and successful completion |
+| TASK-006 | Security review of checkout flow | COMPLETE | Security policy gates and attestation policy metadata |
 
 TASK-004 is the continuity showcase: \`harness-a\` failed the keyboard-navigation
 gate, recorded findings, selected a recovery route and handed off to
 \`harness-b\`, which resumed from \`continuity.json\`.
+
+The optional boundary capabilities are intentionally distributed across the
+tasks. TASK-003 contains a deterministic portable workspace binding, so a real
+checkout normally shows ForgeLoop's canonical MISMATCH or UNAVAILABLE result;
+the demo never pretends to know the host worktree. TASK-002 shows a persisted
+verification scope, TASK-003 shows responsibility constraints, and TASK-004
+shows that immutable handoffs are distinct from mutable Continuity. TASK-001's
+attestation files are unsigned and the project policy is \`off\`; the fixture
+does not claim ATTESTED trust.
 
 ## Intentional scenario states
 

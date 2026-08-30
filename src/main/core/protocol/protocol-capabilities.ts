@@ -1,5 +1,6 @@
 import type {
   ForgeLoopCapabilitiesSummary,
+  ForgeLoopVerificationScopeMode,
   ForgeLoopVerificationIsolationMode,
 } from '@main/core/integration/types';
 import type { ForgeLoopCompatibilityMode, ForgeLoopFeatureSupport } from '@shared/domain';
@@ -91,6 +92,11 @@ const EMPTY_FEATURE_SUPPORT: ForgeLoopFeatureSupport = Object.freeze({
   trajectoryMetrics: false,
   trajectoryEvaluations: false,
   verificationExecutionIsolation: false,
+  workspaceBinding: false,
+  canonicalHandoffs: false,
+  responsibilityConstraints: false,
+  differentialVerificationScope: false,
+  codeAttestation: false,
 });
 
 function hasResource(capabilities: ForgeLoopCapabilitiesSummary, resource: string): boolean {
@@ -140,6 +146,49 @@ export function deriveFeatureSupport(capabilities: ForgeLoopCapabilitiesSummary)
       && REQUIRED_VERIFICATION_ISOLATION_MODES.every((mode) => verificationExecutionIsolation.modes.includes(mode))
       && verificationExecutionIsolation.protocolProjectRootSeparateFromExecutionCwd === true,
   );
+  const workspaceBinding = capabilities.features.workspaceBinding;
+  const workspaceBindingSupported = Boolean(
+    workspaceBinding
+      && workspaceBinding.version === 1
+      && workspaceBinding.supported === true
+      && hasResource(capabilities, 'task/workspace-binding'),
+  );
+  const canonicalHandoffs = capabilities.features.canonicalHandoffs;
+  const canonicalHandoffsSupported = Boolean(
+    canonicalHandoffs
+      && canonicalHandoffs.version === 1
+      && canonicalHandoffs.supported === true
+      && canonicalHandoffs.immutable === true
+      && canonicalHandoffs.lifecycleAuthority === false
+      && hasResource(capabilities, 'task/handoffs'),
+  );
+  const responsibilityConstraints = capabilities.features.responsibilityConstraints;
+  const responsibilityConstraintsSupported = Boolean(
+    responsibilityConstraints
+      && responsibilityConstraints.version === 1
+      && responsibilityConstraints.supported === true
+      && responsibilityConstraints.immutableDuringPass === true
+      && responsibilityConstraints.completionEnforced === true
+      && hasResource(capabilities, 'task/responsibility'),
+  );
+  const differentialVerificationScope = capabilities.features.differentialVerificationScope;
+  const differentialVerificationScopeSupported = Boolean(
+    differentialVerificationScope
+      && differentialVerificationScope.version === 1
+      && differentialVerificationScope.supported === true
+      && differentialVerificationScope.impactedMode === false
+      && (['AUTO', 'CHANGED', 'CLAIMED', 'FULL'] as ForgeLoopVerificationScopeMode[])
+        .every((mode) => differentialVerificationScope.modes.includes(mode))
+      && hasResource(capabilities, 'task/verification-scope'),
+  );
+  const codeAttestation = capabilities.features.codeAttestation;
+  const codeAttestationSupported = Boolean(
+    codeAttestation
+      && codeAttestation.version === 1
+      && codeAttestation.supported === true
+      && codeAttestation.completionLedgerBound === true
+      && hasResource(capabilities, 'task/attestation'),
+  );
 
   return {
     canonicalOwnership: coreResourcesPresent,
@@ -154,6 +203,11 @@ export function deriveFeatureSupport(capabilities: ForgeLoopCapabilitiesSummary)
     trajectoryEvaluations: trajectoryContractSupported
       && hasResource(capabilities, 'task/evaluations'),
     verificationExecutionIsolation: verificationExecutionIsolationSupported,
+    workspaceBinding: workspaceBindingSupported,
+    canonicalHandoffs: canonicalHandoffsSupported,
+    responsibilityConstraints: responsibilityConstraintsSupported,
+    differentialVerificationScope: differentialVerificationScopeSupported,
+    codeAttestation: codeAttestationSupported,
   };
 }
 

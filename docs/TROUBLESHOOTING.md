@@ -62,3 +62,31 @@ Studio negotiates capabilities through the Integration API and fails closed on u
 ## Execution provenance list is empty or shows withheld entries
 
 Executions load lazily per task from `.forgeloop/task-state/<key>/executions/exec-*.json`. Entries that fail the trusted `execution.schema.json`, exceed size limits, or use symlinks are withheld and counted — this is intentional fail-closed behavior, not data loss in Studio.
+
+## Task Boundaries shows an unavailable optional feature
+
+The Task Boundaries surface reads ForgeLoop 1.6.4 resources independently. A missing or incomplete workspace binding, canonical handoff, responsibility, verification-scope or attestation advertisement keeps the project in `INTEGRATION_V1` and disables only the affected view. A valid workspace or handoff can still be displayed when responsibility is invalid or attestation is disabled.
+
+## Workspace binding mismatch or unavailable
+
+`UNBOUND` means no binding was recorded; it is not a failure. `MATCH` means the current workspace matches the canonical binding. `MISMATCH` means it differs. `INVALID` means the persisted binding is invalid. `UNAVAILABLE` means ForgeLoop could not establish the current workspace identity. Studio displays these statuses but never runs `workspace-bind` or edits the binding artifact.
+
+## Canonical handoff is missing or invalid
+
+Studio reads only the fixed `handoffs/handoff-*.json` collection through the ForgeLoop Integration API or its bounded raw-detail reader. Errors such as `E_HANDOFF_INVALID`, `E_HANDOFF_TAMPERED` and `E_HANDOFF_NOT_FOUND` remain attached to the selected task. Handoffs are immutable snapshots and are not review evidence, completion evidence, authority or delegation. Do not edit them manually.
+
+## Responsibility is invalid
+
+`NOT_APPLICABLE`, `VALID` and `INVALID` are canonical responsibility statuses. For `INVALID`, Studio preserves upstream details such as `E_RESPONSIBILITY_INVALID`, `E_RESPONSIBILITY_SCOPE_VIOLATION`, `E_RESPONSIBILITY_FROZEN_INPUT_DRIFT` or `E_RESPONSIBILITY_REQUIRED_CHECK_MISSING`. Studio never runs `responsibility-set`; correction belongs to the authorized ForgeLoop harness.
+
+## Verification scope is absent, stale or unresolved
+
+Studio displays the persisted canonical scope only. Supported modes are `AUTO`, `CHANGED`, `CLAIMED` and `FULL`; `IMPACTED` is not a supported Studio mode. Errors such as `E_VERIFICATION_SCOPE_INVALID`, `E_VERIFICATION_SCOPE_STALE` and `E_VERIFICATION_SCOPE_UNRESOLVED` are shown as canonical errors. Scope describes planned/resolved verification inputs and is not attestation coverage. Studio never runs `verify-scope` or computes a replacement.
+
+## Code attestation is disabled, missing or invalid
+
+Attestation is loaded lazily for the selected task. `DISABLED`, `MISSING`, `VALID` and `INVALID` are status values; `PROCESSED`, `VERIFIED` and `ATTESTED` are separate trust levels and are never inferred. Revision-provider errors such as `E_REVISION_PROVIDER_*` and `E_REVISION_CONTENT_UNAVAILABLE`, along with `E_ATTESTATION_*`, remain visible. A `statement.sigstore.json` bundle is external data: its presence alone does not prove a valid signature or produce `ATTESTED`. Studio never runs `attestation-create`, signs data, stores signing tokens or automatically runs full/range verification.
+
+## Boundary status changed after a file update
+
+The watcher coalesces code-manifest, statement and optional signature-bundle writes into one selected-task attestation update. Workspace binding, handoff, responsibility and verification-scope updates are targeted independently. A temporary write or schema error should remain visible as an unavailable/invalid feature state; do not manually edit protocol artifacts to make the panel green.

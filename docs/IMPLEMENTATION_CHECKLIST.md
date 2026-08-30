@@ -287,3 +287,19 @@
 - [ ] Accessibility checks pass.
 - [ ] Typecheck, lint, tests and build all pass.
 - [ ] Packaged application launches successfully.
+
+## ForgeLoop 1.6.4 alignment gates
+
+- [x] Pin the vendored ForgeLoop runtime to `1.6.4` at commit `24f50f9eefe5055cec053f075c748542b42e4ea2`.
+- [x] Verify package, lockfile, tarball, schema provenance and current compatibility documentation share one ForgeLoop lineage.
+- [x] Include trusted schemas for workspace binding, canonical handoffs, responsibility, verification scope and code attestation, including safe local `$ref` dependencies.
+- [x] Negotiate the five new feature families independently without changing the protocol-v1 compatibility gate.
+- [x] Read the five canonical resources through narrow selected-task adapter/IPC methods.
+- [x] Keep workspace binding, handoffs, responsibility, verification scope and attestation read-only in Studio.
+- [x] Keep immutable canonical handoffs separate from mutable Continuity.
+- [x] Keep verification scope separate from attestation coverage; do not present `IMPACTED` as a supported mode.
+- [x] Load attestation lazily and coalesce attestation watcher bursts into targeted updates.
+- [x] Add bounded raw-artifact support without trusting the external Sigstore bundle by existence alone.
+- [x] Regenerate and verify the deterministic demo with representative optional features and an optional-feature-free task.
+- [x] Add unit, integration, schema, reader, watcher and release-contract coverage for the new boundary behavior.
+- [ ] Complete platform-specific GitHub Actions release gates and packaged Electron verification on every target runner.

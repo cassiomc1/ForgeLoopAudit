@@ -4,6 +4,12 @@ import registry from './artifact-registry.json';
 
 export const ARTIFACT_SCHEMAS = registry as Record<ArtifactName, string>;
 
+/** Schemas used by canonical provider/status payloads without being persisted as Studio artifacts. */
+export const AUXILIARY_TRUSTED_SCHEMAS = [
+  'code-attestation.schema.json',
+  'attestation-verification-result.schema.json',
+] as const;
+
 export type ArtifactScope = 'PROJECT' | 'TASK' | 'COLLECTION' | 'SESSION';
 
 export interface StudioArtifactDefinition {
@@ -37,7 +43,13 @@ export type ArtifactName =
   | 'action.json'
   | 'approval.json'
   | 'policy/capabilities.json'
-  | 'trajectory-evaluation.json';
+  | 'trajectory-evaluation.json'
+  | 'workspace-binding.json'
+  | 'responsibility.json'
+  | 'verification-scope.json'
+  | 'handoff.json'
+  | 'code-manifest.json'
+  | 'attestation-statement.json';
 
 export const REQUIRED_ARTIFACTS: ArtifactName[] = [
   'config.json',
@@ -52,6 +64,9 @@ export const TASK_ARTIFACTS: ArtifactName[] = [
   'work-state.json',
   'continuity.json',
   'execution-receipt.json',
+  'workspace-binding.json',
+  'responsibility.json',
+  'verification-scope.json',
 ];
 
 export const OPTIONAL_TASK_ARTIFACTS: ArtifactName[] = [
@@ -59,6 +74,9 @@ export const OPTIONAL_TASK_ARTIFACTS: ArtifactName[] = [
   'action.json',
   'approval.json',
   'trajectory-evaluation.json',
+  'code-manifest.json',
+  'attestation-statement.json',
+  'handoff.json',
 ];
 
 export const ARTIFACT_DEFINITIONS: Record<ArtifactName, StudioArtifactDefinition> = {
@@ -85,6 +103,12 @@ export const ARTIFACT_DEFINITIONS: Record<ArtifactName, StudioArtifactDefinition
   'approval.json': { key: 'approval.json', schema: ARTIFACT_SCHEMAS['approval.json'], scope: 'COLLECTION', pattern: /^task-state\/[^/]+\/approvals\/approval-[A-Za-z0-9_-]+\.json$/, authoritative: true },
   'policy/capabilities.json': { key: 'policy/capabilities.json', schema: ARTIFACT_SCHEMAS['policy/capabilities.json'], scope: 'PROJECT', authoritative: true },
   'trajectory-evaluation.json': { key: 'trajectory-evaluation.json', schema: ARTIFACT_SCHEMAS['trajectory-evaluation.json'], scope: 'COLLECTION', pattern: /^task-state\/[^/]+\/evaluations\/eval-[A-Za-z0-9_-]+\.json$/, authoritative: true },
+  'workspace-binding.json': { key: 'workspace-binding.json', schema: ARTIFACT_SCHEMAS['workspace-binding.json'], scope: 'TASK', authoritative: true },
+  'responsibility.json': { key: 'responsibility.json', schema: ARTIFACT_SCHEMAS['responsibility.json'], scope: 'TASK', authoritative: true },
+  'verification-scope.json': { key: 'verification-scope.json', schema: ARTIFACT_SCHEMAS['verification-scope.json'], scope: 'TASK', authoritative: true },
+  'handoff.json': { key: 'handoff.json', schema: ARTIFACT_SCHEMAS['handoff.json'], scope: 'COLLECTION', pattern: /^task-state\/[^/]+\/handoffs\/handoff-[A-Za-z0-9_-]+\.json$/, authoritative: false },
+  'code-manifest.json': { key: 'code-manifest.json', schema: ARTIFACT_SCHEMAS['code-manifest.json'], scope: 'COLLECTION', pattern: /^task-state\/[^/]+\/attestations\/code-manifest\.json$/, authoritative: true },
+  'attestation-statement.json': { key: 'attestation-statement.json', schema: ARTIFACT_SCHEMAS['attestation-statement.json'], scope: 'COLLECTION', pattern: /^task-state\/[^/]+\/attestations\/statement\.json$/, authoritative: true },
 };
 
 export function getSchemaForArtifact(artifact: ArtifactName): string {
@@ -108,7 +132,7 @@ export function isTaskArtifact(artifact: ArtifactName): boolean {
 }
 
 export function getMissingArtifactSchemas(schemasDir: string): string[] {
-  return [...new Set(Object.values(ARTIFACT_SCHEMAS))].filter((schema) => {
+  return [...new Set([...Object.values(ARTIFACT_SCHEMAS), ...AUXILIARY_TRUSTED_SCHEMAS])].filter((schema) => {
     return !existsSync(join(schemasDir, schema));
   });
 }

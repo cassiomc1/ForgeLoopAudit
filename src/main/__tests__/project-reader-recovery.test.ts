@@ -9,6 +9,7 @@ import { createProjectReader } from '@main/core/project/project-reader';
 const CONFIG = {
   schemaVersion: 1,
   protocolVersion: 1,
+  complianceMode: 'standard',
   projectName: 'Recovery Fixture',
 };
 
@@ -58,6 +59,107 @@ const ACTION = {
   revision: 0,
   createdAt: '2026-08-20T10:00:00.000Z',
   updatedAt: '2026-08-20T10:00:00.000Z',
+};
+
+const WORKSPACE_BINDING = {
+  schemaVersion: 1,
+  protocolVersion: 1,
+  taskId: 'TASK-001',
+  mode: 'GIT_WORKTREE',
+  repositoryIdentity: 'b'.repeat(64),
+  workspaceIdentity: 'c'.repeat(64),
+  branchAtBind: 'main',
+  headAtBind: 'd'.repeat(40),
+  boundAt: '2026-08-20T10:00:00.000Z',
+};
+
+const RESPONSIBILITY = {
+  schemaVersion: 1,
+  protocolVersion: 1,
+  taskId: 'TASK-001',
+  label: 'recovery fixture',
+  createdAt: '2026-08-20T10:00:00.000Z',
+  allowedPaths: ['src/**'],
+  readOnlyPaths: ['tests/**'],
+  requiredCheckIds: [],
+  frozenInputs: { contract: true, route: false, claims: true },
+  baseline: {
+    contractFingerprint: 'e'.repeat(64),
+    routeFingerprint: null,
+    claimsFingerprint: 'f'.repeat(64),
+  },
+};
+
+const VERIFICATION_SCOPE = {
+  schemaVersion: 1,
+  protocolVersion: 1,
+  taskId: 'TASK-001',
+  requestedMode: 'FULL',
+  resolvedMode: 'FULL',
+  verificationCycle: 1,
+  changedPaths: ['src/a.ts'],
+  claimedPaths: ['src/a.ts'],
+  selectedPaths: ['src/a.ts'],
+  reasons: ['Full fixture verification'],
+  fallback: null,
+  contractFingerprint: '1'.repeat(64),
+  repositoryFingerprint: { branch: 'main', head: 'd'.repeat(40) },
+  claimsFingerprint: '2'.repeat(64),
+  createdAt: '2026-08-20T10:00:00.000Z',
+};
+
+const HANDOFF = {
+  schemaVersion: 1,
+  protocolVersion: 1,
+  handoffId: 'handoff-recovery',
+  taskId: 'TASK-001',
+  createdAt: '2026-08-20T10:00:00.000Z',
+  intent: { recipientHint: 'next-harness', note: 'Continue the read-only fixture.' },
+  state: {
+    phase: 'EXECUTING',
+    revision: 1,
+    verificationCycle: 1,
+    contractFingerprint: '3'.repeat(64),
+    routeFingerprint: null,
+    repositoryFingerprint: { branch: 'main', head: 'd'.repeat(40) },
+    writeClaims: [],
+    changedPaths: ['src/a.ts'],
+  },
+  evidence: { executionRefs: [], checkIds: [] },
+  continuity: { ref: 'continuity.json', fingerprint: null },
+  artifactDigest: '4'.repeat(64),
+};
+
+const CODE_MANIFEST = {
+  schemaVersion: 1,
+  protocolVersion: 1,
+  taskId: 'TASK-001',
+  verificationCycle: 1,
+  capture: {
+    mode: 'WORKTREE',
+    revisionProvider: 'git',
+    baseRevision: null,
+    observedRevision: 'd'.repeat(40),
+    providerMetadata: {},
+  },
+  bindings: {
+    contractFingerprint: '5'.repeat(64),
+    routeFingerprint: null,
+    stateFingerprint: '6'.repeat(64),
+    receiptFingerprint: '7'.repeat(64),
+    ledgerSeq: 1,
+    ledgerHash: '8'.repeat(64),
+  },
+  entries: [],
+  contentDigest: '9'.repeat(64),
+};
+
+const ATTESTATION_STATEMENT = {
+  schemaVersion: 1,
+  _type: 'https://in-toto.io/Statement/v1',
+  subject: [{ name: 'fixture', digest: { sha256: 'a'.repeat(64) } }],
+  predicateType: 'https://forgeloop.dev/attestation/v1',
+  predicate: {},
 };
 
 describe('project-reader recovery artifact', () => {
@@ -141,8 +243,31 @@ describe('project-reader recovery artifact', () => {
     expect(JSON.parse(reader.readRawCapabilityPolicy()).defaultDecision).toBe('DENY');
   });
 
+  it('reads the 1.6.4 task boundary artifacts and fixed attestation collections', () => {
+    const taskDir = join(root, '.forgeloop', 'task-state', KEY);
+    writeFileSync(join(taskDir, 'workspace-binding.json'), JSON.stringify(WORKSPACE_BINDING));
+    writeFileSync(join(taskDir, 'responsibility.json'), JSON.stringify(RESPONSIBILITY));
+    writeFileSync(join(taskDir, 'verification-scope.json'), JSON.stringify(VERIFICATION_SCOPE));
+    mkdirSync(join(taskDir, 'handoffs'), { recursive: true });
+    mkdirSync(join(taskDir, 'attestations'), { recursive: true });
+    writeFileSync(join(taskDir, 'handoffs', 'handoff-recovery.json'), JSON.stringify(HANDOFF));
+    writeFileSync(join(taskDir, 'attestations', 'code-manifest.json'), JSON.stringify(CODE_MANIFEST));
+    writeFileSync(join(taskDir, 'attestations', 'statement.json'), JSON.stringify(ATTESTATION_STATEMENT));
+    writeFileSync(join(taskDir, 'attestations', 'statement.sigstore.json'), JSON.stringify({ external: true }));
+
+    const artifacts = reader.readTaskSummaryArtifacts(KEY);
+    expect(artifacts['workspace-binding.json']).toMatchObject({ taskId: 'TASK-001', mode: 'GIT_WORKTREE' });
+    expect(artifacts['responsibility.json']).toMatchObject({ taskId: 'TASK-001', label: 'recovery fixture' });
+    expect(artifacts['verification-scope.json']).toMatchObject({ taskId: 'TASK-001', resolvedMode: 'FULL' });
+    expect(JSON.parse(reader.readRawCollectionArtifact(KEY, { kind: 'handoff', taskId: 'TASK-001', handoffId: 'handoff-recovery' })).handoffId).toBe('handoff-recovery');
+    expect(JSON.parse(reader.readRawCollectionArtifact(KEY, { kind: 'code-manifest', taskId: 'TASK-001' })).taskId).toBe('TASK-001');
+    expect(JSON.parse(reader.readRawCollectionArtifact(KEY, { kind: 'attestation-statement', taskId: 'TASK-001' }))._type).toBe('https://in-toto.io/Statement/v1');
+    expect(JSON.parse(reader.readRawCollectionArtifact(KEY, { kind: 'attestation-bundle', taskId: 'TASK-001' })).external).toBe(true);
+  });
+
   it('rejects collection path traversal and symbolic links', () => {
     expect(() => reader.readRawCollectionArtifact(KEY, { kind: 'action', taskId: 'TASK-001', actionId: '../action-read' })).toThrow(/Path traversal|invalid action artifact identifier/);
+    expect(() => reader.readRawCollectionArtifact(KEY, { kind: 'handoff', taskId: 'TASK-001', handoffId: 'handoff-../escape' })).toThrow(/Path traversal|invalid handoff artifact identifier/);
     symlinkSync('/etc/hostname', join(root, '.forgeloop', 'task-state', KEY, 'actions', 'action-link.json'));
     let error: unknown;
     try {

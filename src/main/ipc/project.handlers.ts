@@ -17,6 +17,7 @@ import { runStudioReadCommand } from '@main/core/integration/studio-read-command
 import { createCanonicalObservabilityService, type CanonicalObservabilityService } from '@main/core/integration/canonical-observability';
 import { createCanonicalActionsService, type CanonicalActionsService } from '@main/core/integration/canonical-actions';
 import { createCanonicalTrajectoryService, type CanonicalTrajectoryService } from '@main/core/integration/canonical-trajectory';
+import { createCanonicalTaskBoundariesService, type CanonicalTaskBoundariesService } from '@main/core/integration/canonical-task-boundaries';
 import { createCanonicalTaskReadService, type CanonicalTaskReadService } from '@main/core/tasks/canonical-task-read-service';
 import Store from 'electron-store';
 import { z } from 'zod';
@@ -46,6 +47,7 @@ let currentCompatibilityMode: string | null = null;
 let currentObservability: CanonicalObservabilityService | null = null;
 let currentActions: CanonicalActionsService | null = null;
 let currentTrajectory: CanonicalTrajectoryService | null = null;
+let currentTaskBoundaries: CanonicalTaskBoundariesService | null = null;
 let currentWatcher: ReturnType<typeof createProjectWatcher> | null = null;
 let currentSnapshotBuilder: ProjectSnapshotBuilder | null = null;
 let currentMainWindow: BrowserWindow | null = null;
@@ -55,11 +57,15 @@ const TaskIdSchema = z.string().min(1).max(200);
 const ProjectPathSchema = z.string().min(1).max(4096);
 const EventQuerySchema = z.object({ taskId: TaskIdSchema, cursor: z.string().max(256).optional(), limit: z.number().int().min(1).max(500).optional() });
 const RecentProjectSchema = z.object({ path: z.string().min(1).max(4096), name: z.string().max(300), lastOpenedAt: z.string().max(100), kind: z.enum(['PROJECT', 'DEMO']).optional() });
-const RawArtifactSchema = z.object({ taskId: TaskIdSchema, artifact: z.enum(['task.json', 'contract.json', 'routing-result.json', 'preflight.json', 'work-state.json', 'continuity.json', 'recovery.json', 'execution-receipt.json', 'policy-snapshot.json', 'events.ndjson']) });
+const RawArtifactSchema = z.object({ taskId: TaskIdSchema, artifact: z.enum(['task.json', 'contract.json', 'routing-result.json', 'preflight.json', 'work-state.json', 'continuity.json', 'recovery.json', 'execution-receipt.json', 'policy-snapshot.json', 'events.ndjson', 'workspace-binding.json', 'responsibility.json', 'verification-scope.json']) });
 const RawCollectionArtifactSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('action'), taskId: TaskIdSchema, actionId: z.string().regex(/^action-[A-Za-z0-9_-]+$/) }),
   z.object({ kind: z.literal('approval'), taskId: TaskIdSchema, approvalId: z.string().regex(/^approval-[A-Za-z0-9_-]+$/) }),
   z.object({ kind: z.literal('evaluation'), taskId: TaskIdSchema, evaluationId: z.string().regex(/^eval-[A-Za-z0-9_-]+$/) }),
+  z.object({ kind: z.literal('handoff'), taskId: TaskIdSchema, handoffId: z.string().regex(/^handoff-[A-Za-z0-9_-]+$/) }),
+  z.object({ kind: z.literal('code-manifest'), taskId: TaskIdSchema }),
+  z.object({ kind: z.literal('attestation-statement'), taskId: TaskIdSchema }),
+  z.object({ kind: z.literal('attestation-bundle'), taskId: TaskIdSchema }),
   z.object({ kind: z.literal('capability-policy') }),
 ]);
 const ExecutionQuerySchema = z.object({ taskId: TaskIdSchema, limit: z.number().int().min(1).max(100).optional() });
@@ -304,6 +310,41 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
     return currentActions.getCapabilityPolicy(getCurrentProjectRoot()!);
   });
 
+  ipcMain.handle(IPC_CHANNELS.GET_TASK_WORKSPACE_BINDING, async (event, taskId: string) => {
+    assertTrustedSender(event);
+    const safeTaskId = TaskIdSchema.parse(taskId);
+    if (!currentTaskBoundaries || !getCurrentProjectRoot()) throw ForgeLoopStudioError.unknown('No project open');
+    return currentTaskBoundaries.getWorkspaceBinding(getCurrentProjectRoot()!, safeTaskId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GET_TASK_HANDOFFS, async (event, taskId: string) => {
+    assertTrustedSender(event);
+    const safeTaskId = TaskIdSchema.parse(taskId);
+    if (!currentTaskBoundaries || !getCurrentProjectRoot()) throw ForgeLoopStudioError.unknown('No project open');
+    return currentTaskBoundaries.getHandoffs(getCurrentProjectRoot()!, safeTaskId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GET_TASK_RESPONSIBILITY, async (event, taskId: string) => {
+    assertTrustedSender(event);
+    const safeTaskId = TaskIdSchema.parse(taskId);
+    if (!currentTaskBoundaries || !getCurrentProjectRoot()) throw ForgeLoopStudioError.unknown('No project open');
+    return currentTaskBoundaries.getResponsibility(getCurrentProjectRoot()!, safeTaskId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GET_TASK_VERIFICATION_SCOPE, async (event, taskId: string) => {
+    assertTrustedSender(event);
+    const safeTaskId = TaskIdSchema.parse(taskId);
+    if (!currentTaskBoundaries || !getCurrentProjectRoot()) throw ForgeLoopStudioError.unknown('No project open');
+    return currentTaskBoundaries.getVerificationScope(getCurrentProjectRoot()!, safeTaskId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GET_TASK_ATTESTATION, async (event, taskId: string) => {
+    assertTrustedSender(event);
+    const safeTaskId = TaskIdSchema.parse(taskId);
+    if (!currentTaskBoundaries || !getCurrentProjectRoot()) throw ForgeLoopStudioError.unknown('No project open');
+    return currentTaskBoundaries.getAttestation(getCurrentProjectRoot()!, safeTaskId);
+  });
+
   ipcMain.handle(IPC_CHANNELS.GET_TASK_EXECUTIONS, async (event, taskId: string, limit?: number) => {
     assertTrustedSender(event);
     const query = ExecutionQuerySchema.parse({ taskId, limit });
@@ -404,6 +445,7 @@ async function openProject(projectRoot: string, projectKind: ProjectKind = 'PROJ
   currentObservability = createCanonicalObservabilityService({ integration, featureSupport: negotiation.featureSupport });
   currentActions = createCanonicalActionsService({ integration, featureSupport: negotiation.featureSupport });
   currentTrajectory = createCanonicalTrajectoryService({ integration, featureSupport: negotiation.featureSupport });
+  currentTaskBoundaries = createCanonicalTaskBoundariesService({ integration, featureSupport: negotiation.featureSupport });
   detectionResult.forgeLoopVersion = canonicalProtocolInfo?.packageVersion ?? detectionResult.forgeLoopVersion;
   detectionResult.compatibilityMode = negotiation.mode;
   detectionResult.warnings = [
@@ -506,6 +548,7 @@ function closeProject(): void {
   currentObservability = null;
   currentActions = null;
   currentTrajectory = null;
+  currentTaskBoundaries = null;
   currentSnapshotBuilder = null;
 }
 
@@ -520,8 +563,10 @@ function watcherTaskId(event: WatcherEvent): string | undefined {
 }
 
 function handleWatcherEvent(event: WatcherEvent): void {
-  const targetedType: 'action-changed' | 'approval-changed' | 'evaluation-changed' | 'capability-policy-changed' | 'task-updated' =
+  const targetedType: 'action-changed' | 'approval-changed' | 'evaluation-changed' | 'capability-policy-changed' | 'workspace-binding-changed' | 'handoff-changed' | 'responsibility-changed' | 'verification-scope-changed' | 'attestation-changed' | 'task-updated' =
     event.type === 'action-changed' || event.type === 'approval-changed' || event.type === 'evaluation-changed' || event.type === 'capability-policy-changed'
+      || event.type === 'workspace-binding-changed' || event.type === 'handoff-changed' || event.type === 'responsibility-changed'
+      || event.type === 'verification-scope-changed' || event.type === 'attestation-changed'
       ? event.type
       : 'task-updated';
   notifyUpdate({
@@ -535,7 +580,7 @@ function handleWatcherEvent(event: WatcherEvent): void {
   // Execution provenance is loaded lazily per task; a lightweight
   // notification is enough. Only recovery/artifact changes rebuild the full
   // snapshot, and the scheduled flag coalesces bursts into one rebuild.
-  if (event.type === 'execution-changed' || event.type === 'event-appended' || event.type === 'action-changed' || event.type === 'approval-changed' || event.type === 'evaluation-changed' || event.type === 'capability-policy-changed') return;
+  if (event.type === 'execution-changed' || event.type === 'event-appended' || event.type === 'action-changed' || event.type === 'approval-changed' || event.type === 'evaluation-changed' || event.type === 'capability-policy-changed' || event.type === 'workspace-binding-changed' || event.type === 'handoff-changed' || event.type === 'responsibility-changed' || event.type === 'verification-scope-changed' || event.type === 'attestation-changed') return;
 
   if (currentSnapshotBuilder && !snapshotRefreshScheduled) {
     snapshotRefreshScheduled = true;

@@ -36,6 +36,9 @@ const SCHEMA_BY_FILE = {
   'continuity.json': 'continuity.json',
   'recovery.json': 'recovery.json',
   'execution-receipt.json': 'execution-receipt.json',
+  'workspace-binding.json': 'workspace-binding.json',
+  'responsibility.json': 'responsibility.json',
+  'verification-scope.json': 'verification-scope.json',
   'session.json': 'session.json',
   'policy-snapshot.json': 'policy-snapshot.json',
   'capabilities.json': 'policy/capabilities.json',
@@ -148,6 +151,28 @@ export function verifyDemoProject(root) {
             const value = JSON.parse(readFileSync(join(taskDir, entry.name, collectionFile), 'utf8'));
             assertSchemaValid(schemaName, value);
             represented.add(schemaName);
+          }
+        }
+        if (entry.name === 'handoffs') {
+          for (const handoffFile of readdirSync(join(taskDir, 'handoffs')).filter((name) => /^handoff-.*\.json$/.test(name))) {
+            const value = JSON.parse(readFileSync(join(taskDir, 'handoffs', handoffFile), 'utf8'));
+            assertSchemaValid('handoff.json', value);
+            represented.add('handoff.json');
+          }
+        }
+        if (entry.name === 'attestations') {
+          for (const attestationFile of readdirSync(join(taskDir, 'attestations'))) {
+            const target = join(taskDir, 'attestations', attestationFile);
+            if (attestationFile === 'code-manifest.json') {
+              assertSchemaValid('code-manifest.json', JSON.parse(readFileSync(target, 'utf8')));
+              represented.add('code-manifest.json');
+            } else if (attestationFile === 'statement.json') {
+              assertSchemaValid('attestation-statement.json', JSON.parse(readFileSync(target, 'utf8')));
+              represented.add('attestation-statement.json');
+            } else if (attestationFile === 'statement.sigstore.json') {
+              const bundle = JSON.parse(readFileSync(target, 'utf8'));
+              if (!bundle || typeof bundle !== 'object' || Array.isArray(bundle)) warn(`task ${taskKey}: attestation bundle must be a JSON object`);
+            }
           }
         }
         continue;
@@ -356,6 +381,27 @@ export async function verifyCanonicalDemoSemantics(root) {
   const capabilityPolicy = await readForgeLoopIntegrationResource('project/capability-policy', { projectPath: root });
   if (!capabilityPolicy.data || typeof capabilityPolicy.data !== 'object') {
     errors.push('project/capability-policy showcase is missing');
+  }
+
+  const workspace = await readForgeLoopIntegrationResource('task/workspace-binding', { projectPath: root, taskId: 'TASK-003' });
+  if (!['MATCH', 'MISMATCH', 'UNAVAILABLE', 'INVALID'].includes(workspace.data.status)) {
+    errors.push(`TASK-003: expected a persisted workspace binding projection, got ${workspace.data.status}`);
+  }
+  const responsibility = await readForgeLoopIntegrationResource('task/responsibility', { projectPath: root, taskId: 'TASK-003' });
+  if (!['VALID', 'INVALID'].includes(responsibility.data.status)) {
+    errors.push(`TASK-003: expected a responsibility projection, got ${responsibility.data.status}`);
+  }
+  const scope = await readForgeLoopIntegrationResource('task/verification-scope', { projectPath: root, taskId: 'TASK-002' });
+  if (scope.data.scope?.resolvedMode !== 'CHANGED') {
+    errors.push(`TASK-002: expected persisted CHANGED verification scope, got ${scope.data.scope?.resolvedMode}`);
+  }
+  const handoffs = await readForgeLoopIntegrationResource('task/handoffs', { projectPath: root, taskId: 'TASK-004' });
+  if (!Array.isArray(handoffs.data.handoffs) || handoffs.data.handoffs.length !== 1) {
+    errors.push('TASK-004: canonical handoff showcase is missing');
+  }
+  const attestation = await readForgeLoopIntegrationResource('task/attestation', { projectPath: root, taskId: 'TASK-001' });
+  if (attestation.data.status !== 'DISABLED') {
+    errors.push(`TASK-001: expected disabled unsigned attestation policy showcase, got ${attestation.data.status}`);
   }
 
   return {

@@ -13,6 +13,8 @@ async function makeProject(): Promise<string> {
   await mkdir(join(root, '.forgeloop', 'task-state', TASK_KEY, 'actions'), { recursive: true });
   await mkdir(join(root, '.forgeloop', 'task-state', TASK_KEY, 'approvals'), { recursive: true });
   await mkdir(join(root, '.forgeloop', 'task-state', TASK_KEY, 'evaluations'), { recursive: true });
+  await mkdir(join(root, '.forgeloop', 'task-state', TASK_KEY, 'handoffs'), { recursive: true });
+  await mkdir(join(root, '.forgeloop', 'task-state', TASK_KEY, 'attestations'), { recursive: true });
   await mkdir(join(root, '.forgeloop', 'policy'), { recursive: true });
   return root;
 }
@@ -68,6 +70,69 @@ describe('watcher recovery and execution artifacts', () => {
       expect(events).not.toEqual(expect.arrayContaining([
         expect.objectContaining({ type: 'artifact-changed', artifact: 'exec-1.json' }),
       ]));
+    } finally {
+      watcher.stop();
+    }
+  }, 10000);
+
+  it.each([
+    ['workspace-binding.json', 'workspace-binding-changed'],
+    ['responsibility.json', 'responsibility-changed'],
+    ['verification-scope.json', 'verification-scope-changed'],
+  ])('classifies %s as %s', async (fileName, eventType) => {
+    const root = await makeProject();
+    const boundary = new PathBoundary(root);
+    const events: unknown[] = [];
+    const watcher = new ProjectWatcher(boundary, (event) => events.push(event), vi.fn(), vi.fn());
+    watcher.start();
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 80));
+      await writeFile(join(root, '.forgeloop', 'task-state', TASK_KEY, fileName), JSON.stringify({ schemaVersion: 1 }));
+      await waitForEvent(events, (event) => (
+        typeof event === 'object' && event !== null
+          && (event as { type?: string }).type === eventType
+          && (event as { taskKey?: string }).taskKey === TASK_KEY
+      ));
+    } finally {
+      watcher.stop();
+    }
+  }, 10000);
+
+  it('classifies handoff collection changes and coalesces an attestation file burst', async () => {
+    const root = await makeProject();
+    const boundary = new PathBoundary(root);
+    const events: unknown[] = [];
+    const watcher = new ProjectWatcher(boundary, (event) => events.push(event), vi.fn(), vi.fn());
+    watcher.start();
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 80));
+      await writeFile(
+        join(root, '.forgeloop', 'task-state', TASK_KEY, 'handoffs', 'handoff-123.json'),
+        JSON.stringify({ schemaVersion: 1 }),
+      );
+      await waitForEvent(events, (event) => (
+        typeof event === 'object' && event !== null
+          && (event as { type?: string }).type === 'handoff-changed'
+          && (event as { taskKey?: string }).taskKey === TASK_KEY
+      ));
+
+      await Promise.all([
+        writeFile(join(root, '.forgeloop', 'task-state', TASK_KEY, 'attestations', 'code-manifest.json'), JSON.stringify({ schemaVersion: 1 })),
+        writeFile(join(root, '.forgeloop', 'task-state', TASK_KEY, 'attestations', 'statement.json'), JSON.stringify({ schemaVersion: 1 })),
+        writeFile(join(root, '.forgeloop', 'task-state', TASK_KEY, 'attestations', 'statement.sigstore.json'), JSON.stringify({ bundle: true })),
+      ]);
+      await waitForEvent(events, (event) => (
+        typeof event === 'object' && event !== null
+          && (event as { type?: string }).type === 'attestation-changed'
+          && (event as { taskKey?: string }).taskKey === TASK_KEY
+      ));
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      const attestationEvents = events.filter((event) => (
+        typeof event === 'object' && event !== null
+          && (event as { type?: string }).type === 'attestation-changed'
+      ));
+      expect(attestationEvents).toHaveLength(1);
+      expect(attestationEvents[0]).toMatchObject({ taskKey: TASK_KEY, artifact: 'attestations' });
     } finally {
       watcher.stop();
     }

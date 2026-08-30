@@ -51,6 +51,9 @@ const SCHEMA_BY_FILE: Record<string, string> = {
   'discovery.json': ARTIFACT_SCHEMAS['policy/discovery.json'],
   'baseline.json': ARTIFACT_SCHEMAS['policy/baseline.json'],
   'policy.lock': ARTIFACT_SCHEMAS['policy/policy.lock'],
+  'workspace-binding.json': ARTIFACT_SCHEMAS['workspace-binding.json'],
+  'responsibility.json': ARTIFACT_SCHEMAS['responsibility.json'],
+  'verification-scope.json': ARTIFACT_SCHEMAS['verification-scope.json'],
 };
 
 const TASK_JSON_ARTIFACTS = new Set([
@@ -63,12 +66,22 @@ const TASK_JSON_ARTIFACTS = new Set([
   'recovery.json',
   'execution-receipt.json',
   'policy-snapshot.json',
+  'workspace-binding.json',
+  'responsibility.json',
+  'verification-scope.json',
 ]);
 
 const COLLECTION_ARTIFACTS = {
   action: { directory: 'actions', schema: 'action.schema.json' },
   approval: { directory: 'approvals', schema: 'approval.schema.json' },
   evaluation: { directory: 'evaluations', schema: 'trajectory-evaluation.schema.json' },
+  handoff: { directory: 'handoffs', schema: 'handoff-envelope.schema.json' },
+} as const;
+
+const FIXED_COLLECTION_ARTIFACTS = {
+  'code-manifest': { relativePath: 'attestations/code-manifest.json', schema: 'code-manifest.schema.json' },
+  'attestation-statement': { relativePath: 'attestations/statement.json', schema: 'in-toto-statement.schema.json' },
+  'attestation-bundle': { relativePath: 'attestations/statement.sigstore.json', schema: null },
 } as const;
 
 export class ProjectDetector {
@@ -327,13 +340,55 @@ export class ProjectReader {
     taskKey: string,
     request: Exclude<RawCollectionArtifactRequest, { kind: 'capability-policy' }>,
   ): string {
-    const definition = COLLECTION_ARTIFACTS[request.kind];
-    const id = request.kind === 'action' ? request.actionId : request.kind === 'approval' ? request.approvalId : request.evaluationId;
-    const idPattern = request.kind === 'action'
-      ? /^action-[A-Za-z0-9_-]+$/
-      : request.kind === 'approval'
-        ? /^approval-[A-Za-z0-9_-]+$/
-        : /^eval-[A-Za-z0-9_-]+$/;
+    if (request.kind in FIXED_COLLECTION_ARTIFACTS) {
+      const definition = FIXED_COLLECTION_ARTIFACTS[request.kind as keyof typeof FIXED_COLLECTION_ARTIFACTS];
+      const relativePath = join(TASK_STATE_DIR, taskKey, definition.relativePath);
+      const candidate = this.pathBoundary.resolveForgeLoopPathLexically(relativePath);
+      let stat;
+      try {
+        stat = lstatSync(candidate);
+      } catch {
+        throw ForgeLoopStudioError.artifactUnreadable(relativePath, 'Artifact not found');
+      }
+      if (!stat.isFile() || stat.isSymbolicLink()) {
+        throw ForgeLoopStudioError.artifactInvalid(relativePath, 'Symbolic links and non-file artifacts are not allowed');
+      }
+      const validatedPath = this.pathBoundary.validatePath(candidate);
+      const content = readFileSync(validatedPath, 'utf8');
+      const parsed = parseJsonSafely(content);
+      if (definition.schema) {
+        const validation = this.validator.validate(definition.schema, parsed);
+        if (!validation.valid) {
+          throw ForgeLoopStudioError.artifactInvalid(relativePath, validation.errors?.join('; ') || 'Collection artifact schema validation failed');
+        }
+      }
+      return content;
+    }
+
+    const collectionKind = request.kind as keyof typeof COLLECTION_ARTIFACTS;
+    const definition = COLLECTION_ARTIFACTS[collectionKind];
+    let id: string;
+    let idPattern: RegExp;
+    switch (request.kind) {
+      case 'action':
+        id = request.actionId;
+        idPattern = /^action-[A-Za-z0-9_-]+$/;
+        break;
+      case 'approval':
+        id = request.approvalId;
+        idPattern = /^approval-[A-Za-z0-9_-]+$/;
+        break;
+      case 'evaluation':
+        id = request.evaluationId;
+        idPattern = /^eval-[A-Za-z0-9_-]+$/;
+        break;
+      case 'handoff':
+        id = request.handoffId;
+        idPattern = /^handoff-[A-Za-z0-9_-]+$/;
+        break;
+      default:
+        throw ForgeLoopStudioError.pathBoundaryViolation(String(request.kind), 'unsupported collection artifact kind');
+    }
     if (!idPattern.test(id) || id.includes('/') || id.includes('\\') || id.includes('..')) {
       throw ForgeLoopStudioError.pathBoundaryViolation(id, `invalid ${request.kind} artifact identifier`);
     }

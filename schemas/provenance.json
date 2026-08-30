@@ -1,8 +1,8 @@
 {
-  "forgeLoopPackageVersion": "1.6.1",
-  "forgeLoopGitCommit": "f331100cff175a4ce990fa843b397fcf720b40f5",
+  "forgeLoopPackageVersion": "1.6.4",
+  "forgeLoopGitCommit": "24f50f9eefe5055cec053f075c748542b42e4ea2",
   "protocolVersion": 1,
-  "generatedAt": "2026-08-28T11:23:11.294Z",
+  "generatedAt": "2026-08-30T05:42:55.534Z",
   "schemas": {
     "action.schema.json": {
       "sha256": "0066f1d303781060b3ccde0a7235eabcdff69940928a9e75fab5e68e70717e18",
@@ -16,12 +16,24 @@
       "sha256": "f4c2c6b1315f8cfd79b2555c3d7ad8ad73acf6b8e02b6bef6927a231bdef7183",
       "upstreamPath": "schemas/approval.schema.json"
     },
+    "attestation-verification-result.schema.json": {
+      "sha256": "8c668edc3c367f57c41c4c2ee2b3bad628b532645baaf2479a8bc9f2f9be625a",
+      "upstreamPath": "schemas/attestation-verification-result.schema.json"
+    },
     "capability-policy.schema.json": {
       "sha256": "4aa97885ff8eebdbf24c404711a3e8360614a102f905fe17a9a8026a8ce6a1f5",
       "upstreamPath": "schemas/capability-policy.schema.json"
     },
+    "code-attestation.schema.json": {
+      "sha256": "6626c491b180ab046dcac50b9a744783db9ae10b704bfd42c4241a47a6a0234a",
+      "upstreamPath": "schemas/code-attestation.schema.json"
+    },
+    "code-manifest.schema.json": {
+      "sha256": "cdcf9c47e4da762e5a3655e484a2e1452a33cadd132122de39601a3bce41fdda",
+      "upstreamPath": "schemas/code-manifest.schema.json"
+    },
     "config.schema.json": {
-      "sha256": "d2029befbf2faba46425c24465b7394a4f9b55ba0e395544787cae1fb087bfba",
+      "sha256": "d3736a9e1dba42cfa5baed585e9b98f5f6fa953eca1657fbc7c25345acdfa51d",
       "upstreamPath": "schemas/config.schema.json"
     },
     "continuity.schema.json": {
@@ -48,6 +60,14 @@
       "sha256": "7e7e1350838586c0b0385c19f5fb4520abf8f290ea60c9d36bdba2d3682b9690",
       "upstreamPath": "schemas/gate.schema.json"
     },
+    "handoff-envelope.schema.json": {
+      "sha256": "44919e979428c4f7fd9a44885c385952e0b951452bc8915a64148d76aff56801",
+      "upstreamPath": "schemas/handoff-envelope.schema.json"
+    },
+    "in-toto-statement.schema.json": {
+      "sha256": "7eaf21f72164d860f40c8851d6fb26a380fcfe425a5be38e7cd22a4146ee699e",
+      "upstreamPath": "schemas/in-toto-statement.schema.json"
+    },
     "policy-baseline.schema.json": {
       "sha256": "a08c49d13f67c660727c08602c25162bfc1ba7f5aa3b938896ea81d4841fd1f0",
       "upstreamPath": "schemas/policy-baseline.schema.json"
@@ -72,6 +92,10 @@
       "sha256": "bf5873352b9cdbf685a9ad8eb58fadbd90693e5c32cd270b1d17f724849eacb3",
       "upstreamPath": "schemas/preflight.schema.json"
     },
+    "responsibility.schema.json": {
+      "sha256": "54ab530d6f3feb66fc09eca4afbd68eecb08c551d2f2d1f523bb40a8340a8657",
+      "upstreamPath": "schemas/responsibility.schema.json"
+    },
     "routing-result.schema.json": {
       "sha256": "48292b50a01bf6904037833576f27e8fa82090ba2e856b5307bebf93791ac03b",
       "upstreamPath": "schemas/routing-result.schema.json"
@@ -92,9 +116,17 @@
       "sha256": "1003b18977ee3b4bfb264aedf35ccdb07edd09bb7f076f11b266607697c07fb9",
       "upstreamPath": "schemas/trajectory-evaluation.schema.json"
     },
+    "verification-scope.schema.json": {
+      "sha256": "5d6a94fea1eb55b309eaa2c7781571d5f69be5b498253f5bcc79d2a025a84918",
+      "upstreamPath": "schemas/verification-scope.schema.json"
+    },
     "work-state.schema.json": {
       "sha256": "5f227628f07aa926327022396bb8cb3619aca313aaa28300700874b0e3f678b4",
       "upstreamPath": "schemas/work-state.schema.json"
+    },
+    "workspace-binding.schema.json": {
+      "sha256": "7cf67e6e0c9abda7c7f86cdb69d56c4212cfea5a3791d7e765f9fbe69f86337c",
+      "upstreamPath": "schemas/workspace-binding.schema.json"
     }
   }
 }

@@ -20,7 +20,7 @@ describe('core/integration/forgeloop-integration', () => {
 
   describe('package identity', () => {
     it('exposes the bundled ForgeLoop package version', () => {
-      expect(adapter.getPackageVersion()).toBe('1.6.1');
+      expect(adapter.getPackageVersion()).toBe('1.6.4');
     });
 
     it('keeps the version constant synchronized with the installed dependency pin', () => {
@@ -28,7 +28,7 @@ describe('core/integration/forgeloop-integration', () => {
         readFileSync(join(process.cwd(), 'node_modules', '@cassiomc1', 'forgeloop', 'package.json'), 'utf8'),
       ) as { version: string };
       expect(installed.version).toBe(FORGELOOP_PACKAGE_VERSION);
-      expect(FORGELOOP_UPSTREAM_COMMIT).toBe('f331100cff175a4ce990fa843b397fcf720b40f5');
+      expect(FORGELOOP_UPSTREAM_COMMIT).toBe('24f50f9eefe5055cec053f075c748542b42e4ea2');
       const dependencySpec = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8')).dependencies as Record<string, string>;
       expect(dependencySpec).toHaveProperty('@cassiomc1/forgeloop');
     });
@@ -73,6 +73,11 @@ describe('core/integration/forgeloop-integration', () => {
         'task/metrics',
         'task/evaluations',
         'project/capability-policy',
+        'task/workspace-binding',
+        'task/handoffs',
+        'task/responsibility',
+        'task/verification-scope',
+        'task/attestation',
       ]));
     });
 
@@ -101,6 +106,11 @@ describe('core/integration/forgeloop-integration', () => {
         modes: ['NATIVE_PROJECT', 'PROJECT_ISOLATED', 'SYSTEM_ISOLATED'],
         protocolProjectRootSeparateFromExecutionCwd: true,
       });
+      expect(capabilities.features.workspaceBinding).toMatchObject({ version: 1, supported: true, optional: true, explicitRebinding: false });
+      expect(capabilities.features.canonicalHandoffs).toMatchObject({ version: 1, supported: true, immutable: true, lifecycleAuthority: false });
+      expect(capabilities.features.responsibilityConstraints).toMatchObject({ version: 1, supported: true, immutableDuringPass: true, completionEnforced: true });
+      expect(capabilities.features.differentialVerificationScope).toMatchObject({ version: 1, supported: true, modes: ['AUTO', 'CHANGED', 'CLAIMED', 'FULL'], impactedMode: false });
+      expect(capabilities.features.codeAttestation).toMatchObject({ version: 1, supported: true, completionLedgerBound: true });
       for (const command of ['history', 'trace', 'reflect', 'inspect', 'metrics', 'action-show']) {
         expect(capabilities.commands).toEqual(expect.arrayContaining([
           expect.objectContaining({ name: command, baseRiskClass: 'READ_ONLY', mutatesProtocol: false }),

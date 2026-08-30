@@ -48,7 +48,7 @@ function validProtocolInfo(overrides: Record<string, unknown> = {}) {
 function currentCapabilities(overrides: Record<string, unknown> = {}): ForgeLoopCapabilitiesSummary {
   return {
     ...validCapabilities({
-    packageVersion: '1.6.1',
+    packageVersion: '1.6.4',
     features: {
       taskClaimRecovery: {
         version: 1,
@@ -73,6 +73,38 @@ function currentCapabilities(overrides: Record<string, unknown> = {}): ForgeLoop
         modes: ['NATIVE_PROJECT', 'PROJECT_ISOLATED', 'SYSTEM_ISOLATED'],
         protocolProjectRootSeparateFromExecutionCwd: true,
       },
+      workspaceBinding: {
+        version: 1,
+        supported: true,
+        optional: true,
+        explicitRebinding: false,
+      },
+      canonicalHandoffs: {
+        version: 1,
+        supported: true,
+        immutable: true,
+        lifecycleAuthority: false,
+      },
+      responsibilityConstraints: {
+        version: 1,
+        supported: true,
+        immutableDuringPass: true,
+        completionEnforced: true,
+      },
+      differentialVerificationScope: {
+        version: 1,
+        supported: true,
+        modes: ['AUTO', 'CHANGED', 'CLAIMED', 'FULL'],
+        impactedMode: false,
+      },
+      codeAttestation: {
+        version: 1,
+        supported: true,
+        modes: ['off', 'optional', 'required'],
+        revisionProviders: ['git'],
+        signingProviders: ['none', 'sigstore'],
+        completionLedgerBound: true,
+      },
     },
     resources: [
       'protocol/info',
@@ -87,6 +119,11 @@ function currentCapabilities(overrides: Record<string, unknown> = {}): ForgeLoop
       'task/metrics',
       'task/evaluations',
       'project/capability-policy',
+      'task/workspace-binding',
+      'task/handoffs',
+      'task/responsibility',
+      'task/verification-scope',
+      'task/attestation',
     ],
     commands: [
       'history', 'trace', 'reflect', 'inspect', 'metrics', 'action-show',
@@ -155,6 +192,11 @@ describe('core/protocol/protocol-capabilities', () => {
         trajectoryMetrics: true,
         trajectoryEvaluations: true,
         verificationExecutionIsolation: true,
+        workspaceBinding: true,
+        canonicalHandoffs: true,
+        responsibilityConstraints: true,
+        differentialVerificationScope: true,
+        codeAttestation: true,
       });
     });
 
@@ -225,6 +267,73 @@ describe('core/protocol/protocol-capabilities', () => {
       expect(result.featureSupport.durableActions).toBe(false);
       expect(result.featureSupport.trajectoryMetrics).toBe(false);
       expect(result.featureSupport.trajectoryEvaluations).toBe(false);
+      expect(result.featureSupport.workspaceBinding).toBe(false);
+      expect(result.featureSupport.canonicalHandoffs).toBe(false);
+      expect(result.featureSupport.responsibilityConstraints).toBe(false);
+      expect(result.featureSupport.differentialVerificationScope).toBe(false);
+      expect(result.featureSupport.codeAttestation).toBe(false);
+    });
+
+    it('keeps the protocol compatible while closing each incomplete 1.6.4 boundary feature', () => {
+      const cases: Array<[string, (capabilities: ForgeLoopCapabilitiesSummary) => ForgeLoopCapabilitiesSummary]> = [
+        ['workspace feature absent', (capabilities) => {
+          const features = { ...capabilities.features };
+          Reflect.deleteProperty(features, 'workspaceBinding');
+          return { ...capabilities, features };
+        }],
+        ['handoff resource absent', (capabilities) => ({
+          ...capabilities,
+          resources: capabilities.resources.filter((resource) => resource !== 'task/handoffs'),
+        })],
+        ['responsibility contract incomplete', (capabilities) => ({
+          ...capabilities,
+          features: {
+            ...capabilities.features,
+            responsibilityConstraints: {
+              ...capabilities.features.responsibilityConstraints,
+              completionEnforced: false,
+            } as NonNullable<ForgeLoopCapabilitiesSummary['features']['responsibilityConstraints']>,
+          },
+        })],
+        ['verification modes incomplete', (capabilities) => ({
+          ...capabilities,
+          features: {
+            ...capabilities.features,
+            differentialVerificationScope: {
+              ...capabilities.features.differentialVerificationScope,
+              modes: ['AUTO', 'CHANGED', 'CLAIMED'],
+            } as NonNullable<ForgeLoopCapabilitiesSummary['features']['differentialVerificationScope']>,
+          },
+        })],
+        ['IMPACTED unexpectedly advertised', (capabilities) => ({
+          ...capabilities,
+          features: {
+            ...capabilities.features,
+            differentialVerificationScope: {
+              ...capabilities.features.differentialVerificationScope,
+              impactedMode: true,
+            } as NonNullable<ForgeLoopCapabilitiesSummary['features']['differentialVerificationScope']>,
+          },
+        })],
+        ['attestation feature absent', (capabilities) => {
+          const features = { ...capabilities.features };
+          Reflect.deleteProperty(features, 'codeAttestation');
+          return { ...capabilities, features };
+        }],
+      ];
+
+      for (const [label, mutate] of cases) {
+        const result = negotiateCompatibilityMode({
+          protocolInfo: normalizeCanonicalProtocolInfo(validProtocolInfo()),
+          capabilities: mutate(currentCapabilities()),
+        });
+        expect(result.mode, label).toBe('INTEGRATION_V1');
+        if (label.includes('workspace')) expect(result.featureSupport.workspaceBinding, label).toBe(false);
+        if (label.includes('handoff')) expect(result.featureSupport.canonicalHandoffs, label).toBe(false);
+        if (label.includes('responsibility')) expect(result.featureSupport.responsibilityConstraints, label).toBe(false);
+        if (label.includes('verification') || label.includes('IMPACTED')) expect(result.featureSupport.differentialVerificationScope, label).toBe(false);
+        if (label.includes('attestation')) expect(result.featureSupport.codeAttestation, label).toBe(false);
+      }
     });
 
     it('rejects unknown protocol versions', () => {

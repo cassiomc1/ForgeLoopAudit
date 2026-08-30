@@ -93,6 +93,11 @@ export interface ForgeLoopFeatureSupport {
   trajectoryMetrics: boolean;
   trajectoryEvaluations: boolean;
   verificationExecutionIsolation: boolean;
+  workspaceBinding: boolean;
+  canonicalHandoffs: boolean;
+  responsibilityConstraints: boolean;
+  differentialVerificationScope: boolean;
+  codeAttestation: boolean;
 }
 
 export interface BlockerSummary {
@@ -192,6 +197,113 @@ export type CanonicalProjectionSource = 'FORGELOOP_INTEGRATION' | 'UNAVAILABLE';
 export interface CanonicalProjectionError {
   code: string;
   message: string;
+  next?: string;
+}
+
+export type WorkspaceBindingStatus =
+  | 'UNBOUND'
+  | 'MATCH'
+  | 'MISMATCH'
+  | 'INVALID'
+  | 'UNAVAILABLE'
+  | 'UNKNOWN';
+
+export interface WorkspaceBindingView {
+  available: boolean;
+  source: CanonicalProjectionSource;
+  status: WorkspaceBindingStatus;
+  taskId: string | null;
+  path: string | null;
+  bindingFingerprint: string | null;
+  mode: string | null;
+  branchAtBind: string | null;
+  headAtBind: string | null;
+  error: CanonicalProjectionError | null;
+}
+
+export interface CanonicalHandoffView {
+  handoffId: string | null;
+  taskId: string | null;
+  phase: string | null;
+  revision: number | null;
+  verificationCycle: number | null;
+  createdAt: string | null;
+  digest: string | null;
+  recipientHint: string | null;
+  note: string | null;
+  intent: Record<string, unknown> | null;
+  state: Record<string, unknown> | null;
+  evidence: Record<string, unknown> | null;
+  continuity: Record<string, unknown> | null;
+}
+
+export interface TaskHandoffsView {
+  available: boolean;
+  source: CanonicalProjectionSource;
+  count: number;
+  handoffs: CanonicalHandoffView[];
+  error: CanonicalProjectionError | null;
+}
+
+export type ResponsibilityStatus = 'NOT_APPLICABLE' | 'VALID' | 'INVALID' | 'UNKNOWN';
+
+export interface ResponsibilityView {
+  available: boolean;
+  source: CanonicalProjectionSource;
+  status: ResponsibilityStatus;
+  label: string | null;
+  allowedPaths: string[];
+  readOnlyPaths: string[];
+  requiredCheckIds: string[];
+  frozenInputs: { contract: boolean; route: boolean; claims: boolean } | null;
+  changedPaths: string[];
+  fingerprint: string | null;
+  errors: CanonicalProjectionError[];
+}
+
+export type VerificationScopeMode = 'AUTO' | 'CHANGED' | 'CLAIMED' | 'FULL' | 'UNKNOWN';
+
+export interface VerificationScopeView {
+  available: boolean;
+  source: CanonicalProjectionSource;
+  requestedMode: VerificationScopeMode;
+  resolvedMode: VerificationScopeMode;
+  verificationCycle: number | null;
+  changedPaths: string[];
+  claimedPaths: string[];
+  selectedPaths: string[];
+  reasons: string[];
+  fallback: Record<string, unknown> | null;
+  fingerprint: string | null;
+  checkerCapabilityFingerprint: string | null;
+  createdAt: string | null;
+  error: CanonicalProjectionError | null;
+}
+
+export type AttestationStatus = 'DISABLED' | 'MISSING' | 'VALID' | 'INVALID' | 'UNKNOWN';
+export type AttestationTrustLevel = 'PROCESSED' | 'VERIFIED' | 'ATTESTED' | 'UNKNOWN';
+
+export interface TaskAttestationView {
+  available: boolean;
+  source: CanonicalProjectionSource;
+  status: AttestationStatus;
+  level: AttestationTrustLevel;
+  content: string | null;
+  receipt: string | null;
+  ledger: string | null;
+  signature: string | null;
+  signer: Record<string, unknown> | null;
+  files: number | null;
+  subject: string | null;
+  errors: CanonicalProjectionError[];
+}
+
+export interface TaskBoundariesView {
+  workspace: WorkspaceBindingView;
+  responsibility: ResponsibilityView;
+  handoffs: TaskHandoffsView;
+  verificationScope: VerificationScopeView;
+  attestation: TaskAttestationView;
 }
 
 export interface CanonicalProjectionView<T = Record<string, unknown>> {
@@ -686,6 +798,11 @@ export interface TaskSnapshot {
   executionReceipt?: Record<string, unknown>;
   events: EventRecord[];
   policySnapshot?: Record<string, unknown>;
+  workspaceBinding?: WorkspaceBindingView;
+  handoffs?: TaskHandoffsView;
+  responsibility?: ResponsibilityView;
+  verificationScope?: VerificationScopeView;
+  attestation?: TaskAttestationView;
 }
 
 export type StudioErrorCode =
@@ -727,7 +844,10 @@ export type AllowedArtifact =
   | 'execution-receipt.json'
   | 'policy-snapshot.json'
   | 'events.ndjson'
-  | 'task.json';
+  | 'task.json'
+  | 'workspace-binding.json'
+  | 'responsibility.json'
+  | 'verification-scope.json';
 
 export interface RawArtifactRequest {
   taskId: string;
@@ -738,6 +858,10 @@ export type RawCollectionArtifactRequest =
   | { kind: 'action'; taskId: string; actionId: string }
   | { kind: 'approval'; taskId: string; approvalId: string }
   | { kind: 'evaluation'; taskId: string; evaluationId: string }
+  | { kind: 'handoff'; taskId: string; handoffId: string }
+  | { kind: 'code-manifest'; taskId: string }
+  | { kind: 'attestation-statement'; taskId: string }
+  | { kind: 'attestation-bundle'; taskId: string }
   | { kind: 'capability-policy' };
 
 export type ExecutionKind = 'VERIFICATION' | 'DURABLE_ACTION';
@@ -814,6 +938,11 @@ export interface ForgeLoopStudioAPI {
   getTaskMetrics(taskId: string): Promise<TrajectoryMetricsView>;
   getTaskEvaluations(taskId: string): Promise<TrajectoryEvaluationsView>;
   getCapabilityPolicy(): Promise<CapabilityPolicyView>;
+  getTaskWorkspaceBinding(taskId: string): Promise<WorkspaceBindingView>;
+  getTaskHandoffs(taskId: string): Promise<TaskHandoffsView>;
+  getTaskResponsibility(taskId: string): Promise<ResponsibilityView>;
+  getTaskVerificationScope(taskId: string): Promise<VerificationScopeView>;
+  getTaskAttestation(taskId: string): Promise<TaskAttestationView>;
   getRecentProjects(): Promise<RecentProject[]>;
   addRecentProject(project: RecentProject): Promise<void>;
   removeRecentProject(path: string): Promise<void>;
@@ -822,7 +951,7 @@ export interface ForgeLoopStudioAPI {
 }
 
 export interface ProjectUpdate {
-  type: 'task-added' | 'task-updated' | 'task-removed' | 'project-health-changed' | 'policy-changed' | 'session-changed' | 'action-changed' | 'approval-changed' | 'evaluation-changed' | 'capability-policy-changed' | 'snapshot-refreshed' | 'project-opened' | 'watcher-status' | 'error';
+  type: 'task-added' | 'task-updated' | 'task-removed' | 'project-health-changed' | 'policy-changed' | 'session-changed' | 'action-changed' | 'approval-changed' | 'evaluation-changed' | 'capability-policy-changed' | 'workspace-binding-changed' | 'handoff-changed' | 'responsibility-changed' | 'verification-scope-changed' | 'attestation-changed' | 'snapshot-refreshed' | 'project-opened' | 'watcher-status' | 'error';
   taskId?: string;
   snapshot?: ProjectSnapshot;
   detection?: ProjectDetectionResult;

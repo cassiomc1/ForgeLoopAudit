@@ -7,6 +7,7 @@ import type {
   ForgeLoopReadOnlyResult,
   ForgeLoopResourceReadOptions,
   ForgeLoopVerificationIsolationMode,
+  ForgeLoopVerificationScopeMode,
 } from './types';
 
 export * from './types';
@@ -39,6 +40,8 @@ export const STUDIO_READ_ONLY_COMMANDS = Object.freeze(
     'inspect',
     'metrics',
     'action-show',
+    'handoff-list',
+    'handoff-show',
   ]),
 );
 
@@ -71,6 +74,11 @@ export interface ForgeLoopIntegrationAdapter {
   readTaskOwnership(projectRoot: string, taskId: string): Promise<CanonicalOwnershipResource>;
   readTaskContract(projectRoot: string, taskId: string): Promise<Record<string, unknown>>;
   readTaskContinuity(projectRoot: string, taskId: string): Promise<Record<string, unknown>>;
+  readTaskWorkspaceBinding?: (projectRoot: string, taskId: string) => Promise<Record<string, unknown>>;
+  readTaskHandoffs?: (projectRoot: string, taskId: string) => Promise<Record<string, unknown>>;
+  readTaskResponsibility?: (projectRoot: string, taskId: string) => Promise<Record<string, unknown>>;
+  readTaskVerificationScope?: (projectRoot: string, taskId: string) => Promise<Record<string, unknown>>;
+  readTaskAttestation?: (projectRoot: string, taskId: string) => Promise<Record<string, unknown>>;
   /** Optional in test/legacy adapters; present when the negotiated feature is advertised. */
   readTaskActions?: (projectRoot: string, taskId: string) => Promise<Record<string, unknown>>;
   readTaskAction?: (projectRoot: string, taskId: string, actionId: string) => Promise<Record<string, unknown>>;
@@ -123,6 +131,38 @@ interface ForgeLoopIntegrationModule {
         modes: unknown[];
         protocolProjectRootSeparateFromExecutionCwd: boolean;
       };
+      workspaceBinding?: {
+        version: number;
+        supported: boolean;
+        optional: boolean;
+        explicitRebinding: boolean;
+      };
+      canonicalHandoffs?: {
+        version: number;
+        supported: boolean;
+        immutable: boolean;
+        lifecycleAuthority: boolean;
+      };
+      responsibilityConstraints?: {
+        version: number;
+        supported: boolean;
+        immutableDuringPass: boolean;
+        completionEnforced: boolean;
+      };
+      differentialVerificationScope?: {
+        version: number;
+        supported: boolean;
+        modes: unknown[];
+        impactedMode: boolean;
+      };
+      codeAttestation?: {
+        version: number;
+        supported: boolean;
+        modes: unknown[];
+        revisionProviders: unknown[];
+        signingProviders: unknown[];
+        completionLedgerBound: boolean;
+      };
     };
     commands: Array<Record<string, unknown>>;
     resources: Array<{ name: string }>;
@@ -136,6 +176,21 @@ interface ForgeLoopIntegrationModule {
     uri: string,
     options?: ForgeLoopResourceReadOptions,
   ): Promise<{ uri: string; taskId?: string | null; data: T }>;
+}
+
+function finiteNumber(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
+function stringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : [];
+}
+
+const KNOWN_VERIFICATION_SCOPE_MODES: ForgeLoopVerificationScopeMode[] = ['AUTO', 'CHANGED', 'CLAIMED', 'FULL'];
+
+function verificationScopeModes(value: unknown): ForgeLoopVerificationScopeMode[] {
+  return stringArray(value).filter((entry): entry is ForgeLoopVerificationScopeMode =>
+    KNOWN_VERIFICATION_SCOPE_MODES.includes(entry as ForgeLoopVerificationScopeMode));
 }
 
 let cachedModule: Promise<ForgeLoopIntegrationModule> | null = null;
@@ -168,6 +223,11 @@ function buildAdapter(fl: ForgeLoopIntegrationModule): ForgeLoopIntegrationAdapt
       const durableActions = raw.features.durableActions;
       const trajectoryEvaluation = raw.features.trajectoryEvaluation;
       const verificationExecutionIsolation = raw.features.verificationExecutionIsolation;
+      const workspaceBinding = raw.features.workspaceBinding;
+      const canonicalHandoffs = raw.features.canonicalHandoffs;
+      const responsibilityConstraints = raw.features.responsibilityConstraints;
+      const differentialVerificationScope = raw.features.differentialVerificationScope;
+      const codeAttestation = raw.features.codeAttestation;
       return {
         packageVersion,
         protocolVersion: raw.protocolVersion,
@@ -204,6 +264,49 @@ function buildAdapter(fl: ForgeLoopIntegrationModule): ForgeLoopIntegrationAdapt
                 : [],
               protocolProjectRootSeparateFromExecutionCwd:
                 verificationExecutionIsolation.protocolProjectRootSeparateFromExecutionCwd === true,
+            },
+          } : {}),
+          ...(workspaceBinding ? {
+            workspaceBinding: {
+              version: finiteNumber(workspaceBinding.version, 0),
+              supported: workspaceBinding.supported === true,
+              optional: workspaceBinding.optional === true,
+              explicitRebinding: workspaceBinding.explicitRebinding === true,
+            },
+          } : {}),
+          ...(canonicalHandoffs ? {
+            canonicalHandoffs: {
+              version: finiteNumber(canonicalHandoffs.version, 0),
+              supported: canonicalHandoffs.supported === true,
+              immutable: canonicalHandoffs.immutable === true,
+              lifecycleAuthority: canonicalHandoffs.lifecycleAuthority === true,
+            },
+          } : {}),
+          ...(responsibilityConstraints ? {
+            responsibilityConstraints: {
+              version: finiteNumber(responsibilityConstraints.version, 0),
+              supported: responsibilityConstraints.supported === true,
+              immutableDuringPass: responsibilityConstraints.immutableDuringPass === true,
+              completionEnforced: responsibilityConstraints.completionEnforced === true,
+            },
+          } : {}),
+          ...(differentialVerificationScope ? {
+            differentialVerificationScope: {
+              version: finiteNumber(differentialVerificationScope.version, 0),
+              supported: differentialVerificationScope.supported === true,
+              modes: verificationScopeModes(differentialVerificationScope.modes),
+              impactedMode: differentialVerificationScope.impactedMode === true,
+            },
+          } : {}),
+          ...(codeAttestation ? {
+            codeAttestation: {
+              version: finiteNumber(codeAttestation.version, 0),
+              supported: codeAttestation.supported === true,
+              modes: stringArray(codeAttestation.modes).filter((entry): entry is 'off' | 'optional' | 'required' =>
+                entry === 'off' || entry === 'optional' || entry === 'required'),
+              revisionProviders: stringArray(codeAttestation.revisionProviders),
+              signingProviders: stringArray(codeAttestation.signingProviders),
+              completionLedgerBound: codeAttestation.completionLedgerBound === true,
             },
           } : {}),
         },
@@ -246,6 +349,31 @@ function buildAdapter(fl: ForgeLoopIntegrationModule): ForgeLoopIntegrationAdapt
     async readTaskContinuity(projectRoot: string, taskId: string): Promise<Record<string, unknown>> {
       assertReadProjectRoot(projectRoot);
       return readResource<Record<string, unknown>>(fl, 'task/continuity', { projectPath: projectRoot, taskId });
+    },
+
+    async readTaskWorkspaceBinding(projectRoot: string, taskId: string): Promise<Record<string, unknown>> {
+      assertReadProjectRoot(projectRoot);
+      return readResource<Record<string, unknown>>(fl, 'task/workspace-binding', { projectPath: projectRoot, taskId });
+    },
+
+    async readTaskHandoffs(projectRoot: string, taskId: string): Promise<Record<string, unknown>> {
+      assertReadProjectRoot(projectRoot);
+      return readResource<Record<string, unknown>>(fl, 'task/handoffs', { projectPath: projectRoot, taskId });
+    },
+
+    async readTaskResponsibility(projectRoot: string, taskId: string): Promise<Record<string, unknown>> {
+      assertReadProjectRoot(projectRoot);
+      return readResource<Record<string, unknown>>(fl, 'task/responsibility', { projectPath: projectRoot, taskId });
+    },
+
+    async readTaskVerificationScope(projectRoot: string, taskId: string): Promise<Record<string, unknown>> {
+      assertReadProjectRoot(projectRoot);
+      return readResource<Record<string, unknown>>(fl, 'task/verification-scope', { projectPath: projectRoot, taskId });
+    },
+
+    async readTaskAttestation(projectRoot: string, taskId: string): Promise<Record<string, unknown>> {
+      assertReadProjectRoot(projectRoot);
+      return readResource<Record<string, unknown>>(fl, 'task/attestation', { projectPath: projectRoot, taskId });
     },
 
     async readTaskActions(projectRoot: string, taskId: string): Promise<Record<string, unknown>> {

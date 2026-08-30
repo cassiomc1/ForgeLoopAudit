@@ -19,6 +19,11 @@ import type {
   TrajectoryMetricsView,
   TrajectoryEvaluationsView,
   CapabilityPolicyView,
+  WorkspaceBindingView,
+  TaskHandoffsView,
+  ResponsibilityView,
+  VerificationScopeView,
+  TaskAttestationView,
 } from '@shared/domain';
 import { IPC_CHANNELS } from '@shared/ipc';
 
@@ -45,6 +50,11 @@ const api = {
   getTaskMetrics: (taskId: string): Promise<TrajectoryMetricsView> => ipcRenderer.invoke(IPC_CHANNELS.GET_TASK_METRICS, taskId),
   getTaskEvaluations: (taskId: string): Promise<TrajectoryEvaluationsView> => ipcRenderer.invoke(IPC_CHANNELS.GET_TASK_EVALUATIONS, taskId),
   getCapabilityPolicy: (): Promise<CapabilityPolicyView> => ipcRenderer.invoke(IPC_CHANNELS.GET_CAPABILITY_POLICY),
+  getTaskWorkspaceBinding: (taskId: string): Promise<WorkspaceBindingView> => ipcRenderer.invoke(IPC_CHANNELS.GET_TASK_WORKSPACE_BINDING, taskId),
+  getTaskHandoffs: (taskId: string): Promise<TaskHandoffsView> => ipcRenderer.invoke(IPC_CHANNELS.GET_TASK_HANDOFFS, taskId),
+  getTaskResponsibility: (taskId: string): Promise<ResponsibilityView> => ipcRenderer.invoke(IPC_CHANNELS.GET_TASK_RESPONSIBILITY, taskId),
+  getTaskVerificationScope: (taskId: string): Promise<VerificationScopeView> => ipcRenderer.invoke(IPC_CHANNELS.GET_TASK_VERIFICATION_SCOPE, taskId),
+  getTaskAttestation: (taskId: string): Promise<TaskAttestationView> => ipcRenderer.invoke(IPC_CHANNELS.GET_TASK_ATTESTATION, taskId),
   getTaskExecutions: (taskId: string, limit?: number): Promise<ExecutionPage> =>
     ipcRenderer.invoke(IPC_CHANNELS.GET_TASK_EXECUTIONS, taskId, limit),
   getRecentProjects: (): Promise<RecentProject[]> => ipcRenderer.invoke(IPC_CHANNELS.GET_RECENT_PROJECTS),
