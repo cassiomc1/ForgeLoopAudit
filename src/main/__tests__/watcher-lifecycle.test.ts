@@ -24,7 +24,11 @@ describe('watcher lifecycle', () => {
     const events: unknown[] = [];
     const watcher = new ProjectWatcher(boundary, (event) => events.push(event), vi.fn(), vi.fn());
     watcher.start();
-    await new Promise((resolve) => setTimeout(resolve, 80));
+    const deadline = Date.now() + 5_000;
+    while (!watcher.getStatus().active && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    expect(watcher.getStatus().active).toBe(true);
     await writeFile(join(root, '.forgeloop', 'config.json'), '{}');
     await new Promise((resolve) => setTimeout(resolve, 300));
     expect(watcher.getStatus().active).toBe(true);

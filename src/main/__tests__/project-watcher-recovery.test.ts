@@ -29,15 +29,26 @@ async function waitForEvent(events: unknown[], predicate: (event: unknown) => bo
   throw new Error('Timed out waiting for watcher event');
 }
 
+async function startWatcher(root: string, events: unknown[]): Promise<ProjectWatcher> {
+  const watcher = new ProjectWatcher(new PathBoundary(root), (event) => events.push(event), vi.fn(), vi.fn());
+  watcher.start();
+  const deadline = Date.now() + 5_000;
+  while (!watcher.getStatus().active && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  if (!watcher.getStatus().active) {
+    watcher.stop();
+    throw new Error('Timed out waiting for watcher readiness');
+  }
+  return watcher;
+}
+
 describe('watcher recovery and execution artifacts', () => {
   it('emits an artifact-changed event when recovery.json appears', async () => {
     const root = await makeProject();
-    const boundary = new PathBoundary(root);
     const events: unknown[] = [];
-    const watcher = new ProjectWatcher(boundary, (event) => events.push(event), vi.fn(), vi.fn());
-    watcher.start();
+    const watcher = await startWatcher(root, events);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 80));
       await writeFile(
         join(root, '.forgeloop', 'task-state', TASK_KEY, 'recovery.json'),
         JSON.stringify({ schemaVersion: 1 }),
@@ -53,12 +64,9 @@ describe('watcher recovery and execution artifacts', () => {
 
   it('classifies execution artifact changes as bounded execution-changed events', async () => {
     const root = await makeProject();
-    const boundary = new PathBoundary(root);
     const events: unknown[] = [];
-    const watcher = new ProjectWatcher(boundary, (event) => events.push(event), vi.fn(), vi.fn());
-    watcher.start();
+    const watcher = await startWatcher(root, events);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 80));
       await writeFile(
         join(root, '.forgeloop', 'task-state', TASK_KEY, 'executions', 'exec-1.json'),
         JSON.stringify({ schemaVersion: 1 }),
@@ -81,12 +89,9 @@ describe('watcher recovery and execution artifacts', () => {
     ['verification-scope.json', 'verification-scope-changed'],
   ])('classifies %s as %s', async (fileName, eventType) => {
     const root = await makeProject();
-    const boundary = new PathBoundary(root);
     const events: unknown[] = [];
-    const watcher = new ProjectWatcher(boundary, (event) => events.push(event), vi.fn(), vi.fn());
-    watcher.start();
+    const watcher = await startWatcher(root, events);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 80));
       await writeFile(join(root, '.forgeloop', 'task-state', TASK_KEY, fileName), JSON.stringify({ schemaVersion: 1 }));
       await waitForEvent(events, (event) => (
         typeof event === 'object' && event !== null
@@ -100,12 +105,9 @@ describe('watcher recovery and execution artifacts', () => {
 
   it('classifies handoff collection changes and coalesces an attestation file burst', async () => {
     const root = await makeProject();
-    const boundary = new PathBoundary(root);
     const events: unknown[] = [];
-    const watcher = new ProjectWatcher(boundary, (event) => events.push(event), vi.fn(), vi.fn());
-    watcher.start();
+    const watcher = await startWatcher(root, events);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 80));
       await writeFile(
         join(root, '.forgeloop', 'task-state', TASK_KEY, 'handoffs', 'handoff-123.json'),
         JSON.stringify({ schemaVersion: 1 }),
@@ -144,14 +146,11 @@ describe('watcher recovery and execution artifacts', () => {
     ['evaluations', 'eval-added', 'evaluation-changed'],
   ])('classifies %s collection files without promoting their directories to tasks', async (collection, fileStem, eventType) => {
     const root = await makeProject();
-    const boundary = new PathBoundary(root);
     const events: unknown[] = [];
-    const watcher = new ProjectWatcher(boundary, (event) => events.push(event), vi.fn(), vi.fn());
+    const watcher = await startWatcher(root, events);
     const fileName = `${fileStem}.json`;
     const filePath = join(root, '.forgeloop', 'task-state', TASK_KEY, collection, fileName);
-    watcher.start();
     try {
-      await new Promise((resolve) => setTimeout(resolve, 80));
       await writeFile(filePath, JSON.stringify({ schemaVersion: 1 }));
       await waitForEvent(events, (event) => (
         typeof event === 'object' && event !== null
@@ -168,14 +167,11 @@ describe('watcher recovery and execution artifacts', () => {
 
   it('classifies collection file changes and removals as bounded typed events', async () => {
     const root = await makeProject();
-    const boundary = new PathBoundary(root);
     const events: unknown[] = [];
-    const watcher = new ProjectWatcher(boundary, (event) => events.push(event), vi.fn(), vi.fn());
     const actionPath = join(root, '.forgeloop', 'task-state', TASK_KEY, 'actions', 'action-cycle.json');
     await writeFile(actionPath, JSON.stringify({ schemaVersion: 1, state: 'PLANNED' }));
-    watcher.start();
+    const watcher = await startWatcher(root, events);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 80));
       await writeFile(actionPath, JSON.stringify({ schemaVersion: 1, state: 'VERIFIED' }));
       await waitForEvent(events, (event) => (
         typeof event === 'object' && event !== null
@@ -195,12 +191,9 @@ describe('watcher recovery and execution artifacts', () => {
 
   it('classifies policy capabilities separately from generic policy changes', async () => {
     const root = await makeProject();
-    const boundary = new PathBoundary(root);
     const events: unknown[] = [];
-    const watcher = new ProjectWatcher(boundary, (event) => events.push(event), vi.fn(), vi.fn());
-    watcher.start();
+    const watcher = await startWatcher(root, events);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 80));
       await writeFile(
         join(root, '.forgeloop', 'policy', 'capabilities.json'),
         JSON.stringify({ schemaVersion: 1, policy: { default: 'DENY', rules: [] } }),
