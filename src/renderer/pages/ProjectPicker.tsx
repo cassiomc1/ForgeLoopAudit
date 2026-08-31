@@ -71,7 +71,7 @@ export function ProjectPicker({ onOpenProject, onOpenDemoProject, onOpenRecentPr
               {isLoading && <LoadingState message="Opening..." />}
             </button>
             <button
-              className="button-secondary w-full justify-center py-3 gap-2 mt-3"
+              className="btn-secondary w-full justify-center py-3 gap-2 mt-3"
               onClick={onOpenDemoProject}
               disabled={isLoading}
             >

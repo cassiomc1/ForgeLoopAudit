@@ -1,6 +1,8 @@
 import type { ProjectUpdate } from '@shared/domain';
 
 export type TaskProjectionEpochKey =
+  | 'events'
+  | 'executions'
   | 'actions'
   | 'approvals'
   | 'evaluations'
@@ -13,6 +15,8 @@ export type TaskProjectionEpochKey =
 export interface ProjectionRefreshEpochs {
   genericTask: number;
   capabilityPolicy: number;
+  events: Record<string, number>;
+  executions: Record<string, number>;
   actions: Record<string, number>;
   approvals: Record<string, number>;
   evaluations: Record<string, number>;
@@ -29,6 +33,8 @@ export function createProjectionRefreshEpochs(): ProjectionRefreshEpochs {
   return {
     genericTask: 0,
     capabilityPolicy: 0,
+    events: {},
+    executions: {},
     actions: {},
     approvals: {},
     evaluations: {},
@@ -59,7 +65,14 @@ export function reduceProjectionRefresh(current: ProjectionRefreshEpochs, update
       return createProjectionRefreshEpochs();
     case 'snapshot-refreshed':
       return { ...current, genericTask: current.genericTask + 1 };
-    case 'task-updated':
+    case 'task-updated': {
+      const watcherEvent = update.data && typeof update.data === 'object'
+        ? (update.data as { type?: string }).type
+        : undefined;
+      if (watcherEvent === 'event-appended') return bumpTaskProjection(current, 'events', update.taskId);
+      if (watcherEvent === 'execution-changed') return bumpTaskProjection(current, 'executions', update.taskId);
+      return { ...current, genericTask: current.genericTask + 1 };
+    }
     case 'task-added':
     case 'task-removed':
     case 'project-health-changed':
@@ -88,6 +101,10 @@ export function reduceProjectionRefresh(current: ProjectionRefreshEpochs, update
     case 'error':
       return current;
   }
+}
+
+export function shouldApplySnapshotGeneration(currentGeneration: number, incomingGeneration?: number): boolean {
+  return incomingGeneration === undefined || incomingGeneration >= currentGeneration;
 }
 
 export function taskProjectionRefreshEpoch(

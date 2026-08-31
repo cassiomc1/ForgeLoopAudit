@@ -30,17 +30,17 @@ orphaned screenshot files.
 
 | File | Surface | Selected task | Scenario |
 |---|---|---|---|
-| `overview.png` | Overview | `TASK-003` | Project health and selected-task boundaries |
+| `overview.png` | Overview | `TASK-003` | Project identity, canonical freshness, monitored state and selected-task boundaries |
 | `tasks.png` | Tasks | — | Six mixed lifecycle states |
 | `lifecycle-flow.png` | Flow | `TASK-004` | Blocked lifecycle and recovery |
 | `contract-inspector.png` | Contract | `TASK-006` | Security-review contract |
 | `evidence-matrix.png` | Evidence | `TASK-002` | `AUTO` → `CHANGED` verification scope |
-| `event-ledger.png` | Events | `TASK-004` | Recovery event ledger |
+| `event-ledger.png` | Events | `TASK-004` | Live-updating recovery event ledger |
 | `continuity.png` | Continuity | `TASK-004` | Continuity and canonical handoff |
 | `diagnostics.png` | Diagnostics | `TASK-004` | Canonical diagnostic signals |
 | `actions.png` | Actions | `TASK-002` | Durable actions and approvals |
 | `policy.png` | Policy | `TASK-006` | Capability and task policy |
-| `settings.png` | Settings | — | Studio and protocol metadata |
+| `settings.png` | Settings | — | Project context, Studio preferences and ForgeLoop capability metadata |
 | `task-boundaries.png` | Overview | `TASK-003` | Workspace mismatch and invalid responsibility |
 
 ## Review checklist

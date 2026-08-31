@@ -20,6 +20,8 @@ export class ProjectWatcher {
   private readonly forgeLoopRoot: string;
   private isActive = false;
   private retryCount = 0;
+  private retryTimer: NodeJS.Timeout | null = null;
+  private stopped = false;
 
   constructor(
     pathBoundary: PathBoundary,
@@ -35,6 +37,7 @@ export class ProjectWatcher {
 
   start(): void {
     if (this.isActive) return;
+    this.stopped = false;
 
     try {
       const watchPaths = [
@@ -80,6 +83,11 @@ export class ProjectWatcher {
   }
 
   stop(): void {
+    this.stopped = true;
+    if (this.retryTimer) {
+      clearTimeout(this.retryTimer);
+      this.retryTimer = null;
+    }
     if (this.watcher) {
       this.watcher.close();
       this.watcher = null;
@@ -315,6 +323,7 @@ export class ProjectWatcher {
   }
 
   private handleError(error: Error): void {
+    if (this.stopped) return;
     this.isActive = false;
     void this.watcher?.close();
     this.watcher = null;
@@ -322,8 +331,9 @@ export class ProjectWatcher {
 
     if (this.retryCount < WATCHER_MAX_RETRIES) {
       this.retryCount++;
-      setTimeout(() => {
-        if (!this.isActive) {
+      this.retryTimer = setTimeout(() => {
+        this.retryTimer = null;
+        if (!this.stopped && !this.isActive) {
           this.start();
         }
       }, WATCHER_RETRY_MS * this.retryCount);

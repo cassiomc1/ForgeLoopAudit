@@ -42,6 +42,26 @@ export function InspectorPanel({ task, onClose }: InspectorPanelProps) {
             </div>
           </div>
 
+          {task.canonicalStatus && (
+            <div className="rounded-8 border border-forge-border-subtle bg-forge-secondary-surface p-3">
+              <h3 className="text-xs font-semibold text-forge-text-muted uppercase tracking-wider mb-2">ForgeLoop status</h3>
+              <p className="text-sm font-mono text-forge-text-primary">{task.canonicalStatus.status}</p>
+              {task.canonicalStatus.reasons.length > 0 && <p className="mt-1 text-xs text-forge-warning">{task.canonicalStatus.reasons.join(' · ')}</p>}
+              {task.canonicalStatus.warnings.length > 0 && <p className="mt-1 text-xs text-forge-text-muted">Warnings: {task.canonicalStatus.warnings.join(' · ')}</p>}
+              <div className="mt-3 grid grid-cols-1 gap-1 text-[11px] text-forge-text-muted">
+                {task.canonicalStatus.repositoryComparison && <span>Repository: {task.canonicalStatus.repositoryComparison}</span>}
+                {task.canonicalStatus.contractComparison && <span>Contract: {task.canonicalStatus.contractComparison}</span>}
+                {task.canonicalStatus.artifactComparison && <span>Artifacts: {task.canonicalStatus.artifactComparison}</span>}
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3 text-xs">
+            <div><p className="text-forge-text-muted">Verification cycle</p><p className="mt-1 font-mono text-forge-text-primary">{task.verificationCycle ?? 'Unknown'}</p></div>
+            <div><p className="text-forge-text-muted">Publication</p><p className="mt-1 font-mono text-forge-text-primary">{task.publicationStatus || 'Unknown'}</p></div>
+            {task.nextAction && <div className="col-span-2"><p className="text-forge-text-muted">Next safe action</p><p className="mt-1 text-forge-text-primary">{task.nextAction.action}</p></div>}
+          </div>
+
           {task.objective && (
             <div>
               <h3 className="text-xs font-semibold text-forge-text-muted uppercase tracking-wider mb-3">Objective</h3>
@@ -167,6 +187,27 @@ export function InspectorPanel({ task, onClose }: InspectorPanelProps) {
               </div>
             </div>
           )}
+
+          {task.failures.length > 0 && (
+            <div>
+              <h3 className="text-xs font-semibold text-forge-text-muted uppercase tracking-wider mb-3">Failures</h3>
+              <div className="space-y-2">
+                {task.failures.map((failure) => (
+                  <div key={failure.id} className="p-2 bg-forge-danger/5 border border-forge-danger/20 rounded-6">
+                    <p className="text-xs text-forge-danger">{failure.message}</p>
+                    {failure.verificationCycle !== undefined && <p className="text-[10px] text-forge-text-muted mt-1">Cycle: {failure.verificationCycle}</p>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {(task.artifactErrors?.length || task.gateErrors?.length) ? (
+            <div className="rounded-8 border border-forge-warning/20 bg-forge-warning/5 p-3 text-xs">
+              <h3 className="font-semibold text-forge-warning">Validation errors</h3>
+              {[...(task.artifactErrors || []), ...(task.gateErrors || [])].map((message) => <p key={message} className="mt-1 text-forge-text-secondary">{message}</p>)}
+            </div>
+          ) : null}
 
           <div>
             <h3 className="text-xs font-semibold text-forge-text-muted uppercase tracking-wider mb-3">Steps</h3>

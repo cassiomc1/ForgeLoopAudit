@@ -360,7 +360,16 @@ function extractHealthStatus(value: unknown): string | undefined {
   if (!value || typeof value !== 'object') return undefined;
   const record = value as Record<string, unknown>;
   const candidate = [record.status, record.stateStatus, record.state, record.health].find((item) => typeof item === 'string');
-  return typeof candidate === 'string' ? candidate.toUpperCase() : undefined;
+  if (typeof candidate !== 'string') return undefined;
+  const normalized = candidate.toUpperCase();
+  // ForgeLoop's task/status resource reports freshness as FRESH or
+  // REVALIDATION_REQUIRED, while Studio's project-health contract exposes
+  // the corresponding user-facing states as VALID and STALE. Keep this
+  // translation explicit; do not infer health from lifecycle phase.
+  if (normalized === 'FRESH') return 'VALID';
+  if (normalized === 'REVALIDATION_REQUIRED') return 'STALE';
+  if (normalized === 'ABSENT') return 'INCOMPLETE';
+  return normalized;
 }
 function extractPhase(value: unknown): string | undefined {
   if (!value || typeof value !== 'object') return undefined;

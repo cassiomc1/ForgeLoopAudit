@@ -7,6 +7,7 @@ import { SchemaValidator } from '@main/core/protocol/validator';
 import { createProjectReader } from '@main/core/project/project-reader';
 import {
   createCanonicalTaskReadService,
+  summarizeCanonicalTaskStatus,
   type CanonicalTaskReadService,
 } from '@main/core/tasks/canonical-task-read-service';
 import type { ForgeLoopIntegrationAdapter } from '@main/core/integration/forgeloop-integration';
@@ -118,6 +119,36 @@ describe('core/tasks/canonical-task-read-service', () => {
     expect(result.summary.ownership.source).toBe('FORGELOOP_INTEGRATION');
     expect(result.summary.operationalState).toBe('ACTIVE');
     expect(result.status).toBeDefined();
+  });
+
+  it('preserves canonical status freshness and comparison reasons for the UI', async () => {
+    const adapter = adapterWith(ownership({}));
+    adapter.readTaskStatus = async () => ({
+      status: 'REVALIDATION_REQUIRED',
+      reasons: ['REPOSITORY_CHANGED', 'CONTRACT_NOT_VERIFIED'],
+      warnings: ['CHECKPOINT_OLD'],
+      repositoryComparison: 'MISMATCH',
+      contractComparison: 'NOT_VERIFIED',
+      artifactComparison: 'NOT_APPLICABLE',
+    });
+    const boundary = new PathBoundary(root);
+    const reader = createProjectReader(boundary, new SchemaValidator('schemas'));
+    service = createCanonicalTaskReadService({ projectRoot: root, projectReader: reader, integration: adapter });
+
+    const result = await service.readTask('TASK-1', KEY);
+
+    expect(result.summary.canonicalStatus).toEqual({
+      status: 'REVALIDATION_REQUIRED',
+      reasons: ['REPOSITORY_CHANGED', 'CONTRACT_NOT_VERIFIED'],
+      warnings: ['CHECKPOINT_OLD'],
+      repositoryComparison: 'MISMATCH',
+      contractComparison: 'NOT_VERIFIED',
+      artifactComparison: 'NOT_APPLICABLE',
+    });
+  });
+
+  it('fails closed when canonical status has no status field', () => {
+    expect(summarizeCanonicalTaskStatus({ phase: 'EXECUTING' })).toBeUndefined();
   });
 
   it('never marks recovered tasks as active', async () => {

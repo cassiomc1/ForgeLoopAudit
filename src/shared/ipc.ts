@@ -90,6 +90,8 @@ export interface MainToRendererEvents {
 export interface WatcherStatus {
   active: boolean;
   lastEventAt?: string;
+  lastEventType?: string;
+  lastTaskId?: string;
   error?: string;
 }
 

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { NavItemId } from '@renderer/App';
+import type { WatcherStatus } from '@shared/domain';
 import { FolderOpen, ChevronLeft, ChevronRight, X, GitBranch } from 'lucide-react';
 import { clsx } from 'clsx';
 import { NAV_ITEMS } from '@renderer/App';
@@ -13,7 +14,7 @@ interface AppShellProps {
   head?: string;
   protocolVersion: number;
   health: string;
-  watcherStatus: { active: boolean; lastEventAt?: string; error?: string };
+  watcherStatus: WatcherStatus;
   activeNav: NavItemId;
   onNavChange: (nav: NavItemId) => void;
   sidebarCollapsed: boolean;
@@ -206,11 +207,17 @@ export function AppShell({
             </span>
 
             <span className={clsx('flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-6',
-              watcherStatus.active ? 'bg-forge-success/10 text-forge-success' : 'bg-forge-border-subtle text-forge-text-muted'
-            )}>
-              <span className={clsx('w-1.5 h-1.5 rounded-full', watcherStatus.active ? 'bg-forge-success animate-pulse-subtle' : 'bg-forge-border-strong')} />
-              <span>{watcherStatus.active ? 'Live' : 'Paused'}</span>
+              watcherStatus.error ? 'bg-forge-danger/10 text-forge-danger' : watcherStatus.active ? 'bg-forge-success/10 text-forge-success' : 'bg-forge-border-subtle text-forge-text-muted'
+            )} title={watcherStatus.error || (watcherStatus.lastEventType && watcherStatus.lastEventAt ? `Last monitored change: ${watcherStatus.lastEventType} at ${new Date(watcherStatus.lastEventAt).toLocaleTimeString()}` : 'Watching ForgeLoop project files')} aria-label={`File watcher: ${watcherStatus.error ? 'error' : watcherStatus.active ? 'live' : 'paused'}`}>
+              <span className={clsx('w-1.5 h-1.5 rounded-full', watcherStatus.error ? 'bg-forge-danger' : watcherStatus.active ? 'bg-forge-success animate-pulse-subtle' : 'bg-forge-border-strong')} />
+              <span>{watcherStatus.error ? 'Error' : watcherStatus.active ? 'Live' : 'Paused'}</span>
             </span>
+
+            {watcherStatus.lastEventType && watcherStatus.lastEventAt && (
+              <span className="hidden xl:inline text-[11px] text-forge-text-muted" title={watcherStatus.lastEventType}>
+                Last change {new Date(watcherStatus.lastEventAt).toLocaleTimeString()}
+              </span>
+            )}
 
             {isLoading && (
               <svg className="w-5 h-5 text-forge-accent animate-spin" fill="none" viewBox="0 0 24 24">

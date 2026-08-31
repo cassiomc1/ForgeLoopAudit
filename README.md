@@ -23,7 +23,7 @@ information.
 
 | Overview | Tasks | Lifecycle flow |
 |---|---|---|
-| <img src="screen/overview.png" alt="ForgeShop project overview with health metrics and Task Boundaries" width="420"> | <img src="screen/tasks.png" alt="ForgeShop task list with six mixed lifecycle states" width="420"> | <img src="screen/lifecycle-flow.png" alt="ForgeShop lifecycle flow for the selected task" width="420"> |
+| <img src="screen/overview.png" alt="ForgeShop project overview with Project Information, health metrics and Task Boundaries" width="420"> | <img src="screen/tasks.png" alt="ForgeShop task list with six mixed lifecycle states" width="420"> | <img src="screen/lifecycle-flow.png" alt="ForgeShop lifecycle flow for the selected task" width="420"> |
 | Contract inspector | Evidence matrix | Event ledger |
 | <img src="screen/contract-inspector.png" alt="ForgeShop contract inspector showing the selected task contract" width="420"> | <img src="screen/evidence-matrix.png" alt="ForgeShop evidence matrix showing verification scope and attestation boundaries" width="420"> | <img src="screen/event-ledger.png" alt="ForgeShop event ledger with canonical task events" width="420"> |
 | Continuity | Diagnostics | Actions |
