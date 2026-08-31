@@ -160,7 +160,7 @@ try {
   await openSurface(page, 'Settings', 'Settings');
   await capture(page, 'settings.png', 'Settings', async () => {
     await expect(page.getByText(`ForgeLoop Studio v${packageVersion}`, { exact: true })).toBeVisible();
-    await expect(page.getByText('1.7.0', { exact: true })).toBeVisible();
+    await expect(page.getByText('1.8.0', { exact: true })).toBeVisible();
     await expect(page.getByText('INTEGRATION_V1', { exact: true })).toBeVisible();
   }, page.getByRole('heading', { name: 'ForgeLoop protocol', exact: true }));
 

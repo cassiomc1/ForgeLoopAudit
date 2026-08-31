@@ -7,8 +7,8 @@
 **Target ForgeLoop protocol:** v1  
 **Default product mode:** Local, read-only observer  
 
-The current release line is `0.1.0-rc.6`, aligned to ForgeLoop `1.7.0` at
-source commit `1eaae5cbb2046ef606d201161aa5abbbeddab153` with protocol v1,
+The current release line is `0.1.0-rc.6`, aligned to ForgeLoop `1.8.0` at
+source commit `a4360ac9b24b19c74171fdbac3163b892d896484` with protocol v1,
 schema v1 and Integration API v1. This document describes the implemented
 observer boundary and identifies genuine future work explicitly.
 
@@ -58,9 +58,9 @@ read-only ForgeLoop Studio renderer
 
 The UI must represent actual ForgeLoop protocol concepts and artifacts. It must not invent hidden lifecycle states, undocumented completion rules, synthetic evidence, or alternative transitions.
 
-### 2.1a ForgeLoop 1.7.0 Integration boundary
+### 2.1a ForgeLoop 1.8.0 Integration boundary
 
-Semantic facts come exclusively from the bundled `@cassiomc1/forgeloop/integration` public subpath (ForgeLoop 1.7.0, Integration API v1, protocol v1, schema v1):
+Semantic facts come exclusively from the bundled `@cassiomc1/forgeloop/integration` public subpath (ForgeLoop 1.8.0, Integration API v1, protocol v1, schema v1):
 
 - `protocol/info` — compatibility via `compatibility.schemaVersion` (there is no top-level `schemaVersion`);
 - `project/tasks` — canonical task discovery with filesystem parity diagnostics;
@@ -84,7 +84,7 @@ ForgeLoop 1.6.4 advertises five additive, independently negotiated feature famil
 
 The five resources are read through narrow, selected-task APIs and optional failures remain isolated. Attestation is lazy and panel-scoped. Studio never creates or signs attestations. Attestation status is loaded only for the selected task; Studio may request ForgeLoop's canonical local content verification when no external signing-provider execution is required. External signing-provider verification is never triggered automatically. Studio never binds a workspace, creates a handoff, sets responsibility or computes verification scope. Verification scope is distinct from attestation coverage, and mutable Continuity remains separate from immutable canonical handoffs.
 
-### 2.1c ForgeLoop 1.7.0 adaptive efficiency context
+### 2.1c ForgeLoop adaptive efficiency context
 
 ForgeLoop 1.7.0 adds the canonical `task/context` projection. Studio reads it
 only when the complete advertised capability is present and displays the
