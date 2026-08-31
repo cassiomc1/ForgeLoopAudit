@@ -33,7 +33,7 @@ describe('watcher lifecycle', () => {
     await new Promise((resolve) => setTimeout(resolve, 300));
     expect(watcher.getStatus().active).toBe(true);
     expect(events).toEqual(expect.arrayContaining([expect.objectContaining({ type: 'artifact-changed', artifact: 'config.json' })]));
-    watcher.stop();
+    await watcher.stop();
     expect(watcher.getStatus().active).toBe(false);
   });
 
@@ -70,7 +70,7 @@ describe('watcher lifecycle', () => {
       ]));
     } finally {
       validatePath.mockRestore();
-      watcher.stop();
+      await watcher.stop();
     }
   }, 10000);
 });

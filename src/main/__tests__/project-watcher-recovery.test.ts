@@ -37,7 +37,7 @@ async function startWatcher(root: string, events: unknown[]): Promise<ProjectWat
     await new Promise((resolve) => setTimeout(resolve, 25));
   }
   if (!watcher.getStatus().active) {
-    watcher.stop();
+    await watcher.stop();
     throw new Error('Timed out waiting for watcher readiness');
   }
   return watcher;
@@ -60,7 +60,7 @@ describe('watcher recovery and execution artifacts', () => {
           && (event as { taskKey?: string }).taskKey === TASK_KEY
       ));
     } finally {
-      watcher.stop();
+      await watcher.stop();
     }
   });
 
@@ -81,7 +81,7 @@ describe('watcher recovery and execution artifacts', () => {
         expect.objectContaining({ type: 'artifact-changed', artifact: 'exec-1.json' }),
       ]));
     } finally {
-      watcher.stop();
+      await watcher.stop();
     }
   }, 15000);
 
@@ -101,7 +101,7 @@ describe('watcher recovery and execution artifacts', () => {
           && (event as { taskKey?: string }).taskKey === TASK_KEY
       ));
     } finally {
-      watcher.stop();
+      await watcher.stop();
     }
   }, 15000);
 
@@ -138,7 +138,7 @@ describe('watcher recovery and execution artifacts', () => {
       expect(attestationEvents).toHaveLength(1);
       expect(attestationEvents[0]).toMatchObject({ taskKey: TASK_KEY, artifact: 'attestations' });
     } finally {
-      watcher.stop();
+      await watcher.stop();
     }
   }, 15000);
 
@@ -163,7 +163,7 @@ describe('watcher recovery and execution artifacts', () => {
         expect.objectContaining({ type: 'task-added', taskKey: TASK_KEY }),
       ]));
     } finally {
-      watcher.stop();
+      await watcher.stop();
     }
   }, 15000);
 
@@ -187,7 +187,7 @@ describe('watcher recovery and execution artifacts', () => {
           && (event as { artifact?: string }).artifact === 'action-cycle.json'
       ));
     } finally {
-      watcher.stop();
+      await watcher.stop();
     }
   }, 15000);
 
@@ -208,7 +208,7 @@ describe('watcher recovery and execution artifacts', () => {
         expect.objectContaining({ type: 'policy-changed', path: expect.stringContaining('capabilities.json') }),
       ]));
     } finally {
-      watcher.stop();
+      await watcher.stop();
     }
   }, 15000);
 });

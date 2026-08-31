@@ -113,7 +113,7 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
 
   ipcMain.handle(IPC_CHANNELS.CLOSE_PROJECT, async (event): Promise<void> => {
     assertTrustedSender(event);
-    closeProject();
+    await closeProject();
   });
 
   ipcMain.handle(IPC_CHANNELS.GET_PROJECT_SNAPSHOT, async (event): Promise<any> => {
@@ -411,7 +411,7 @@ export function updateProjectIpcWindow(mainWindow: BrowserWindow): void {
 }
 
 async function openProject(projectRoot: string, projectKind: ProjectKind = 'PROJECT'): Promise<ProjectDetectionResult> {
-  closeProject();
+  await closeProject();
   snapshotGeneration = 0;
 
   const pathBoundary = new PathBoundary(projectRoot);
@@ -555,18 +555,18 @@ export async function openProjectForAutomation(projectRoot: string): Promise<Pro
   return openProject(projectRoot);
 }
 
-export function shutdownProject(): void {
-  closeProject();
+export async function shutdownProject(): Promise<void> {
+  await closeProject();
 }
 
-function closeProject(): void {
+async function closeProject(): Promise<void> {
   if (snapshotRefreshTimer) {
     clearTimeout(snapshotRefreshTimer);
     snapshotRefreshTimer = null;
   }
   snapshotRefreshScheduled = false;
   if (currentWatcher) {
-    currentWatcher.stop();
+    await currentWatcher.stop();
     currentWatcher = null;
   }
   currentProjectBoundary = null;

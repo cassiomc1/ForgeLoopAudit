@@ -107,7 +107,7 @@ app.on('window-all-closed', () => {
 });
 
 app.on('will-quit', () => {
-  shutdownProject();
+  void shutdownProject();
 });
 
 process.on('uncaughtException', (error) => {

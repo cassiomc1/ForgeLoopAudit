@@ -44,16 +44,11 @@ export class ProjectWatcher {
     this.stopped = false;
 
     try {
-      const watchPaths = [
-        join(this.forgeLoopRoot, '*.json'),
-        join(this.forgeLoopRoot, TASK_STATE_DIR, '**', '*.json'),
-        join(this.forgeLoopRoot, TASK_STATE_DIR, '**', '*.ndjson'),
-        join(this.forgeLoopRoot, SESSIONS_DIR, '*.json'),
-        join(this.forgeLoopRoot, POLICY_DIR, '**', '*.json'),
-        join(this.forgeLoopRoot, POLICY_DIR, 'policy.lock'),
-      ];
-
-      this.watcher = chokidar.watch(watchPaths, {
+      // Watch the bounded ForgeLoop state tree once and classify events below.
+      // Multiple overlapping glob roots can share native watcher handles and
+      // lose a child notification on Windows; one recursive root keeps the
+      // monitored surface complete while classification remains allowlisted.
+      this.watcher = chokidar.watch(this.forgeLoopRoot, {
         ignored: [
           join(this.forgeLoopRoot, '.txn', '**'),
           join(this.forgeLoopRoot, '*.log'),
@@ -91,7 +86,7 @@ export class ProjectWatcher {
     }
   }
 
-  stop(): void {
+  async stop(): Promise<void> {
     this.stopped = true;
     if (this.retryTimer) {
       clearTimeout(this.retryTimer);
@@ -99,13 +94,12 @@ export class ProjectWatcher {
     }
     for (const timer of this.pathValidationRetryTimers) clearTimeout(timer);
     this.pathValidationRetryTimers.clear();
-    if (this.watcher) {
-      this.watcher.close();
-      this.watcher = null;
-    }
+    const watcher = this.watcher;
+    this.watcher = null;
     this.coalescer.destroy();
     this.isActive = false;
     this.onStatusChange(false);
+    if (watcher) await watcher.close();
   }
 
   private handleFileChange(path: string, changeType: 'add' | 'change' | 'unlink', attempt = 0): void {
@@ -360,8 +354,9 @@ export class ProjectWatcher {
   private handleError(error: Error): void {
     if (this.stopped) return;
     this.isActive = false;
-    void this.watcher?.close();
+    const watcher = this.watcher;
     this.watcher = null;
+    void watcher?.close();
     this.onError(error);
 
     if (this.retryCount < WATCHER_MAX_RETRIES) {
