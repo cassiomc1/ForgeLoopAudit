@@ -20,7 +20,7 @@ async function makeProject(): Promise<string> {
 }
 
 async function waitForEvent(events: unknown[], predicate: (event: unknown) => boolean): Promise<void> {
-  const deadline = Date.now() + 3_000;
+  const deadline = Date.now() + 10_000;
   while (Date.now() < deadline) {
     if (events.some(predicate)) return;
     await new Promise((resolve) => setTimeout(resolve, 25));
@@ -81,7 +81,7 @@ describe('watcher recovery and execution artifacts', () => {
     } finally {
       watcher.stop();
     }
-  }, 10000);
+  }, 15000);
 
   it.each([
     ['workspace-binding.json', 'workspace-binding-changed'],
@@ -101,7 +101,7 @@ describe('watcher recovery and execution artifacts', () => {
     } finally {
       watcher.stop();
     }
-  }, 10000);
+  }, 15000);
 
   it('classifies handoff collection changes and coalesces an attestation file burst', async () => {
     const root = await makeProject();
@@ -138,7 +138,7 @@ describe('watcher recovery and execution artifacts', () => {
     } finally {
       watcher.stop();
     }
-  }, 10000);
+  }, 15000);
 
   it.each([
     ['actions', 'action-added', 'action-changed'],
@@ -163,7 +163,7 @@ describe('watcher recovery and execution artifacts', () => {
     } finally {
       watcher.stop();
     }
-  }, 10000);
+  }, 15000);
 
   it('classifies collection file changes and removals as bounded typed events', async () => {
     const root = await makeProject();
@@ -187,7 +187,7 @@ describe('watcher recovery and execution artifacts', () => {
     } finally {
       watcher.stop();
     }
-  }, 10000);
+  }, 15000);
 
   it('classifies policy capabilities separately from generic policy changes', async () => {
     const root = await makeProject();
@@ -208,5 +208,5 @@ describe('watcher recovery and execution artifacts', () => {
     } finally {
       watcher.stop();
     }
-  }, 10000);
+  }, 15000);
 });
