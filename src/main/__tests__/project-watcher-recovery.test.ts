@@ -53,10 +53,12 @@ describe('watcher recovery and execution artifacts', () => {
         join(root, '.forgeloop', 'task-state', TASK_KEY, 'recovery.json'),
         JSON.stringify({ schemaVersion: 1 }),
       );
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      expect(events).toEqual(expect.arrayContaining([
-        expect.objectContaining({ type: 'artifact-changed', artifact: 'recovery.json', taskKey: TASK_KEY }),
-      ]));
+      await waitForEvent(events, (event) => (
+        typeof event === 'object' && event !== null
+          && (event as { type?: string }).type === 'artifact-changed'
+          && (event as { artifact?: string }).artifact === 'recovery.json'
+          && (event as { taskKey?: string }).taskKey === TASK_KEY
+      ));
     } finally {
       watcher.stop();
     }

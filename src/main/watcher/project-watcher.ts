@@ -61,6 +61,11 @@ export class ProjectWatcher {
         ],
         ignoreInitial: true,
         persistent: true,
+        // Windows can silently drop a subset of rapid additions through its
+        // native fs.watch backend. Polling keeps the live projection complete
+        // for the small, bounded ForgeLoop state tree without changing the
+        // native backend used by macOS and Linux.
+        usePolling: process.platform === 'win32',
         awaitWriteFinish: {
           stabilityThreshold: 50,
           pollInterval: 20,
