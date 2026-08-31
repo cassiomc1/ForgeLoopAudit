@@ -27,6 +27,7 @@ export class ProjectWatcher {
   private retryTimer: NodeJS.Timeout | null = null;
   private readonly pathValidationRetryTimers = new Set<NodeJS.Timeout>();
   private readonly pendingAttestationChanges = new Map<string, CoalescedChange>();
+  private readonly knownTaskKeys = new Set<string>();
   private attestationBurstTimer: NodeJS.Timeout | null = null;
   private stopped = false;
 
@@ -45,6 +46,7 @@ export class ProjectWatcher {
   start(): void {
     if (this.isActive) return;
     this.stopped = false;
+    this.knownTaskKeys.clear();
 
     try {
       // Watch the bounded ForgeLoop state tree once and classify events below.
@@ -79,6 +81,7 @@ export class ProjectWatcher {
         .on('unlinkDir', (path) => this.handleDirChange(path, 'unlink'))
         .on('error', (error) => this.handleError(error))
         .on('ready', () => {
+          this.initializeKnownTaskKeys();
           this.isActive = true;
           this.retryCount = 0;
           this.onStatusChange(true);
@@ -102,6 +105,7 @@ export class ProjectWatcher {
       this.attestationBurstTimer = null;
     }
     this.pendingAttestationChanges.clear();
+    this.knownTaskKeys.clear();
     const watcher = this.watcher;
     this.watcher = null;
     this.coalescer.destroy();
@@ -170,6 +174,12 @@ export class ProjectWatcher {
     for (const change of changes) {
       const event = this.classifyChange(change);
       if (event) {
+        if (event.type === 'task-added' && event.taskKey) {
+          // A recursive root watcher can rediscover an already-existing task
+          // while reconciling a child directory. Only announce a task once.
+          if (this.knownTaskKeys.has(event.taskKey)) continue;
+          this.knownTaskKeys.add(event.taskKey);
+        }
         if (event.type === 'attestation-changed' && event.taskKey) {
           // Files in an attestation collection are often committed together,
           // but platform watchers can discover them in separate batches. Keep
@@ -195,6 +205,19 @@ export class ProjectWatcher {
           });
         }
       }, ATTESTATION_BURST_DEBOUNCE_MS);
+    }
+  }
+
+  private initializeKnownTaskKeys(): void {
+    this.knownTaskKeys.clear();
+    if (!this.watcher) return;
+
+    const taskStateRoot = join(this.forgeLoopRoot, TASK_STATE_DIR);
+    for (const watchedPath of Object.keys(this.watcher.getWatched())) {
+      const relativePath = relative(taskStateRoot, watchedPath);
+      if (!relativePath || relativePath.startsWith('..') || relativePath.includes(`${sep}..${sep}`)) continue;
+      const parts = relativePath.split(sep);
+      if (parts.length === 1) this.knownTaskKeys.add(parts[0]);
     }
   }
 
