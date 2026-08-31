@@ -7,8 +7,8 @@
 **Target ForgeLoop protocol:** v1  
 **Default product mode:** Local, read-only observer  
 
-The current release line is `0.1.0-rc.6`, aligned to ForgeLoop `1.6.4` at
-source commit `24f50f9eefe5055cec053f075c748542b42e4ea2` with protocol v1,
+The current release line is `0.1.0-rc.6`, aligned to ForgeLoop `1.7.0` at
+source commit `1eaae5cbb2046ef606d201161aa5abbbeddab153` with protocol v1,
 schema v1 and Integration API v1. This document describes the implemented
 observer boundary and identifies genuine future work explicitly.
 
@@ -58,9 +58,9 @@ read-only ForgeLoop Studio renderer
 
 The UI must represent actual ForgeLoop protocol concepts and artifacts. It must not invent hidden lifecycle states, undocumented completion rules, synthetic evidence, or alternative transitions.
 
-### 2.1a ForgeLoop 1.6.4 Integration boundary
+### 2.1a ForgeLoop 1.7.0 Integration boundary
 
-Semantic facts come exclusively from the bundled `@cassiomc1/forgeloop/integration` public subpath (ForgeLoop 1.6.4, Integration API v1, protocol v1, schema v1):
+Semantic facts come exclusively from the bundled `@cassiomc1/forgeloop/integration` public subpath (ForgeLoop 1.7.0, Integration API v1, protocol v1, schema v1):
 
 - `protocol/info` — compatibility via `compatibility.schemaVersion` (there is no top-level `schemaVersion`);
 - `project/tasks` — canonical task discovery with filesystem parity diagnostics;
@@ -83,6 +83,22 @@ ForgeLoop 1.6.4 advertises five additive, independently negotiated feature famil
 | Code attestation | `task/attestation` | Display canonical status and independent `PROCESSED`, `VERIFIED` or `ATTESTED` trust levels; never create or sign attestations |
 
 The five resources are read through narrow, selected-task APIs and optional failures remain isolated. Attestation is lazy and panel-scoped. Studio never creates or signs attestations. Attestation status is loaded only for the selected task; Studio may request ForgeLoop's canonical local content verification when no external signing-provider execution is required. External signing-provider verification is never triggered automatically. Studio never binds a workspace, creates a handoff, sets responsibility or computes verification scope. Verification scope is distinct from attestation coverage, and mutable Continuity remains separate from immutable canonical handoffs.
+
+### 2.1c ForgeLoop 1.7.0 adaptive efficiency context
+
+ForgeLoop 1.7.0 adds the canonical `task/context` projection. Studio reads it
+only when the complete advertised capability is present and displays the
+requested profile, safety floor, resolved profile, escalation state, bounded
+context policy and invariants without classifying the task locally. Older
+compatible hosts receive an explicit balanced compatibility projection;
+advertised-but-unavailable or malformed context remains unavailable.
+
+Efficiency telemetry is host/provider-reported or `UNKNOWN` and is never
+estimated from event counts, wall-clock time or provider-specific tokenizers.
+Context inflation and benchmark regression statuses are observational,
+non-blocking diagnostics. The panel preserves `NOT MEASURED` when trusted
+usage or quality data is absent and never changes lifecycle authority or
+completion state.
 
 ### 2.2 Read-only by default
 
@@ -1736,7 +1752,8 @@ Developer
 ```
 
 The protocol section also displays ForgeLoop package, protocol/schema versions,
-compatibility mode and independently negotiated 1.6.4 boundary capabilities.
+compatibility mode and independently negotiated boundary capabilities,
+including adaptive execution-profile context and efficiency observability.
 Protocol state and project policy remain read-only. Dark theme is the default
 and flagship appearance.
 
@@ -1776,6 +1793,9 @@ following surfaces:
 - canonical ownership, durable recovery, observability, gates, checks,
   evidence, policy, next-action, execution provenance and bounded raw-artifact
   detail;
+- adaptive execution-profile context with explicit balanced compatibility,
+  host/provider-reported usage, context-inflation diagnostics and
+  `NOT MEASURED` handling for unavailable efficiency evidence;
 - independently degraded Workspace Binding, Canonical Handoffs,
   Responsibility Constraints, Differential Verification Scope and Code
   Attestation presentations;

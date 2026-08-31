@@ -35,7 +35,7 @@ Settings → Diagnostics reports the negotiated `ForgeLoopCompatibilityMode` ver
 
 ## Ownership shows "OWNERSHIP UNAVAILABLE"
 
-Canonical ownership comes exclusively from the bundled ForgeLoop 1.6.4
+Canonical ownership comes exclusively from the bundled ForgeLoop 1.7.0
 Integration API (`task/ownership`). When the Integration API is unavailable,
 Studio degrades to `ARTIFACT_ONLY` mode: raw artifacts stay readable for
 inspection but ownership facts are shown as unavailable instead of being
@@ -57,6 +57,21 @@ The project capability policy is context for ForgeLoop decisions. Displaying `AL
 
 ForgeLoop reports usage as `null`/`UNKNOWN` when the runtime cannot attest tokens or cost. Studio preserves that honest state; it does not estimate usage from event counts or wall-clock time.
 
+## Execution profile or efficiency context is unavailable
+
+The Overview panel reads the canonical task/context resource only when the
+Integration API advertises adaptiveExecutionProfiles, executionProfileContext,
+and task/context. It displays requested, floor, resolved, escalated, the
+bounded context policy and policy invariants as read-only data. A host that
+lacks the additive capability receives an explicit balanced compatibility
+projection; an advertised but unavailable or malformed projection remains
+unavailable.
+
+Efficiency telemetry is provider-, host- or actor-reported only. Missing usage,
+context-item counts, wall-clock values or compatible comparisons are shown as
+NOT MEASURED, never as zero. Context inflation and regression checks are
+diagnostic observations and do not alter ForgeLoop lifecycle truth.
+
 ## Task badge says "RECOVERED — RESUME REQUIRED"
 
 The task has a valid durable recovery (`claimState=RELEASED_BY_RECOVERY`, `mutationAllowed=false`). Mutations are blocked until an authorized harness performs the canonical ForgeLoop `task-resume`. Studio only displays this state and offers the command as copy-only text; it never executes it.
@@ -71,7 +86,7 @@ Executions load lazily per task from `.forgeloop/task-state/<key>/executions/exe
 
 ## Task Boundaries shows an unavailable optional feature
 
-The Task Boundaries surface reads ForgeLoop 1.6.4 resources independently. A missing or incomplete workspace binding, canonical handoff, responsibility, verification-scope or attestation advertisement keeps the project in `INTEGRATION_V1` and disables only the affected view. A valid workspace or handoff can still be displayed when responsibility is invalid or attestation is disabled.
+The Task Boundaries surface reads ForgeLoop 1.7.0 resources independently. A missing or incomplete workspace binding, canonical handoff, responsibility, verification-scope, attestation or execution-profile context advertisement keeps only the affected view unavailable while the project remains in `INTEGRATION_V1`. A valid workspace or handoff can still be displayed when responsibility is invalid or attestation is disabled.
 
 ## Workspace binding mismatch or unavailable
 

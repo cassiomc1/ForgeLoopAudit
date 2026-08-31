@@ -24,6 +24,7 @@ import type {
   ResponsibilityView,
   VerificationScopeView,
   TaskAttestationView,
+  ExecutionProfileContextView,
 } from '@shared/domain';
 import { IPC_CHANNELS } from '@shared/ipc';
 
@@ -55,6 +56,8 @@ const api = {
   getTaskResponsibility: (taskId: string): Promise<ResponsibilityView> => ipcRenderer.invoke(IPC_CHANNELS.GET_TASK_RESPONSIBILITY, taskId),
   getTaskVerificationScope: (taskId: string): Promise<VerificationScopeView> => ipcRenderer.invoke(IPC_CHANNELS.GET_TASK_VERIFICATION_SCOPE, taskId),
   getTaskAttestation: (taskId: string): Promise<TaskAttestationView> => ipcRenderer.invoke(IPC_CHANNELS.GET_TASK_ATTESTATION, taskId),
+  getTaskExecutionProfileContext: (taskId: string): Promise<ExecutionProfileContextView> =>
+    ipcRenderer.invoke(IPC_CHANNELS.GET_TASK_EXECUTION_PROFILE_CONTEXT, taskId),
   getTaskExecutions: (taskId: string, limit?: number): Promise<ExecutionPage> =>
     ipcRenderer.invoke(IPC_CHANNELS.GET_TASK_EXECUTIONS, taskId, limit),
   getRecentProjects: (): Promise<RecentProject[]> => ipcRenderer.invoke(IPC_CHANNELS.GET_RECENT_PROJECTS),

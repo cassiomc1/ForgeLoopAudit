@@ -74,6 +74,8 @@ export interface ForgeLoopIntegrationAdapter {
   readTaskOwnership(projectRoot: string, taskId: string): Promise<CanonicalOwnershipResource>;
   readTaskContract(projectRoot: string, taskId: string): Promise<Record<string, unknown>>;
   readTaskContinuity(projectRoot: string, taskId: string): Promise<Record<string, unknown>>;
+  /** Present when the canonical execution-profile context capability is advertised. */
+  readTaskContext?: (projectRoot: string, taskId: string) => Promise<Record<string, unknown>>;
   readTaskWorkspaceBinding?: (projectRoot: string, taskId: string) => Promise<Record<string, unknown>>;
   readTaskHandoffs?: (projectRoot: string, taskId: string) => Promise<Record<string, unknown>>;
   readTaskResponsibility?: (projectRoot: string, taskId: string) => Promise<Record<string, unknown>>;
@@ -113,6 +115,27 @@ interface ForgeLoopIntegrationModule {
         durableRecoveryState: boolean;
         explicitResume: boolean;
         validatedClaimProjection: boolean;
+      };
+      adaptiveExecutionProfiles?: {
+        version: number;
+        supported: boolean;
+        deterministic: boolean;
+        lifecycleFastPath: boolean;
+      };
+      executionProfileContext?: {
+        version: number;
+        supported: boolean;
+        resource: string;
+        resolvedProfileAuthoritative: boolean;
+        compatibilityFallback: string;
+        lifecycleFastPath: boolean;
+      };
+      contextUsageObservability?: {
+        version: number;
+        supported: boolean;
+        sources: unknown[];
+        estimation: boolean;
+        inflationStatus: string;
       };
       durableActions?: {
         version: number;
@@ -220,6 +243,9 @@ function buildAdapter(fl: ForgeLoopIntegrationModule): ForgeLoopIntegrationAdapt
     getCapabilities(): ForgeLoopCapabilitiesSummary {
       const packageVersion = fl.getForgeLoopPackageVersion();
       const raw = fl.getForgeLoopCapabilities({ packageVersion });
+      const adaptiveExecutionProfiles = raw.features.adaptiveExecutionProfiles;
+      const executionProfileContext = raw.features.executionProfileContext;
+      const contextUsageObservability = raw.features.contextUsageObservability;
       const durableActions = raw.features.durableActions;
       const trajectoryEvaluation = raw.features.trajectoryEvaluation;
       const verificationExecutionIsolation = raw.features.verificationExecutionIsolation;
@@ -240,6 +266,37 @@ function buildAdapter(fl: ForgeLoopIntegrationModule): ForgeLoopIntegrationAdapt
             explicitResume: raw.features.taskClaimRecovery.explicitResume === true,
             validatedClaimProjection: raw.features.taskClaimRecovery.validatedClaimProjection === true,
           },
+          ...(adaptiveExecutionProfiles ? {
+            adaptiveExecutionProfiles: {
+              version: finiteNumber(adaptiveExecutionProfiles.version, 0),
+              supported: adaptiveExecutionProfiles.supported === true,
+              deterministic: adaptiveExecutionProfiles.deterministic === true,
+              lifecycleFastPath: adaptiveExecutionProfiles.lifecycleFastPath === true,
+            },
+          } : {}),
+          ...(executionProfileContext ? {
+            executionProfileContext: {
+              version: finiteNumber(executionProfileContext.version, 0),
+              supported: executionProfileContext.supported === true,
+              resource: typeof executionProfileContext.resource === 'string' ? executionProfileContext.resource : '',
+              resolvedProfileAuthoritative: executionProfileContext.resolvedProfileAuthoritative === true,
+              compatibilityFallback: typeof executionProfileContext.compatibilityFallback === 'string'
+                ? executionProfileContext.compatibilityFallback
+                : '',
+              lifecycleFastPath: executionProfileContext.lifecycleFastPath === true,
+            },
+          } : {}),
+          ...(contextUsageObservability ? {
+            contextUsageObservability: {
+              version: finiteNumber(contextUsageObservability.version, 0),
+              supported: contextUsageObservability.supported === true,
+              sources: stringArray(contextUsageObservability.sources),
+              estimation: contextUsageObservability.estimation === true,
+              inflationStatus: typeof contextUsageObservability.inflationStatus === 'string'
+                ? contextUsageObservability.inflationStatus
+                : '',
+            },
+          } : {}),
           ...(durableActions ? {
             durableActions: {
               version: durableActions.version,
@@ -349,6 +406,11 @@ function buildAdapter(fl: ForgeLoopIntegrationModule): ForgeLoopIntegrationAdapt
     async readTaskContinuity(projectRoot: string, taskId: string): Promise<Record<string, unknown>> {
       assertReadProjectRoot(projectRoot);
       return readResource<Record<string, unknown>>(fl, 'task/continuity', { projectPath: projectRoot, taskId });
+    },
+
+    async readTaskContext(projectRoot: string, taskId: string): Promise<Record<string, unknown>> {
+      assertReadProjectRoot(projectRoot);
+      return readResource<Record<string, unknown>>(fl, 'task/context', { projectPath: projectRoot, taskId });
     },
 
     async readTaskWorkspaceBinding(projectRoot: string, taskId: string): Promise<Record<string, unknown>> {

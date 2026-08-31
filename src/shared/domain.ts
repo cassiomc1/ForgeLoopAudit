@@ -98,6 +98,63 @@ export interface ForgeLoopFeatureSupport {
   responsibilityConstraints: boolean;
   differentialVerificationScope: boolean;
   codeAttestation: boolean;
+  adaptiveExecutionProfiles?: boolean;
+  executionProfileContext?: boolean;
+  contextUsageObservability?: boolean;
+}
+
+export type ExecutionProfileName = 'light' | 'balanced' | 'full';
+export type ExecutionProfileRequest = 'auto' | ExecutionProfileName;
+export type ExecutionProfileContextStatus = 'CANONICAL' | 'COMPATIBILITY_FALLBACK' | 'UNAVAILABLE';
+
+export interface ExecutionProfileProjectionView {
+  requested: ExecutionProfileRequest | null;
+  floor: ExecutionProfileName | null;
+  resolved: ExecutionProfileName | null;
+  reasons: string[];
+  escalated: boolean | null;
+}
+
+export interface ContextPolicyView {
+  contextDepth: string;
+  output: string;
+  planDepth: string;
+  guideStrategy: string;
+  verificationStrategy: string;
+  optionalArtifacts: string;
+  requiredSections: string[];
+  excludedContext: string[];
+  allowedOptionalContext: string[];
+}
+
+export interface ContextUsageView {
+  source: 'PROVIDER_REPORTED' | 'HOST_REPORTED' | 'ACTOR_REPORTED' | 'UNKNOWN';
+  inputTokens: number | null;
+  outputTokens: number | null;
+  cacheReadTokens: number | null;
+  cacheWriteTokens: number | null;
+  totalTokens: number | null;
+  costUsd: number | null;
+  model: string | null;
+  provider: string | null;
+}
+
+export interface ExecutionProfileContextView {
+  available: boolean;
+  source: 'FORGELOOP_INTEGRATION' | 'COMPATIBILITY_FALLBACK' | 'UNAVAILABLE';
+  status: ExecutionProfileContextStatus;
+  taskId: string | null;
+  executionProfile: ExecutionProfileProjectionView;
+  contextPolicy: ContextPolicyView | null;
+  objective: string | null;
+  deliverables: string[];
+  constraints: string[];
+  selectedGuideIds: string[];
+  verificationRequirements: Array<{ id: string | null; text: string | null; type: string | null }>;
+  optionalContext: { available: string[]; loaded: string[] };
+  invariants: Record<string, boolean> | null;
+  usage: ContextUsageView | null;
+  error: CanonicalProjectionError | null;
 }
 
 export interface BlockerSummary {
