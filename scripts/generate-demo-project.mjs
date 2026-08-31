@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, relative } from 'node:path';
+import { join, relative, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { generateDemoFiles, writeDemoProject } from './demo/write-demo-project.mjs';
 
 const DEMO_ROOT = join(process.cwd(), 'demo');
@@ -48,16 +49,19 @@ export function demoHasDrift() {
   }
 }
 
-const checkOnly = process.argv.includes('--check');
-if (checkOnly) {
-  const result = demoHasDrift();
-  if (result.drift) {
-    console.error(`DEMO DRIFT DETECTED: ${result.reason}`);
-    console.error('Run "npm run demo:generate" and commit the regenerated demo/ directory.');
-    process.exit(1);
+const isMainModule = process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1]);
+if (isMainModule) {
+  const checkOnly = process.argv.includes('--check');
+  if (checkOnly) {
+    const result = demoHasDrift();
+    if (result.drift) {
+      console.error(`DEMO DRIFT DETECTED: ${result.reason}`);
+      console.error('Run "npm run demo:generate" and commit the regenerated demo/ directory.');
+      process.exit(1);
+    }
+    console.log(`Demo project matches generator output (${result.fileCount} files)`);
+  } else {
+    const { fileCount, eventCount } = writeDemoProject(DEMO_ROOT);
+    console.log(`Generated demo project at ${DEMO_ROOT} (${fileCount} files, ${eventCount} events)`);
   }
-  console.log(`Demo project matches generator output (${result.fileCount} files)`);
-} else {
-  const { fileCount, eventCount } = writeDemoProject(DEMO_ROOT);
-  console.log(`Generated demo project at ${DEMO_ROOT} (${fileCount} files, ${eventCount} events)`);
 }
