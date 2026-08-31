@@ -8,6 +8,7 @@ import { WATCHER_RETRY_MS, WATCHER_MAX_RETRIES } from '@shared/constants';
 
 const PATH_VALIDATION_RETRY_MS = 50;
 const PATH_VALIDATION_MAX_RETRIES = 10;
+const ATTESTATION_BURST_DEBOUNCE_MS = 250;
 
 export interface WatcherEvent {
   type: 'artifact-changed' | 'task-added' | 'task-removed' | 'event-appended' | 'policy-changed' | 'session-changed' | 'execution-changed' | 'action-changed' | 'approval-changed' | 'evaluation-changed' | 'capability-policy-changed' | 'workspace-binding-changed' | 'handoff-changed' | 'responsibility-changed' | 'verification-scope-changed' | 'attestation-changed';
@@ -25,6 +26,8 @@ export class ProjectWatcher {
   private retryCount = 0;
   private retryTimer: NodeJS.Timeout | null = null;
   private readonly pathValidationRetryTimers = new Set<NodeJS.Timeout>();
+  private readonly pendingAttestationChanges = new Map<string, CoalescedChange>();
+  private attestationBurstTimer: NodeJS.Timeout | null = null;
   private stopped = false;
 
   constructor(
@@ -94,6 +97,11 @@ export class ProjectWatcher {
     }
     for (const timer of this.pathValidationRetryTimers) clearTimeout(timer);
     this.pathValidationRetryTimers.clear();
+    if (this.attestationBurstTimer) {
+      clearTimeout(this.attestationBurstTimer);
+      this.attestationBurstTimer = null;
+    }
+    this.pendingAttestationChanges.clear();
     const watcher = this.watcher;
     this.watcher = null;
     this.coalescer.destroy();
@@ -159,24 +167,34 @@ export class ProjectWatcher {
   }
 
   private handleCoalescedChanges(changes: CoalescedChange[]): void {
-    const attestationChanges = new Map<string, CoalescedChange>();
     for (const change of changes) {
       const event = this.classifyChange(change);
       if (event) {
         if (event.type === 'attestation-changed' && event.taskKey) {
-          attestationChanges.set(event.taskKey, change);
+          // Files in an attestation collection are often committed together,
+          // but platform watchers can discover them in separate batches. Keep
+          // one bounded task-level notification across that short window.
+          this.pendingAttestationChanges.set(event.taskKey, change);
           continue;
         }
         this.onEvent(event);
       }
     }
-    for (const [taskKey, change] of attestationChanges) {
-      this.onEvent({
-        type: 'attestation-changed',
-        taskKey,
-        artifact: 'attestations',
-        path: change.path,
-      });
+    if (this.pendingAttestationChanges.size > 0) {
+      if (this.attestationBurstTimer) clearTimeout(this.attestationBurstTimer);
+      this.attestationBurstTimer = setTimeout(() => {
+        this.attestationBurstTimer = null;
+        const attestationChanges = Array.from(this.pendingAttestationChanges.entries());
+        this.pendingAttestationChanges.clear();
+        for (const [taskKey, change] of attestationChanges) {
+          this.onEvent({
+            type: 'attestation-changed',
+            taskKey,
+            artifact: 'attestations',
+            path: change.path,
+          });
+        }
+      }, ATTESTATION_BURST_DEBOUNCE_MS);
     }
   }
 
