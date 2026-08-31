@@ -6,6 +6,9 @@ import { ChangeCoalescer, type CoalescedChange } from './change-coalescer';
 import { ForgeLoopStudioError } from '@shared/errors';
 import { WATCHER_RETRY_MS, WATCHER_MAX_RETRIES } from '@shared/constants';
 
+const PATH_VALIDATION_RETRY_MS = 50;
+const PATH_VALIDATION_MAX_RETRIES = 10;
+
 export interface WatcherEvent {
   type: 'artifact-changed' | 'task-added' | 'task-removed' | 'event-appended' | 'policy-changed' | 'session-changed' | 'execution-changed' | 'action-changed' | 'approval-changed' | 'evaluation-changed' | 'capability-policy-changed' | 'workspace-binding-changed' | 'handoff-changed' | 'responsibility-changed' | 'verification-scope-changed' | 'attestation-changed';
   taskKey?: string;
@@ -21,6 +24,7 @@ export class ProjectWatcher {
   private isActive = false;
   private retryCount = 0;
   private retryTimer: NodeJS.Timeout | null = null;
+  private readonly pathValidationRetryTimers = new Set<NodeJS.Timeout>();
   private stopped = false;
 
   constructor(
@@ -88,6 +92,8 @@ export class ProjectWatcher {
       clearTimeout(this.retryTimer);
       this.retryTimer = null;
     }
+    for (const timer of this.pathValidationRetryTimers) clearTimeout(timer);
+    this.pathValidationRetryTimers.clear();
     if (this.watcher) {
       this.watcher.close();
       this.watcher = null;
@@ -97,7 +103,9 @@ export class ProjectWatcher {
     this.onStatusChange(false);
   }
 
-  private handleFileChange(path: string, changeType: 'add' | 'change' | 'unlink'): void {
+  private handleFileChange(path: string, changeType: 'add' | 'change' | 'unlink', attempt = 0): void {
+    if (this.stopped) return;
+
     try {
       const validatedPath = changeType === 'unlink'
         ? this.pathBoundary.validateLexicalPath(path)
@@ -109,11 +117,17 @@ export class ProjectWatcher {
         timestamp: Date.now(),
       });
     } catch {
-      // Ignore paths outside boundary
+      // A native watcher can report an add/change while the file is still
+      // being committed by the writer or antivirus scanner. Retry only after
+      // the realpath-aware boundary check succeeds, and stop after a bounded
+      // window. Paths outside the boundary remain rejected on every attempt.
+      this.schedulePathValidationRetry(path, changeType, 'file', attempt);
     }
   }
 
-  private handleDirChange(path: string, changeType: 'add' | 'unlink'): void {
+  private handleDirChange(path: string, changeType: 'add' | 'unlink', attempt = 0): void {
+    if (this.stopped) return;
+
     try {
       const validatedPath = changeType === 'unlink'
         ? this.pathBoundary.validateLexicalPath(path)
@@ -125,8 +139,24 @@ export class ProjectWatcher {
         timestamp: Date.now(),
       });
     } catch {
-      // Ignore paths outside boundary
+      this.schedulePathValidationRetry(path, changeType, 'directory', attempt);
     }
+  }
+
+  private schedulePathValidationRetry(
+    path: string,
+    changeType: 'add' | 'change' | 'unlink',
+    observedType: 'file' | 'directory',
+    attempt: number,
+  ): void {
+    if (this.stopped || changeType === 'unlink' || attempt >= PATH_VALIDATION_MAX_RETRIES) return;
+
+    const timer = setTimeout(() => {
+      this.pathValidationRetryTimers.delete(timer);
+      if (observedType === 'file') this.handleFileChange(path, changeType, attempt + 1);
+      else this.handleDirChange(path, changeType as 'add' | 'unlink', attempt + 1);
+    }, PATH_VALIDATION_RETRY_MS);
+    this.pathValidationRetryTimers.add(timer);
   }
 
   private handleCoalescedChanges(changes: CoalescedChange[]): void {
