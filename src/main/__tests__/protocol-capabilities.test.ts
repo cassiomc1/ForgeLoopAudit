@@ -48,7 +48,7 @@ function validProtocolInfo(overrides: Record<string, unknown> = {}) {
 function currentCapabilities(overrides: Record<string, unknown> = {}): ForgeLoopCapabilitiesSummary {
   return {
     ...validCapabilities({
-    packageVersion: '1.6.4',
+    packageVersion: '1.7.0',
     features: {
       taskClaimRecovery: {
         version: 1,
@@ -65,6 +65,27 @@ function currentCapabilities(overrides: Record<string, unknown> = {}): ForgeLoop
         version: 1,
         readOnlyMetrics: true,
         projectLocalReference: true,
+      },
+      adaptiveExecutionProfiles: {
+        version: 1,
+        supported: true,
+        deterministic: true,
+        lifecycleFastPath: false,
+      },
+      executionProfileContext: {
+        version: 1,
+        supported: true,
+        resource: 'task/context',
+        resolvedProfileAuthoritative: true,
+        compatibilityFallback: 'balanced',
+        lifecycleFastPath: false,
+      },
+      contextUsageObservability: {
+        version: 1,
+        supported: true,
+        sources: ['HOST_REPORTED', 'UNKNOWN'],
+        estimation: false,
+        inflationStatus: 'OBSERVATIONAL',
       },
       verificationExecutionIsolation: {
         version: 1,
@@ -117,6 +138,7 @@ function currentCapabilities(overrides: Record<string, unknown> = {}): ForgeLoop
       'task/action',
       'task/approvals',
       'task/metrics',
+      'task/context',
       'task/evaluations',
       'project/capability-policy',
       'task/workspace-binding',
@@ -197,6 +219,9 @@ describe('core/protocol/protocol-capabilities', () => {
         responsibilityConstraints: true,
         differentialVerificationScope: true,
         codeAttestation: true,
+        adaptiveExecutionProfiles: true,
+        executionProfileContext: true,
+        contextUsageObservability: true,
       });
     });
 

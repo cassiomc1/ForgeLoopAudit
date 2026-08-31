@@ -32,7 +32,7 @@ tests.
 ## ForgeLoop integration and trust boundary
 
 - [x] Detect ForgeLoop projects, including safe nested-project discovery.
-- [x] Load ForgeLoop `1.6.4` through the vendored Integration API v1.
+- [x] Load ForgeLoop `1.7.0` through the vendored Integration API v1.
 - [x] Read `protocol/info` from `compatibility.schemaVersion`; no top-level
   schema version is inferred.
 - [x] Fail closed on unsupported protocol/schema versions, missing core
@@ -50,6 +50,9 @@ tests.
   treating phase alone as proof of claim release.
 - [x] Read observability, durable actions, approvals, capability policy,
   trajectory metrics/evaluations and execution provenance when advertised.
+- [x] Read the canonical task/context projection when adaptive execution
+  capabilities are advertised, display the resolved profile and bounded policy,
+  and use explicit balanced compatibility behavior for older hosts.
 - [x] Keep policy and next-action reads on the Integration API in
   `INTEGRATION_V1`; older artifact-only compatibility paths use only the
   allowlisted read-only CLI adapter.
@@ -105,6 +108,9 @@ Evidence: `src/main/core/integration/canonical-task-boundaries.ts`,
 - [x] Diagnostics, Actions, Policy and Settings: canonical read-only
   projections, capability-aware unavailable states, policy context and
   privacy-safe diagnostics.
+- [x] Execution Profile: requested/safety-floor/resolved/escalated values,
+  bounded context policy and provider/host/actor usage with NOT MEASURED
+  semantics for missing telemetry and comparisons.
 - [~] Dedicated task-command palette, phase filter and large-ledger
   virtualization are not part of the current UI surface.
 

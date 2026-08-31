@@ -24,6 +24,7 @@ import type {
   ResponsibilityView,
   VerificationScopeView,
   TaskAttestationView,
+  ExecutionProfileContextView,
 } from './domain';
 import type { StudioDiagnostics } from './diagnostics';
 
@@ -54,6 +55,7 @@ export interface ForgeLoopStudioAPI {
   getTaskResponsibility(taskId: string): Promise<ResponsibilityView>;
   getTaskVerificationScope(taskId: string): Promise<VerificationScopeView>;
   getTaskAttestation(taskId: string): Promise<TaskAttestationView>;
+  getTaskExecutionProfileContext(taskId: string): Promise<ExecutionProfileContextView>;
   getTaskExecutions(taskId: string, limit?: number): Promise<ExecutionPage>;
   getRecentProjects(): Promise<RecentProject[]>;
   addRecentProject(project: RecentProject): Promise<void>;
@@ -118,6 +120,7 @@ export const IPC_CHANNELS = {
   GET_TASK_RESPONSIBILITY: 'studio:get-task-responsibility',
   GET_TASK_VERIFICATION_SCOPE: 'studio:get-task-verification-scope',
   GET_TASK_ATTESTATION: 'studio:get-task-attestation',
+  GET_TASK_EXECUTION_PROFILE_CONTEXT: 'studio:get-task-execution-profile-context',
   GET_TASK_EXECUTIONS: 'studio:get-task-executions',
   GET_RECENT_PROJECTS: 'studio:get-recent-projects',
   ADD_RECENT_PROJECT: 'studio:add-recent-project',

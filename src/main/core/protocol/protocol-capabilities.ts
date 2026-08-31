@@ -97,6 +97,9 @@ const EMPTY_FEATURE_SUPPORT: ForgeLoopFeatureSupport = Object.freeze({
   responsibilityConstraints: false,
   differentialVerificationScope: false,
   codeAttestation: false,
+  adaptiveExecutionProfiles: false,
+  executionProfileContext: false,
+  contextUsageObservability: false,
 });
 
 function hasResource(capabilities: ForgeLoopCapabilitiesSummary, resource: string): boolean {
@@ -189,6 +192,36 @@ export function deriveFeatureSupport(capabilities: ForgeLoopCapabilitiesSummary)
       && codeAttestation.completionLedgerBound === true
       && hasResource(capabilities, 'task/attestation'),
   );
+  const adaptiveExecutionProfiles = capabilities.features.adaptiveExecutionProfiles;
+  const adaptiveExecutionProfilesSupported = Boolean(
+    adaptiveExecutionProfiles
+      && adaptiveExecutionProfiles.version === 1
+      && adaptiveExecutionProfiles.supported === true
+      && adaptiveExecutionProfiles.deterministic === true
+      && adaptiveExecutionProfiles.lifecycleFastPath === false,
+  );
+  const executionProfileContext = capabilities.features.executionProfileContext;
+  const executionProfileContextSupported = Boolean(
+    adaptiveExecutionProfilesSupported
+      && executionProfileContext
+      && executionProfileContext.version === 1
+      && executionProfileContext.supported === true
+      && executionProfileContext.resource === 'task/context'
+      && executionProfileContext.resolvedProfileAuthoritative === true
+      && executionProfileContext.compatibilityFallback === 'balanced'
+      && executionProfileContext.lifecycleFastPath === false
+      && hasResource(capabilities, 'task/context'),
+  );
+  const contextUsageObservability = capabilities.features.contextUsageObservability;
+  const contextUsageObservabilitySupported = Boolean(
+    contextUsageObservability
+      && contextUsageObservability.version === 1
+      && contextUsageObservability.supported === true
+      && contextUsageObservability.estimation === false
+      && contextUsageObservability.inflationStatus === 'OBSERVATIONAL'
+      && contextUsageObservability.sources.includes('HOST_REPORTED')
+      && contextUsageObservability.sources.includes('UNKNOWN'),
+  );
 
   return {
     canonicalOwnership: coreResourcesPresent,
@@ -208,6 +241,9 @@ export function deriveFeatureSupport(capabilities: ForgeLoopCapabilitiesSummary)
     responsibilityConstraints: responsibilityConstraintsSupported,
     differentialVerificationScope: differentialVerificationScopeSupported,
     codeAttestation: codeAttestationSupported,
+    adaptiveExecutionProfiles: adaptiveExecutionProfilesSupported,
+    executionProfileContext: executionProfileContextSupported,
+    contextUsageObservability: contextUsageObservabilitySupported,
   };
 }
 

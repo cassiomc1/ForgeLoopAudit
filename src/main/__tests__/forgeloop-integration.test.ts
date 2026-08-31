@@ -20,7 +20,7 @@ describe('core/integration/forgeloop-integration', () => {
 
   describe('package identity', () => {
     it('exposes the bundled ForgeLoop package version', () => {
-      expect(adapter.getPackageVersion()).toBe('1.6.4');
+      expect(adapter.getPackageVersion()).toBe('1.7.0');
     });
 
     it('keeps the version constant synchronized with the installed dependency pin', () => {
@@ -28,7 +28,7 @@ describe('core/integration/forgeloop-integration', () => {
         readFileSync(join(process.cwd(), 'node_modules', '@cassiomc1', 'forgeloop', 'package.json'), 'utf8'),
       ) as { version: string };
       expect(installed.version).toBe(FORGELOOP_PACKAGE_VERSION);
-      expect(FORGELOOP_UPSTREAM_COMMIT).toBe('24f50f9eefe5055cec053f075c748542b42e4ea2');
+      expect(FORGELOOP_UPSTREAM_COMMIT).toBe('1eaae5cbb2046ef606d201161aa5abbbeddab153');
       const dependencySpec = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8')).dependencies as Record<string, string>;
       expect(dependencySpec).toHaveProperty('@cassiomc1/forgeloop');
     });
@@ -63,6 +63,7 @@ describe('core/integration/forgeloop-integration', () => {
         'task/ownership',
         'task/contract',
         'task/continuity',
+        'task/context',
       ]) {
         expect(resources).toContain(required);
       }
@@ -111,6 +112,20 @@ describe('core/integration/forgeloop-integration', () => {
       expect(capabilities.features.responsibilityConstraints).toMatchObject({ version: 1, supported: true, immutableDuringPass: true, completionEnforced: true });
       expect(capabilities.features.differentialVerificationScope).toMatchObject({ version: 1, supported: true, modes: ['AUTO', 'CHANGED', 'CLAIMED', 'FULL'], impactedMode: false });
       expect(capabilities.features.codeAttestation).toMatchObject({ version: 1, supported: true, completionLedgerBound: true });
+      expect(capabilities.features.adaptiveExecutionProfiles).toMatchObject({
+        version: 1,
+        supported: true,
+        deterministic: true,
+        lifecycleFastPath: false,
+      });
+      expect(capabilities.features.executionProfileContext).toMatchObject({
+        version: 1,
+        supported: true,
+        resource: 'task/context',
+        resolvedProfileAuthoritative: true,
+        compatibilityFallback: 'balanced',
+        lifecycleFastPath: false,
+      });
       for (const command of ['history', 'trace', 'reflect', 'inspect', 'metrics', 'action-show']) {
         expect(capabilities.commands).toEqual(expect.arrayContaining([
           expect.objectContaining({ name: command, baseRiskClass: 'READ_ONLY', mutatesProtocol: false }),

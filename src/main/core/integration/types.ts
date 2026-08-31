@@ -5,6 +5,30 @@ export interface ForgeLoopRecoveryFeatureSummary {
   validatedClaimProjection: boolean;
 }
 
+export interface ForgeLoopAdaptiveExecutionProfilesFeatureSummary {
+  version: number;
+  supported: boolean;
+  deterministic: boolean;
+  lifecycleFastPath: boolean;
+}
+
+export interface ForgeLoopExecutionProfileContextFeatureSummary {
+  version: number;
+  supported: boolean;
+  resource: string;
+  resolvedProfileAuthoritative: boolean;
+  compatibilityFallback: string;
+  lifecycleFastPath: boolean;
+}
+
+export interface ForgeLoopContextUsageObservabilityFeatureSummary {
+  version: number;
+  supported: boolean;
+  sources: string[];
+  estimation: boolean;
+  inflationStatus: string;
+}
+
 export interface ForgeLoopDurableActionsFeatureSummary {
   version: number;
   readOnlyResources: boolean;
@@ -83,6 +107,9 @@ export interface ForgeLoopCapabilitiesSummary {
   executorParity: boolean;
   features: {
     taskClaimRecovery: ForgeLoopRecoveryFeatureSummary;
+    adaptiveExecutionProfiles?: ForgeLoopAdaptiveExecutionProfilesFeatureSummary;
+    executionProfileContext?: ForgeLoopExecutionProfileContextFeatureSummary;
+    contextUsageObservability?: ForgeLoopContextUsageObservabilityFeatureSummary;
     durableActions?: ForgeLoopDurableActionsFeatureSummary;
     trajectoryEvaluation?: ForgeLoopTrajectoryEvaluationFeatureSummary;
     verificationExecutionIsolation?: ForgeLoopVerificationExecutionIsolationFeatureSummary;

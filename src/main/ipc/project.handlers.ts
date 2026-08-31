@@ -17,6 +17,7 @@ import { runStudioReadCommand } from '@main/core/integration/studio-read-command
 import { createCanonicalObservabilityService, type CanonicalObservabilityService } from '@main/core/integration/canonical-observability';
 import { createCanonicalActionsService, type CanonicalActionsService } from '@main/core/integration/canonical-actions';
 import { createCanonicalTrajectoryService, type CanonicalTrajectoryService } from '@main/core/integration/canonical-trajectory';
+import { createCanonicalExecutionProfileContextService, type CanonicalExecutionProfileContextService } from '@main/core/integration/canonical-execution-profile';
 import { createCanonicalTaskBoundariesService, type CanonicalTaskBoundariesService } from '@main/core/integration/canonical-task-boundaries';
 import { createCanonicalTaskReadService, type CanonicalTaskReadService } from '@main/core/tasks/canonical-task-read-service';
 import Store from 'electron-store';
@@ -47,6 +48,7 @@ let currentCompatibilityMode: string | null = null;
 let currentObservability: CanonicalObservabilityService | null = null;
 let currentActions: CanonicalActionsService | null = null;
 let currentTrajectory: CanonicalTrajectoryService | null = null;
+let currentExecutionProfileContext: CanonicalExecutionProfileContextService | null = null;
 let currentTaskBoundaries: CanonicalTaskBoundariesService | null = null;
 let currentWatcher: ReturnType<typeof createProjectWatcher> | null = null;
 let currentSnapshotBuilder: ProjectSnapshotBuilder | null = null;
@@ -345,6 +347,13 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
     return currentTaskBoundaries.getAttestation(getCurrentProjectRoot()!, safeTaskId);
   });
 
+  ipcMain.handle(IPC_CHANNELS.GET_TASK_EXECUTION_PROFILE_CONTEXT, async (event, taskId: string) => {
+    assertTrustedSender(event);
+    const safeTaskId = TaskIdSchema.parse(taskId);
+    if (!currentExecutionProfileContext || !getCurrentProjectRoot()) throw ForgeLoopStudioError.unknown('No project open');
+    return currentExecutionProfileContext.getContext(getCurrentProjectRoot()!, safeTaskId);
+  });
+
   ipcMain.handle(IPC_CHANNELS.GET_TASK_EXECUTIONS, async (event, taskId: string, limit?: number) => {
     assertTrustedSender(event);
     const query = ExecutionQuerySchema.parse({ taskId, limit });
@@ -445,6 +454,10 @@ async function openProject(projectRoot: string, projectKind: ProjectKind = 'PROJ
   currentObservability = createCanonicalObservabilityService({ integration, featureSupport: negotiation.featureSupport });
   currentActions = createCanonicalActionsService({ integration, featureSupport: negotiation.featureSupport });
   currentTrajectory = createCanonicalTrajectoryService({ integration, featureSupport: negotiation.featureSupport });
+  currentExecutionProfileContext = createCanonicalExecutionProfileContextService({
+    integration,
+    featureSupport: negotiation.featureSupport,
+  });
   currentTaskBoundaries = createCanonicalTaskBoundariesService({
     integration,
     featureSupport: negotiation.featureSupport,
@@ -555,6 +568,7 @@ function closeProject(): void {
   currentObservability = null;
   currentActions = null;
   currentTrajectory = null;
+  currentExecutionProfileContext = null;
   currentTaskBoundaries = null;
   currentSnapshotBuilder = null;
 }

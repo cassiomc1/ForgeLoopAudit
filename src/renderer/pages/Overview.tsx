@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { ProjectSnapshot, TaskSummary, TaskActionsView, TrajectoryMetricsView } from '@shared/domain';
+import type { ProjectSnapshot, TaskSummary, TaskActionsView, TrajectoryMetricsView, ExecutionProfileContextView } from '@shared/domain';
 import { MetricCard } from '../components/ui/MetricCard';
 import { StatusBadge } from '../components/ui/StatusBadge';
 import { TaskRow } from '../components/tasks/TaskRow';
@@ -8,6 +8,7 @@ import { cn } from '../lib/utils';
 import { Provenance } from '../components/ui/Provenance';
 import { formatEvidenceSummary } from '../lib/evidence-display';
 import { TaskBoundariesPanel } from '../components/tasks/TaskBoundariesPanel';
+import { ExecutionProfilePanel } from '../components/tasks/ExecutionProfilePanel';
 import {
   Activity,
   AlertTriangle,
@@ -37,6 +38,7 @@ export function Overview({ snapshot, watcherStatus: _watcherStatus, onTaskSelect
   const [activeTask, setActiveTask] = useState<TaskSummary | null>(null);
   const [canonicalMetrics, setCanonicalMetrics] = useState<TrajectoryMetricsView | null>(null);
   const [canonicalActions, setCanonicalActions] = useState<TaskActionsView | null>(null);
+  const [executionProfileContext, setExecutionProfileContext] = useState<ExecutionProfileContextView | null>(null);
 
   useEffect(() => {
     if (snapshot.activeTaskId) {
@@ -48,13 +50,31 @@ export function Overview({ snapshot, watcherStatus: _watcherStatus, onTaskSelect
   }, [snapshot]);
 
   useEffect(() => {
-    if (!activeTask) { setCanonicalMetrics(null); setCanonicalActions(null); return; }
+    if (!activeTask) {
+      setCanonicalMetrics(null);
+      setCanonicalActions(null);
+      setExecutionProfileContext(null);
+      return;
+    }
     let cancelled = false;
     const featureSupport = snapshot.protocol.featureSupport;
     Promise.all([
       featureSupport?.trajectoryMetrics === true ? window.forgeLoopStudio.getTaskMetrics(activeTask.taskId) : Promise.resolve(null),
       featureSupport?.durableActions === true ? window.forgeLoopStudio.getTaskActions(activeTask.taskId) : Promise.resolve(null),
-    ]).then(([metrics, actions]) => { if (!cancelled) { setCanonicalMetrics(metrics); setCanonicalActions(actions); } }).catch(() => { if (!cancelled) { setCanonicalMetrics(null); setCanonicalActions(null); } });
+      window.forgeLoopStudio.getTaskExecutionProfileContext(activeTask.taskId),
+    ]).then(([metrics, actions, context]) => {
+      if (!cancelled) {
+        setCanonicalMetrics(metrics);
+        setCanonicalActions(actions);
+        setExecutionProfileContext(context);
+      }
+    }).catch(() => {
+      if (!cancelled) {
+        setCanonicalMetrics(null);
+        setCanonicalActions(null);
+        setExecutionProfileContext(null);
+      }
+    });
     return () => { cancelled = true; };
   }, [activeTask, snapshot.protocol.featureSupport, genericTaskRefreshToken, actionsRefreshToken]);
 
@@ -126,6 +146,14 @@ export function Overview({ snapshot, watcherStatus: _watcherStatus, onTaskSelect
           workspaceBindingRefreshToken={taskBoundaryRefreshTokens?.workspaceBinding}
           handoffRefreshToken={taskBoundaryRefreshTokens?.handoffs}
           responsibilityRefreshToken={taskBoundaryRefreshTokens?.responsibility}
+        />
+      )}
+
+      {boundaryTask && (
+        <ExecutionProfilePanel
+          context={executionProfileContext}
+          metrics={canonicalMetrics}
+          observedAt={snapshot.updatedAt}
         />
       )}
 

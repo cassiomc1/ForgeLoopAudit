@@ -88,7 +88,7 @@ try {
   await capture(page, 'overview.png', 'Project Overview', async () => {
     await expect(page.getByRole('heading', { name: 'Task Boundaries', exact: true })).toBeVisible();
     await expect(page.getByText('TASK-003', { exact: true }).first()).toBeVisible();
-    await expect(page.locator('text=/^(MISMATCH|UNAVAILABLE)$/')).toHaveCount(1);
+    await expect(page.getByRole('region', { name: 'Task Boundaries' }).locator('text=/^(MISMATCH|UNAVAILABLE)$/')).toHaveCount(1);
     await expect(page.getByText('INVALID', { exact: true })).toBeVisible();
   });
 
@@ -160,7 +160,7 @@ try {
   await openSurface(page, 'Settings', 'Settings');
   await capture(page, 'settings.png', 'Settings', async () => {
     await expect(page.getByText(`ForgeLoop Studio v${packageVersion}`, { exact: true })).toBeVisible();
-    await expect(page.getByText('1.6.4', { exact: true })).toBeVisible();
+    await expect(page.getByText('1.7.0', { exact: true })).toBeVisible();
     await expect(page.getByText('INTEGRATION_V1', { exact: true })).toBeVisible();
   }, page.getByRole('heading', { name: 'ForgeLoop protocol', exact: true }));
 
@@ -170,9 +170,10 @@ try {
   await navigation(page, 'Overview').click();
   await stabilize(page, 'Project Overview');
   await capture(page, 'task-boundaries.png', 'Project Overview', async () => {
-    await expect(page.getByRole('heading', { name: 'Task Boundaries', exact: true })).toBeVisible();
-    await expect(page.getByText('MISMATCH', { exact: true }).or(page.getByText('UNAVAILABLE', { exact: true }))).toBeVisible();
-    await expect(page.getByText('INVALID', { exact: true })).toBeVisible();
+    const boundaries = page.getByRole('region', { name: 'Task Boundaries' });
+    await expect(boundaries.getByRole('heading', { name: 'Task Boundaries', exact: true })).toBeVisible();
+    await expect(boundaries.getByText('MISMATCH', { exact: true }).or(boundaries.getByText('UNAVAILABLE', { exact: true }))).toBeVisible();
+    await expect(boundaries.getByText('INVALID', { exact: true })).toBeVisible();
   }, page.getByRole('heading', { name: 'Task Boundaries', exact: true }));
 } finally {
   await app.close();

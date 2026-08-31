@@ -5,8 +5,9 @@
 ForgeLoop Studio is a local-first, read-only desktop visualizer for ForgeLoop.
 Open a ForgeLoop-enabled project and inspect canonical tasks, lifecycle phases,
 contracts, routing, gates, checks, evidence, recovery, continuity, policy and
-provenance in real time. ForgeLoop remains the protocol authority; Studio is a
-visual consumer of the state that ForgeLoop exposes.
+execution-profile context and provenance in real time. ForgeLoop remains the
+protocol authority; Studio is a visual consumer of the state that ForgeLoop
+exposes.
 
 ## Trust model
 
@@ -30,7 +31,7 @@ information.
 | Policy | Settings | |
 | <img src="screen/policy.png" alt="ForgeShop policy and capability decisions" width="420"> | <img src="screen/settings.png" alt="ForgeLoop Studio settings and protocol capability metadata" width="420"> | |
 
-### ForgeLoop 1.6.4 boundary surfaces
+### ForgeLoop 1.7.0 adaptive efficiency and boundary surfaces
 
 <img src="screen/task-boundaries.png" alt="ForgeShop Task Boundaries showing workspace binding and responsibility status" width="840">
 
@@ -55,11 +56,12 @@ common dependency/build folders are not followed during discovery.
 The current release line is `v0.1.0-rc.6`. The read-only Studio runtime,
 trusted protocol validation, functional fixture E2E and multi-platform release
 staging are implemented. This release line is aligned to the vendored ForgeLoop
-`1.6.4` Integration API v1 (canonical ownership, durable recovery,
+`1.7.0` Integration API v1 (canonical ownership, durable recovery,
 observability, durable actions, approvals, capability policy, trajectory
 metrics, evaluations, verification-execution provenance, workspace binding,
 canonical handoffs, responsibility constraints, differential verification scope
-and code attestation).
+code attestation, adaptive execution-profile context and provider/host-reported
+efficiency observability).
 
 For the current release-candidate policy, Linux, macOS and Windows builds are unsigned preview artifacts. Validate the published checksums and expect normal operating-system security warnings; signed/notarized distribution is not part of this release candidate.
 
@@ -76,7 +78,7 @@ For the current release-candidate policy, Linux, macOS and Windows builds are un
 - Ajv
 - Vitest
 - Playwright
-- `@cassiomc1/forgeloop` 1.6.4 (vendored from the trusted source commit in `schemas/provenance.json`, read-only)
+- `@cassiomc1/forgeloop` 1.7.0 (vendored from the trusted source commit in `schemas/provenance.json`, read-only)
 
 ## Product direction
 
@@ -84,11 +86,11 @@ ForgeLoop Studio is designed as a **read-only observer by default**. ForgeLoop r
 
 ## Current ForgeLoop compatibility
 
-The current vendored ForgeLoop baseline is ForgeLoop `1.6.4` at immutable source commit `24f50f9eefe5055cec053f075c748542b42e4ea2` (protocol v1, schema v1, Integration API v1).
+The current vendored ForgeLoop baseline is ForgeLoop `1.7.0` at immutable source commit `1eaae5cbb2046ef606d201161aa5abbbeddab153` (protocol v1, schema v1, Integration API v1).
 
 Studio consumes the bundled `@cassiomc1/forgeloop/integration` public subpath as its semantic boundary: canonical task discovery, canonical claim ownership (`claimState`, `mutationAllowed`, `ownershipValid`, historical vs effective write claims), durable recovery state, execution provenance, observability projections, durable actions, approvals, capability policy, trajectory metrics, trajectory evaluations, workspace binding, canonical handoffs, responsibility constraints, differential verification scope and code attestation. Direct `.forgeloop/` artifact reading remains available for bounded detail views and diagnostics only — it never determines current ownership, action readiness or authority. The Studio never executes mutable ForgeLoop commands; recovery/resume and action decisions are displayed as copy-only/read-only information.
 
-The Diagnostics, Actions, verification-execution provenance and 1.6.4 boundary views are explicitly capability-negotiated. Missing optional resources degrade the affected feature to an honest **unavailable** state while retaining `INTEGRATION_V1`; `COMMIT_UNKNOWN`, unresolved requirements and unknown usage remain visible rather than being inferred or silently reconciled. Workspace status, responsibility constraints, immutable handoffs, persisted verification scope and attestation status are read lazily for the selected task. Studio displays the isolation and attestation metadata persisted by ForgeLoop and never creates bindings, handoffs, scopes, attestations or execution sandboxes. Studio never creates or signs attestations. It may request ForgeLoop's canonical local content verification when no external signing-provider execution is required; external signing-provider verification is never triggered automatically. Verification scope is not attestation coverage, handoff snapshots are not evidence, and the capability policy is displayed as project policy context; it never grants host authority to Studio.
+The Diagnostics, Actions, verification-execution provenance, adaptive execution-profile context and 1.7.0 boundary views are explicitly capability-negotiated. Missing optional resources degrade the affected feature to an honest **unavailable** state while retaining `INTEGRATION_V1`; `COMMIT_UNKNOWN`, unresolved requirements and unknown usage remain visible rather than being inferred or silently reconciled. Workspace status, responsibility constraints, immutable handoffs, persisted verification scope, attestation status and bounded context policy are read lazily for the selected task. Studio displays the isolation, attestation and execution-profile metadata persisted by ForgeLoop and never creates bindings, handoffs, scopes, attestations or execution sandboxes. Studio never creates or signs attestations. It may request ForgeLoop's canonical local content verification when no external signing-provider execution is required; external signing-provider verification is never triggered automatically. Verification scope is not attestation coverage, handoff snapshots are not evidence, context inflation and efficiency regression are observational diagnostics, and the capability policy is displayed as project policy context; it never grants host authority to Studio.
 
 Compatibility modes: `INTEGRATION_V1` (full support), `ARTIFACT_ONLY` (visual reading with ownership unavailable; also the degraded mode for ForgeLoop <= 1.3 projects), and `INCOMPATIBLE` (fail closed). There is deliberately no inferred legacy mode — without an explicit project-level signal, downgrading a broken integration into "legacy" would mask regressions. See [docs/PROTOCOL_COMPATIBILITY.md](docs/PROTOCOL_COMPATIBILITY.md) for the full matrix.
 
