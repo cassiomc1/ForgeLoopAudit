@@ -36,7 +36,7 @@ describe('project health vs canonical ownership', () => {
     rmSync(root, { recursive: true, force: true });
   });
 
-  function makeBuilder(ownership: Record<string, unknown>) {
+  function makeBuilder(ownership: Record<string, unknown>, status = 'VALID') {
     return new ProjectSnapshotBuilder(
       new PathBoundary(root),
       {
@@ -59,7 +59,7 @@ describe('project health vs canonical ownership', () => {
         getCapabilities: () => ({}) as never,
         readProtocolInfo: async () => ({ compatibility: { protocolVersion: 1, schemaVersion: 1 } }),
         listTasks: async () => ({ count: 1, tasks: [{ taskId: 'TASK-001', healthy: true, phase: 'COMPLETE', mutationAllowed: false }] }),
-        readTaskStatus: async () => ({ phase: 'COMPLETE', status: 'VALID' }),
+        readTaskStatus: async () => ({ phase: 'COMPLETE', status }),
         readTaskOwnership: async () => ownership,
         readTaskContract: async () => ({}),
         readTaskContinuity: async () => ({}),
@@ -107,6 +107,23 @@ describe('project health vs canonical ownership', () => {
     }).build();
 
     expect(snapshot.health.status).toBe('VALID');
+    expect(snapshot.health.source).toBe('FORGELOOP_STATUS_AGGREGATE');
+  });
+
+  it('maps canonical revalidation status to the project STALE state', async () => {
+    const snapshot = await makeBuilder({
+      taskId: 'TASK-001',
+      phase: 'COMPLETE',
+      claimState: 'RELEASED_BY_COMPLETION',
+      mutationAllowed: false,
+      ownershipValid: true,
+      recoveryStatus: 'NOT_APPLICABLE',
+      historicalWriteClaims: [],
+      effectiveWriteClaims: [],
+      reasonCodes: [],
+    }, 'REVALIDATION_REQUIRED').build();
+
+    expect(snapshot.health.status).toBe('STALE');
     expect(snapshot.health.source).toBe('FORGELOOP_STATUS_AGGREGATE');
   });
 });

@@ -713,6 +713,15 @@ export type TaskOperationalState =
   | 'OWNERSHIP_INCONSISTENT'
   | 'READ_ONLY_UNKNOWN';
 
+export interface CanonicalTaskStatusSummary {
+  status: string;
+  reasons: string[];
+  warnings: string[];
+  repositoryComparison?: string;
+  contractComparison?: string;
+  artifactComparison?: string;
+}
+
 export interface ForgeLoopIntegrationCapabilitiesSummary {
   available: boolean;
   integrationApiVersion?: number;
@@ -738,6 +747,7 @@ export interface TaskSummary {
   taskKey: string;
   objective?: string;
   phase: ForgeLoopPhase;
+  canonicalStatus?: CanonicalTaskStatusSummary;
   previousPhase?: ForgeLoopPhase;
   selectedGuides: string[];
   completedSteps: string[];
@@ -987,6 +997,8 @@ export interface ExecutionPage {
 export interface WatcherStatus {
   active: boolean;
   lastEventAt?: string;
+  lastEventType?: string;
+  lastTaskId?: string;
   error?: string;
 }
 

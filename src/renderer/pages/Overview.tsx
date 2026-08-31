@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { ProjectSnapshot, TaskSummary, TaskActionsView, TrajectoryMetricsView, ExecutionProfileContextView } from '@shared/domain';
+import type { ProjectDetectionResult, ProjectSnapshot, TaskSummary, TaskActionsView, TrajectoryMetricsView, ExecutionProfileContextView, WatcherStatus } from '@shared/domain';
 import { MetricCard } from '../components/ui/MetricCard';
 import { StatusBadge } from '../components/ui/StatusBadge';
 import { TaskRow } from '../components/tasks/TaskRow';
@@ -9,6 +9,7 @@ import { Provenance } from '../components/ui/Provenance';
 import { formatEvidenceSummary } from '../lib/evidence-display';
 import { TaskBoundariesPanel } from '../components/tasks/TaskBoundariesPanel';
 import { ExecutionProfilePanel } from '../components/tasks/ExecutionProfilePanel';
+import { ProjectInformation } from '../components/project/ProjectInformation';
 import {
   Activity,
   AlertTriangle,
@@ -21,7 +22,8 @@ import {
 
 interface OverviewProps {
   snapshot: ProjectSnapshot;
-  watcherStatus?: { active: boolean };
+  detection?: ProjectDetectionResult | null;
+  watcherStatus?: WatcherStatus;
   onTaskSelect?: (taskId: string) => void;
   onViewAllTasks?: () => void;
   genericTaskRefreshToken?: number;
@@ -34,7 +36,7 @@ interface OverviewProps {
   selectedTaskId?: string | null;
 }
 
-export function Overview({ snapshot, watcherStatus: _watcherStatus, onTaskSelect, onViewAllTasks, genericTaskRefreshToken = 0, actionsRefreshToken = 0, taskBoundaryRefreshTokens, selectedTaskId }: OverviewProps) {
+export function Overview({ snapshot, detection, watcherStatus = { active: false }, onTaskSelect, onViewAllTasks, genericTaskRefreshToken = 0, actionsRefreshToken = 0, taskBoundaryRefreshTokens, selectedTaskId }: OverviewProps) {
   const [activeTask, setActiveTask] = useState<TaskSummary | null>(null);
   const [canonicalMetrics, setCanonicalMetrics] = useState<TrajectoryMetricsView | null>(null);
   const [canonicalActions, setCanonicalActions] = useState<TaskActionsView | null>(null);
@@ -101,6 +103,8 @@ export function Overview({ snapshot, watcherStatus: _watcherStatus, onTaskSelect
           <Provenance source="ForgeLoop status aggregate" authority="FORGELOOP" observedAt={snapshot.updatedAt} />
         </div>
       </div>
+
+      <ProjectInformation snapshot={snapshot} detection={detection} watcherStatus={watcherStatus} />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <MetricCard

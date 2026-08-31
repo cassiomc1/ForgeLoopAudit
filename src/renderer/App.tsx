@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { ProjectDetectionResult, ProjectSnapshot, ProjectUpdate, WatcherStatus, StudioError, RecentProject, ForgeLoopStudioAPI } from '@shared/domain';
 import { AppShell } from './components/app-shell/AppShell';
 import { ProjectPicker } from './pages/ProjectPicker';
@@ -19,6 +19,7 @@ import { LoadingState } from './components/ui/LoadingState';
 import {
   createProjectionRefreshEpochs,
   reduceProjectionRefresh,
+  shouldApplySnapshotGeneration,
   taskProjectionRefreshEpoch,
 } from './projection-refresh';
 
@@ -54,6 +55,7 @@ export function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [projectionRefreshEpochs, setProjectionRefreshEpochs] = useState(createProjectionRefreshEpochs);
+  const latestSnapshotGeneration = useRef(0);
 
   const api = getApi();
 
@@ -67,16 +69,28 @@ export function App() {
   }, [api]);
 
   const handleProjectUpdate = useCallback((update: ProjectUpdate) => {
+    if (update.type === 'project-opened') {
+      latestSnapshotGeneration.current = update.generation ?? 0;
+    } else if (!shouldApplySnapshotGeneration(latestSnapshotGeneration.current, update.generation)) {
+      // Snapshot builds are asynchronous. A slower build may finish after a
+      // newer one; its generation must never roll the UI back to stale data.
+      return;
+    } else if (update.generation !== undefined) {
+      latestSnapshotGeneration.current = update.generation;
+    }
+
     setProjectionRefreshEpochs((current) => reduceProjectionRefresh(current, update));
     switch (update.type) {
       case 'project-opened':
         if (update.detection) setDetectionResult(update.detection);
         if (update.snapshot) setSnapshot(update.snapshot);
+        setSelectedTaskId(null);
         setActiveNav('overview');
         break;
       case 'snapshot-refreshed':
         if (update.snapshot) {
           setSnapshot(update.snapshot);
+          setSelectedTaskId((current) => current && update.snapshot?.tasks.some((task) => task.taskId === current) ? current : null);
         }
         break;
       case 'watcher-status':
@@ -162,6 +176,9 @@ export function App() {
       setDetectionResult(null);
       setSnapshot(null);
       setActiveNav('overview');
+      setSelectedTaskId(null);
+      setWatcherStatus({ active: false });
+      latestSnapshotGeneration.current = 0;
       setProjectionRefreshEpochs(createProjectionRefreshEpochs());
     } catch (err) {
       console.error('Failed to close project:', err);
@@ -197,6 +214,7 @@ export function App() {
       case 'overview':
         return <Overview
           snapshot={snapshot}
+          detection={detectionResult}
           watcherStatus={watcherStatus}
           selectedTaskId={selectedTaskId}
           genericTaskRefreshToken={projectionRefreshEpochs.genericTask}
@@ -226,9 +244,9 @@ export function App() {
           onOpenActions={() => setActiveNav('actions')}
         />;
       case 'events':
-        return <Events snapshot={snapshot} selectedTaskId={selectedTaskId} onSelectedTaskChange={setSelectedTaskId} />;
+        return <Events snapshot={snapshot} selectedTaskId={selectedTaskId} eventsRefreshToken={taskRefresh('events')} onSelectedTaskChange={setSelectedTaskId} />;
       case 'executions':
-        return <Executions snapshot={snapshot} selectedTaskId={selectedTaskId} onSelectedTaskChange={setSelectedTaskId} />;
+        return <Executions snapshot={snapshot} selectedTaskId={selectedTaskId} executionsRefreshToken={taskRefresh('executions')} onSelectedTaskChange={setSelectedTaskId} />;
       case 'continuity':
         return <Continuity snapshot={snapshot} selectedTaskId={selectedTaskId} handoffRefreshToken={taskRefresh('handoffs')} onSelectedTaskChange={setSelectedTaskId} onOpenDiagnostics={() => setActiveNav('diagnostics')} />;
       case 'diagnostics':
@@ -238,7 +256,7 @@ export function App() {
       case 'policy':
         return <Policy snapshot={snapshot} selectedTaskId={selectedTaskId} capabilityPolicyRefreshToken={projectionRefreshEpochs.capabilityPolicy} onSelectedTaskChange={setSelectedTaskId} />;
       case 'settings':
-        return <Settings snapshot={snapshot} detection={detectionResult} />;
+        return <Settings snapshot={snapshot} detection={detectionResult} watcherStatus={watcherStatus} />;
       default:
         return <EmptyState title="Unknown page" />;
     }

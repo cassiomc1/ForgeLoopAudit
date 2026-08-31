@@ -76,6 +76,10 @@ try {
   await expect(page.getByRole('heading', { name: 'Project Overview', exact: true })).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole('region', { name: 'Demo project information' })).toContainText('ForgeShop');
   await expect(page.getByRole('region', { name: 'Demo project information' })).toContainText('errors are still real');
+  const projectInformation = page.getByRole('region', { name: 'Project Information', exact: true });
+  await expect(projectInformation).toContainText('Project Information');
+  await expect(projectInformation).toContainText('Stale');
+  await expect(projectInformation).toContainText('REVALIDATION_REQUIRED');
 
   // Select the documented boundary task through the real Tasks surface so the
   // Overview and Task Boundaries captures cannot depend on a hidden default.
@@ -125,6 +129,7 @@ try {
 
   await openSurface(page, 'Events', 'Event Ledger', 'TASK-004');
   await capture(page, 'event-ledger.png', 'Event Ledger', async () => {
+    await expect(page.getByRole('status')).toContainText('Live updates enabled');
     await expect(page.getByText('HANDOFF_CREATED', { exact: true })).toBeVisible();
     await expect(page.getByText('TASK_BLOCKED', { exact: true })).toBeVisible();
   });
@@ -160,8 +165,9 @@ try {
   await openSurface(page, 'Settings', 'Settings');
   await capture(page, 'settings.png', 'Settings', async () => {
     await expect(page.getByText(`ForgeLoop Studio v${packageVersion}`, { exact: true })).toBeVisible();
-    await expect(page.getByText('1.8.0', { exact: true })).toBeVisible();
-    await expect(page.getByText('INTEGRATION_V1', { exact: true })).toBeVisible();
+    const protocolPanel = page.getByRole('heading', { name: 'ForgeLoop protocol', exact: true }).locator('..');
+    await expect(protocolPanel).toContainText('1.8.0');
+    await expect(protocolPanel).toContainText('INTEGRATION_V1');
   }, page.getByRole('heading', { name: 'ForgeLoop protocol', exact: true }));
 
   await openSurface(page, 'Tasks', 'Tasks');

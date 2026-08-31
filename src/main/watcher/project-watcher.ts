@@ -6,6 +6,10 @@ import { ChangeCoalescer, type CoalescedChange } from './change-coalescer';
 import { ForgeLoopStudioError } from '@shared/errors';
 import { WATCHER_RETRY_MS, WATCHER_MAX_RETRIES } from '@shared/constants';
 
+const PATH_VALIDATION_RETRY_MS = 50;
+const PATH_VALIDATION_MAX_RETRIES = 10;
+const ATTESTATION_BURST_DEBOUNCE_MS = 250;
+
 export interface WatcherEvent {
   type: 'artifact-changed' | 'task-added' | 'task-removed' | 'event-appended' | 'policy-changed' | 'session-changed' | 'execution-changed' | 'action-changed' | 'approval-changed' | 'evaluation-changed' | 'capability-policy-changed' | 'workspace-binding-changed' | 'handoff-changed' | 'responsibility-changed' | 'verification-scope-changed' | 'attestation-changed';
   taskKey?: string;
@@ -20,6 +24,12 @@ export class ProjectWatcher {
   private readonly forgeLoopRoot: string;
   private isActive = false;
   private retryCount = 0;
+  private retryTimer: NodeJS.Timeout | null = null;
+  private readonly pathValidationRetryTimers = new Set<NodeJS.Timeout>();
+  private readonly pendingAttestationChanges = new Map<string, CoalescedChange>();
+  private readonly knownTaskKeys = new Set<string>();
+  private attestationBurstTimer: NodeJS.Timeout | null = null;
+  private stopped = false;
 
   constructor(
     pathBoundary: PathBoundary,
@@ -35,18 +45,15 @@ export class ProjectWatcher {
 
   start(): void {
     if (this.isActive) return;
+    this.stopped = false;
+    this.knownTaskKeys.clear();
 
     try {
-      const watchPaths = [
-        join(this.forgeLoopRoot, '*.json'),
-        join(this.forgeLoopRoot, TASK_STATE_DIR, '**', '*.json'),
-        join(this.forgeLoopRoot, TASK_STATE_DIR, '**', '*.ndjson'),
-        join(this.forgeLoopRoot, SESSIONS_DIR, '*.json'),
-        join(this.forgeLoopRoot, POLICY_DIR, '**', '*.json'),
-        join(this.forgeLoopRoot, POLICY_DIR, 'policy.lock'),
-      ];
-
-      this.watcher = chokidar.watch(watchPaths, {
+      // Watch the bounded ForgeLoop state tree once and classify events below.
+      // Multiple overlapping glob roots can share native watcher handles and
+      // lose a child notification on Windows; one recursive root keeps the
+      // monitored surface complete while classification remains allowlisted.
+      this.watcher = chokidar.watch(this.forgeLoopRoot, {
         ignored: [
           join(this.forgeLoopRoot, '.txn', '**'),
           join(this.forgeLoopRoot, '*.log'),
@@ -54,6 +61,11 @@ export class ProjectWatcher {
         ],
         ignoreInitial: true,
         persistent: true,
+        // Windows can silently drop a subset of rapid additions through its
+        // native fs.watch backend. Polling keeps the live projection complete
+        // for the small, bounded ForgeLoop state tree without changing the
+        // native backend used by macOS and Linux.
+        usePolling: process.platform === 'win32',
         awaitWriteFinish: {
           stabilityThreshold: 50,
           pollInterval: 20,
@@ -69,6 +81,7 @@ export class ProjectWatcher {
         .on('unlinkDir', (path) => this.handleDirChange(path, 'unlink'))
         .on('error', (error) => this.handleError(error))
         .on('ready', () => {
+          this.initializeKnownTaskKeys();
           this.isActive = true;
           this.retryCount = 0;
           this.onStatusChange(true);
@@ -79,17 +92,31 @@ export class ProjectWatcher {
     }
   }
 
-  stop(): void {
-    if (this.watcher) {
-      this.watcher.close();
-      this.watcher = null;
+  async stop(): Promise<void> {
+    this.stopped = true;
+    if (this.retryTimer) {
+      clearTimeout(this.retryTimer);
+      this.retryTimer = null;
     }
+    for (const timer of this.pathValidationRetryTimers) clearTimeout(timer);
+    this.pathValidationRetryTimers.clear();
+    if (this.attestationBurstTimer) {
+      clearTimeout(this.attestationBurstTimer);
+      this.attestationBurstTimer = null;
+    }
+    this.pendingAttestationChanges.clear();
+    this.knownTaskKeys.clear();
+    const watcher = this.watcher;
+    this.watcher = null;
     this.coalescer.destroy();
     this.isActive = false;
     this.onStatusChange(false);
+    if (watcher) await watcher.close();
   }
 
-  private handleFileChange(path: string, changeType: 'add' | 'change' | 'unlink'): void {
+  private handleFileChange(path: string, changeType: 'add' | 'change' | 'unlink', attempt = 0): void {
+    if (this.stopped) return;
+
     try {
       const validatedPath = changeType === 'unlink'
         ? this.pathBoundary.validateLexicalPath(path)
@@ -101,11 +128,17 @@ export class ProjectWatcher {
         timestamp: Date.now(),
       });
     } catch {
-      // Ignore paths outside boundary
+      // A native watcher can report an add/change while the file is still
+      // being committed by the writer or antivirus scanner. Retry only after
+      // the realpath-aware boundary check succeeds, and stop after a bounded
+      // window. Paths outside the boundary remain rejected on every attempt.
+      this.schedulePathValidationRetry(path, changeType, 'file', attempt);
     }
   }
 
-  private handleDirChange(path: string, changeType: 'add' | 'unlink'): void {
+  private handleDirChange(path: string, changeType: 'add' | 'unlink', attempt = 0): void {
+    if (this.stopped) return;
+
     try {
       const validatedPath = changeType === 'unlink'
         ? this.pathBoundary.validateLexicalPath(path)
@@ -117,29 +150,74 @@ export class ProjectWatcher {
         timestamp: Date.now(),
       });
     } catch {
-      // Ignore paths outside boundary
+      this.schedulePathValidationRetry(path, changeType, 'directory', attempt);
     }
   }
 
+  private schedulePathValidationRetry(
+    path: string,
+    changeType: 'add' | 'change' | 'unlink',
+    observedType: 'file' | 'directory',
+    attempt: number,
+  ): void {
+    if (this.stopped || changeType === 'unlink' || attempt >= PATH_VALIDATION_MAX_RETRIES) return;
+
+    const timer = setTimeout(() => {
+      this.pathValidationRetryTimers.delete(timer);
+      if (observedType === 'file') this.handleFileChange(path, changeType, attempt + 1);
+      else this.handleDirChange(path, changeType as 'add' | 'unlink', attempt + 1);
+    }, PATH_VALIDATION_RETRY_MS);
+    this.pathValidationRetryTimers.add(timer);
+  }
+
   private handleCoalescedChanges(changes: CoalescedChange[]): void {
-    const attestationChanges = new Map<string, CoalescedChange>();
     for (const change of changes) {
       const event = this.classifyChange(change);
       if (event) {
+        if (event.type === 'task-added' && event.taskKey) {
+          // A recursive root watcher can rediscover an already-existing task
+          // while reconciling a child directory. Only announce a task once.
+          if (this.knownTaskKeys.has(event.taskKey)) continue;
+          this.knownTaskKeys.add(event.taskKey);
+        }
         if (event.type === 'attestation-changed' && event.taskKey) {
-          attestationChanges.set(event.taskKey, change);
+          // Files in an attestation collection are often committed together,
+          // but platform watchers can discover them in separate batches. Keep
+          // one bounded task-level notification across that short window.
+          this.pendingAttestationChanges.set(event.taskKey, change);
           continue;
         }
         this.onEvent(event);
       }
     }
-    for (const [taskKey, change] of attestationChanges) {
-      this.onEvent({
-        type: 'attestation-changed',
-        taskKey,
-        artifact: 'attestations',
-        path: change.path,
-      });
+    if (this.pendingAttestationChanges.size > 0) {
+      if (this.attestationBurstTimer) clearTimeout(this.attestationBurstTimer);
+      this.attestationBurstTimer = setTimeout(() => {
+        this.attestationBurstTimer = null;
+        const attestationChanges = Array.from(this.pendingAttestationChanges.entries());
+        this.pendingAttestationChanges.clear();
+        for (const [taskKey, change] of attestationChanges) {
+          this.onEvent({
+            type: 'attestation-changed',
+            taskKey,
+            artifact: 'attestations',
+            path: change.path,
+          });
+        }
+      }, ATTESTATION_BURST_DEBOUNCE_MS);
+    }
+  }
+
+  private initializeKnownTaskKeys(): void {
+    this.knownTaskKeys.clear();
+    if (!this.watcher) return;
+
+    const taskStateRoot = join(this.forgeLoopRoot, TASK_STATE_DIR);
+    for (const watchedPath of Object.keys(this.watcher.getWatched())) {
+      const relativePath = relative(taskStateRoot, watchedPath);
+      if (!relativePath || relativePath.startsWith('..') || relativePath.includes(`${sep}..${sep}`)) continue;
+      const parts = relativePath.split(sep);
+      if (parts.length === 1) this.knownTaskKeys.add(parts[0]);
     }
   }
 
@@ -315,15 +393,18 @@ export class ProjectWatcher {
   }
 
   private handleError(error: Error): void {
+    if (this.stopped) return;
     this.isActive = false;
-    void this.watcher?.close();
+    const watcher = this.watcher;
     this.watcher = null;
+    void watcher?.close();
     this.onError(error);
 
     if (this.retryCount < WATCHER_MAX_RETRIES) {
       this.retryCount++;
-      setTimeout(() => {
-        if (!this.isActive) {
+      this.retryTimer = setTimeout(() => {
+        this.retryTimer = null;
+        if (!this.stopped && !this.isActive) {
           this.start();
         }
       }, WATCHER_RETRY_MS * this.retryCount);

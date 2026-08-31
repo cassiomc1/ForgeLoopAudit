@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { ProjectSnapshot, TaskSummary, EventRecord, EventPage } from '@shared/domain';
 import { NoEventsState } from '../components/ui/EmptyState';
 import { cn, formatDate, shortHash } from '../lib/utils';
@@ -7,10 +7,11 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 interface EventsProps {
   snapshot: ProjectSnapshot;
   selectedTaskId?: string | null;
+  eventsRefreshToken?: number;
   onSelectedTaskChange?: (taskId: string) => void;
 }
 
-export function Events({ snapshot, selectedTaskId, onSelectedTaskChange }: EventsProps) {
+export function Events({ snapshot, selectedTaskId, eventsRefreshToken = 0, onSelectedTaskChange }: EventsProps) {
   const [selectedTask, setSelectedTask] = useState<TaskSummary | null>(
     snapshot.tasks.find((t) => t.taskId === snapshot.activeTaskId) || snapshot.tasks[0] || null
   );
@@ -20,26 +21,68 @@ export function Events({ snapshot, selectedTaskId, onSelectedTaskChange }: Event
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<string>('all');
   const [validation, setValidation] = useState<EventPage['validation']>();
+  const [hasMore, setHasMore] = useState(false);
+  const eventsRef = useRef<EventRecord[]>([]);
+  const cursorRef = useRef<string | undefined>(undefined);
+  const hasMoreRef = useRef(false);
+  const currentTaskRef = useRef<string | null>(null);
+  const requestIdRef = useRef(0);
 
-  useEffect(() => {
-    if (selectedTask) {
-      loadEvents(selectedTask.taskId);
-    }
-  }, [selectedTask]);
-
-  const loadEvents = async (taskId: string) => {
+  const loadEvents = useCallback(async (taskId: string, append = false) => {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     try {
-      const result = await window.forgeLoopStudio.getTaskEvents(taskId, undefined, 100);
-      setEvents(result.events || []);
+      const result = await window.forgeLoopStudio.getTaskEvents(taskId, append ? cursorRef.current : undefined, 100);
+      if (requestId !== requestIdRef.current) return;
+
+      const previousEvents = eventsRef.current;
+      const mergedEvents = Array.from(new Map(
+        [...previousEvents, ...(result.events || [])].map((event) => [event.hash, event]),
+      ).values()).sort((a, b) => b.seq - a.seq);
+      eventsRef.current = mergedEvents;
+      setEvents(mergedEvents);
       setValidation(result.validation);
+      if (append || previousEvents.length === 0) cursorRef.current = result.cursor;
+      const retainedOlderEvents = previousEvents.some((event) => !(result.events || []).some((next) => next.hash === event.hash));
+      const nextHasMore = Boolean(result.hasMore || retainedOlderEvents);
+      hasMoreRef.current = nextHasMore;
+      setHasMore(nextHasMore);
+      setSelectedEvent((current) => current ? mergedEvents.find((event) => event.hash === current.hash) || null : null);
     } catch (err) {
+      if (requestId !== requestIdRef.current) return;
       console.error('Failed to load events:', err);
-      setEvents([]);
+      if (!append) {
+        eventsRef.current = [];
+        setEvents([]);
+        cursorRef.current = undefined;
+        hasMoreRef.current = false;
+        setHasMore(false);
+      }
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const taskId = selectedTask?.taskId || null;
+    if (currentTaskRef.current !== taskId) {
+      requestIdRef.current++;
+      currentTaskRef.current = taskId;
+      eventsRef.current = [];
+      cursorRef.current = undefined;
+      hasMoreRef.current = false;
+      setEvents([]);
+      setHasMore(false);
+      setValidation(undefined);
+      setSelectedEvent(null);
+    }
+    if (taskId) void loadEvents(taskId);
+  }, [selectedTask?.taskId, eventsRefreshToken, loadEvents]);
+
+  const loadOlderEvents = useCallback(() => {
+    if (!selectedTask || loading || !hasMoreRef.current || !cursorRef.current) return;
+    void loadEvents(selectedTask.taskId, true);
+  }, [loadEvents, loading, selectedTask]);
 
   const validateLedger = async () => {
     if (!selectedTask) return;
@@ -79,6 +122,9 @@ export function Events({ snapshot, selectedTaskId, onSelectedTaskChange }: Event
         <div>
           <h1 className="text-xl font-semibold text-forge-text-primary">Event Ledger</h1>
           <p className="text-sm text-forge-text-muted mt-1">Chronological engineering timeline</p>
+          <p className="text-xs text-forge-text-muted mt-2" role="status" aria-live="polite">
+            Live updates enabled · Showing {events.length} event{events.length === 1 ? '' : 's'}
+          </p>
         </div>
           <div className="flex items-center gap-3">
           <select
@@ -96,7 +142,7 @@ export function Events({ snapshot, selectedTaskId, onSelectedTaskChange }: Event
               </option>
             ))}
             </select>
-            <button className="button-secondary text-xs" onClick={() => void validateLedger()}>Validate ledger</button>
+            <button className="btn-secondary text-xs" onClick={() => void validateLedger()}>Validate ledger</button>
           <div className="flex items-center gap-1 bg-forge-secondary-surface rounded-6 p-0.5">
             {['all', 'verification', 'lifecycle', 'diagnosis', 'actions', 'approvals', 'trajectory', 'continuity', 'policy', 'errors'].map((f) => (
               <button
@@ -130,7 +176,7 @@ export function Events({ snapshot, selectedTaskId, onSelectedTaskChange }: Event
         ) : filteredEvents.length === 0 ? (
           <div className="p-8 text-center text-sm text-forge-text-muted">No events found</div>
         ) : (
-          <div className="divide-y divide-forge-border-subtle/50">
+          <div className="divide-y divide-forge-border-subtle/50" aria-live="polite">
             {filteredEvents.map((event) => (
               <button
                 key={event.hash}
@@ -160,6 +206,14 @@ export function Events({ snapshot, selectedTaskId, onSelectedTaskChange }: Event
           </div>
         )}
       </div>
+
+      {hasMore && (
+        <div className="flex justify-center">
+          <button className="btn-secondary text-xs" onClick={loadOlderEvents} disabled={loading}>
+            {loading ? 'Loading older events…' : 'Load older events'}
+          </button>
+        </div>
+      )}
 
       {selectedEvent && (
         <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-10 p-4 animate-fade-in">

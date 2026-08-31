@@ -3,11 +3,12 @@ import type { ProjectUpdate } from '@shared/domain';
 import {
   createProjectionRefreshEpochs,
   reduceProjectionRefresh,
+  shouldApplySnapshotGeneration,
   taskProjectionRefreshEpoch,
 } from './projection-refresh';
 
-function update(type: ProjectUpdate['type'], taskId?: string): ProjectUpdate {
-  return { type, taskId, timestamp: '2026-08-30T00:00:00.000Z' };
+function update(type: ProjectUpdate['type'], taskId?: string, data?: unknown): ProjectUpdate {
+  return { type, taskId, data, timestamp: '2026-08-30T00:00:00.000Z' };
 }
 
 describe('resource-specific renderer projection refresh', () => {
@@ -45,5 +46,25 @@ describe('resource-specific renderer projection refresh', () => {
     expect(taskProjectionRefreshEpoch(next, 'approvals', 'TASK-A')).toBe(1);
     expect(taskProjectionRefreshEpoch(next, 'actions', 'TASK-A')).toBe(1);
     expect(taskProjectionRefreshEpoch(next, 'evaluations', 'TASK-A')).toBe(0);
+  });
+
+  it('refreshes only the ledger surface for appended events and executions', () => {
+    const initial = createProjectionRefreshEpochs();
+    const event = reduceProjectionRefresh(initial, update('task-updated', 'TASK-A', { type: 'event-appended' }));
+    const execution = reduceProjectionRefresh(initial, update('task-updated', 'TASK-B', { type: 'execution-changed' }));
+
+    expect(taskProjectionRefreshEpoch(event, 'events', 'TASK-A')).toBe(1);
+    expect(taskProjectionRefreshEpoch(event, 'executions', 'TASK-A')).toBe(0);
+    expect(event.genericTask).toBe(0);
+    expect(taskProjectionRefreshEpoch(execution, 'executions', 'TASK-B')).toBe(1);
+    expect(taskProjectionRefreshEpoch(execution, 'events', 'TASK-B')).toBe(0);
+    expect(execution.genericTask).toBe(0);
+  });
+
+  it('rejects snapshots that finish with an older generation', () => {
+    expect(shouldApplySnapshotGeneration(4, 4)).toBe(true);
+    expect(shouldApplySnapshotGeneration(4, 5)).toBe(true);
+    expect(shouldApplySnapshotGeneration(4, 3)).toBe(false);
+    expect(shouldApplySnapshotGeneration(4)).toBe(true);
   });
 });

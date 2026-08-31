@@ -54,6 +54,7 @@ let currentWatcher: ReturnType<typeof createProjectWatcher> | null = null;
 let currentSnapshotBuilder: ProjectSnapshotBuilder | null = null;
 let currentMainWindow: BrowserWindow | null = null;
 let snapshotRefreshScheduled = false;
+let snapshotRefreshTimer: ReturnType<typeof setTimeout> | null = null;
 let snapshotGeneration = 0;
 const TaskIdSchema = z.string().min(1).max(200);
 const ProjectPathSchema = z.string().min(1).max(4096);
@@ -112,7 +113,7 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
 
   ipcMain.handle(IPC_CHANNELS.CLOSE_PROJECT, async (event): Promise<void> => {
     assertTrustedSender(event);
-    closeProject();
+    await closeProject();
   });
 
   ipcMain.handle(IPC_CHANNELS.GET_PROJECT_SNAPSHOT, async (event): Promise<any> => {
@@ -410,7 +411,8 @@ export function updateProjectIpcWindow(mainWindow: BrowserWindow): void {
 }
 
 async function openProject(projectRoot: string, projectKind: ProjectKind = 'PROJECT'): Promise<ProjectDetectionResult> {
-  closeProject();
+  await closeProject();
+  snapshotGeneration = 0;
 
   const pathBoundary = new PathBoundary(projectRoot);
 
@@ -520,7 +522,14 @@ async function openProject(projectRoot: string, projectKind: ProjectKind = 'PROJ
 
   const classifiedDetection = classifyDetection(detectionResult, projectKind);
 
-  notifyUpdate({ type: 'project-opened', detection: classifiedDetection, snapshot: await currentSnapshotBuilder.build(), timestamp: new Date().toISOString() });
+  const initialSnapshot = await currentSnapshotBuilder.build();
+  notifyUpdate({
+    type: 'project-opened',
+    detection: classifiedDetection,
+    snapshot: initialSnapshot,
+    generation: snapshotGeneration,
+    timestamp: new Date().toISOString(),
+  });
 
   return classifiedDetection;
 }
@@ -546,13 +555,18 @@ export async function openProjectForAutomation(projectRoot: string): Promise<Pro
   return openProject(projectRoot);
 }
 
-export function shutdownProject(): void {
-  closeProject();
+export async function shutdownProject(): Promise<void> {
+  await closeProject();
 }
 
-function closeProject(): void {
+async function closeProject(): Promise<void> {
+  if (snapshotRefreshTimer) {
+    clearTimeout(snapshotRefreshTimer);
+    snapshotRefreshTimer = null;
+  }
+  snapshotRefreshScheduled = false;
   if (currentWatcher) {
-    currentWatcher.stop();
+    await currentWatcher.stop();
     currentWatcher = null;
   }
   currentProjectBoundary = null;
@@ -571,6 +585,7 @@ function closeProject(): void {
   currentExecutionProfileContext = null;
   currentTaskBoundaries = null;
   currentSnapshotBuilder = null;
+  snapshotGeneration = 0;
 }
 
 function watcherTaskId(event: WatcherEvent): string | undefined {
@@ -584,6 +599,7 @@ function watcherTaskId(event: WatcherEvent): string | undefined {
 }
 
 function handleWatcherEvent(event: WatcherEvent): void {
+  const timestamp = new Date().toISOString();
   const targetedType: 'action-changed' | 'approval-changed' | 'evaluation-changed' | 'capability-policy-changed' | 'workspace-binding-changed' | 'handoff-changed' | 'responsibility-changed' | 'verification-scope-changed' | 'attestation-changed' | 'task-updated' =
     event.type === 'action-changed' || event.type === 'approval-changed' || event.type === 'evaluation-changed' || event.type === 'capability-policy-changed'
       || event.type === 'workspace-binding-changed' || event.type === 'handoff-changed' || event.type === 'responsibility-changed'
@@ -595,7 +611,12 @@ function handleWatcherEvent(event: WatcherEvent): void {
     taskId: watcherTaskId(event),
     data: event,
     generation: ++snapshotGeneration,
-    timestamp: new Date().toISOString(),
+    timestamp,
+  });
+  notifyUpdate({
+    type: 'watcher-status',
+    data: { active: true, lastEventAt: timestamp, lastEventType: event.type, lastTaskId: watcherTaskId(event) },
+    timestamp,
   });
 
   // Execution provenance is loaded lazily per task; a lightweight
@@ -605,27 +626,45 @@ function handleWatcherEvent(event: WatcherEvent): void {
 
   if (currentSnapshotBuilder && !snapshotRefreshScheduled) {
     snapshotRefreshScheduled = true;
-    setTimeout(() => { snapshotRefreshScheduled = false; if (!currentSnapshotBuilder) return; currentSnapshotBuilder.build().then((snapshot) => {
-      notifyUpdate({ type: 'snapshot-refreshed', snapshot, generation: ++snapshotGeneration, timestamp: new Date().toISOString() });
-    }).catch(console.error); }, 100);
+    snapshotRefreshTimer = setTimeout(async () => {
+      snapshotRefreshTimer = null;
+      snapshotRefreshScheduled = false;
+      const builder = currentSnapshotBuilder;
+      if (!builder) return;
+      const generation = snapshotGeneration;
+      try {
+        const snapshot = await builder.build();
+        // The project may have been closed or replaced while the snapshot
+        // was being assembled. Never publish that result into the new project.
+        if (currentSnapshotBuilder !== builder) return;
+        notifyUpdate({ type: 'snapshot-refreshed', snapshot, generation, timestamp: new Date().toISOString() });
+      } catch (error) {
+        console.error('Failed to refresh project snapshot:', error);
+      }
+    }, 100);
   }
 }
 
 function handleWatcherError(error: Error): void {
+  const timestamp = new Date().toISOString();
   const studioError: StudioError = {
     code: 'WATCHER_FAILED',
     message: error.message,
     recoverable: true,
     details: error.stack,
   };
-  notifyUpdate({ type: 'error', data: studioError, timestamp: new Date().toISOString() });
+  notifyUpdate({ type: 'watcher-status', data: { active: false, error: error.message }, timestamp });
+  notifyUpdate({ type: 'error', data: studioError, timestamp });
 }
 
 function handleWatcherStatusChange(active: boolean): void {
+  const timestamp = new Date().toISOString();
   notifyUpdate({
     type: 'watcher-status',
-    data: { active, lastEventAt: new Date().toISOString() },
-    timestamp: new Date().toISOString(),
+    // `lastEventAt` is reserved for an observed project-file change. A
+    // watcher becoming ready is not itself a project mutation.
+    data: { active },
+    timestamp,
   });
 }
 

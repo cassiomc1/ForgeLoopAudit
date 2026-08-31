@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { _electron as electron } from 'playwright';
 import { createHash } from 'node:crypto';
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, cpSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -77,6 +77,43 @@ function createFixtureProject(): string {
   return root;
 }
 
+function taskKey(taskId: string): string {
+  return createHash('sha256').update(taskId).digest('hex');
+}
+
+function appendLiveEvent(projectRoot: string, taskId: string, eventName: string): void {
+  const eventPath = join(projectRoot, '.forgeloop', 'task-state', taskKey(taskId), 'events.ndjson');
+  const lines = readFileSync(eventPath, 'utf8').trim().split('\n').filter(Boolean);
+  const previous = JSON.parse(lines.at(-1) || '{}') as { seq: number; hash: string };
+  const event = {
+    seq: previous.seq + 1,
+    schemaVersion: 1,
+    protocolVersion: 1,
+    taskId,
+    event: eventName,
+    at: new Date().toISOString(),
+    previousHash: previous.hash,
+    details: { source: 'electron-live-watcher-test' },
+  };
+  const hash = createHash('sha256').update(JSON.stringify(canonicalize(event))).digest('hex');
+  appendFileSync(eventPath, `${JSON.stringify({ ...event, hash })}\n`);
+}
+
+function addLiveExecution(projectRoot: string, taskId: string): void {
+  const taskDir = join(projectRoot, '.forgeloop', 'task-state', taskKey(taskId), 'executions');
+  const sourcePath = join(taskDir, 'exec-checkout-integration-tests.json');
+  const source = JSON.parse(readFileSync(sourcePath, 'utf8')) as Record<string, unknown>;
+  writeFileSync(join(taskDir, 'exec-live-audit.json'), JSON.stringify({
+    ...source,
+    executionId: 'exec-live-audit',
+    checkId: 'live-audit',
+    requirement: 'Live execution updates appear in Studio',
+    argv: ['npm', 'run', 'live-audit'],
+    startedAt: new Date().toISOString(),
+    finishedAt: new Date().toISOString(),
+  }));
+}
+
 test('fixture project flows through the functional v0.1 renderer surfaces', async () => {
   const fixture = createFixtureProject();
   const app = await electron.launch({ args: ['.'], env: { ...process.env, NODE_ENV: 'production', FORGELOOP_STUDIO_SMOKE: '1', FORGELOOP_STUDIO_FIXTURE_PROJECT: fixture } });
@@ -146,5 +183,41 @@ test('demo exposes the 1.6.4 boundary surfaces without mutation controls', async
     await expect(window.getByRole('button', { name: /workspace-bind|handoff-create|responsibility-set|verify-scope|attestation-create/i })).toHaveCount(0);
   } finally {
     await app.close();
+  }
+});
+
+test('live watcher updates event and execution surfaces after monitored changes', async () => {
+  const fixture = mkdtempSync(join(tmpdir(), 'forgeloop-studio-live-e2e-'));
+  cpSync(DEMO_PROJECT, fixture, { recursive: true });
+  const app = await electron.launch({
+    args: ['.'],
+    env: { ...process.env, NODE_ENV: 'production', FORGELOOP_STUDIO_SMOKE: '1', FORGELOOP_STUDIO_FIXTURE_PROJECT: fixture },
+  });
+  try {
+    const window = await app.firstWindow();
+    await expect(window.getByRole('heading', { name: 'Project Overview' })).toBeVisible();
+
+    await window.getByLabel('Main navigation').getByRole('button', { name: 'Events', exact: true }).click();
+    await expect(window.getByRole('heading', { name: 'Event Ledger' })).toBeVisible();
+    await window.getByRole('combobox').selectOption('TASK-004');
+    await expect(window.getByText('TASK_BLOCKED', { exact: true })).toBeVisible();
+    appendLiveEvent(fixture, 'TASK-004', 'LIVE_AUDIT_EVENT');
+    await expect(window.getByText('LIVE_AUDIT_EVENT', { exact: true })).toBeVisible({ timeout: 5000 });
+    await window.getByLabel('Main navigation').getByRole('button', { name: 'Overview', exact: true }).click();
+    const projectInformation = window.getByRole('region', { name: 'Project Information', exact: true });
+    await expect(projectInformation).toContainText('event-appended');
+    await expect(projectInformation).toContainText('TASK-004');
+
+    await window.getByLabel('Main navigation').getByRole('button', { name: 'Executions', exact: true }).click();
+    await expect(window.getByRole('heading', { name: 'Executions' })).toBeVisible();
+    await window.getByRole('combobox').selectOption('TASK-003');
+    addLiveExecution(fixture, 'TASK-003');
+    await expect(window.getByRole('button', { name: /exec-live-audit/ })).toBeVisible({ timeout: 5000 });
+    await window.getByLabel('Main navigation').getByRole('button', { name: 'Overview', exact: true }).click();
+    await expect(window.getByRole('region', { name: 'Project Information', exact: true })).toContainText('execution-changed');
+    await expect(window.getByRole('region', { name: 'Project Information', exact: true })).toContainText('TASK-003');
+  } finally {
+    await app.close();
+    rmSync(fixture, { recursive: true, force: true });
   }
 });

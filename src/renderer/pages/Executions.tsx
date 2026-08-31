@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { ProjectSnapshot, ExecutionPage, ExecutionRecord } from '@shared/domain';
 import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingState } from '../components/ui/LoadingState';
@@ -16,6 +16,7 @@ import {
 interface ExecutionsProps {
   snapshot: ProjectSnapshot;
   selectedTaskId: string | null;
+  executionsRefreshToken?: number;
   onSelectedTaskChange?: (taskId: string) => void;
 }
 
@@ -114,35 +115,40 @@ export function ExecutionEntry({
   );
 }
 
-export function Executions({ snapshot, selectedTaskId, onSelectedTaskChange }: ExecutionsProps) {
+export function Executions({ snapshot, selectedTaskId, executionsRefreshToken = 0, onSelectedTaskChange }: ExecutionsProps) {
   const [page, setPage] = useState<ExecutionPage | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [rawJson, setRawJson] = useState<string | null>(null);
+  const requestIdRef = useRef(0);
 
   const effectiveTask = snapshot.tasks.find((t) => t.taskId === selectedTaskId) || null;
   const isolationFeatureAvailable = isVerificationExecutionIsolationAvailable(snapshot.protocol.featureSupport);
 
   const loadExecutions = useCallback(async () => {
     if (!effectiveTask) return;
+    const requestId = ++requestIdRef.current;
+    const taskId = effectiveTask.taskId;
     setIsLoading(true);
     setError(null);
     try {
-      const result = await (window as any).forgeLoopStudio.getTaskExecutions(effectiveTask.taskId);
+      const result = await (window as any).forgeLoopStudio.getTaskExecutions(taskId);
+      if (requestId !== requestIdRef.current) return;
       setPage(result);
       setRawJson(null);
       setExpandedId(null);
     } catch (err) {
+      if (requestId !== requestIdRef.current) return;
       setError(err instanceof Error ? err.message : 'Failed to load execution provenance');
     } finally {
-      setIsLoading(false);
+      if (requestId === requestIdRef.current) setIsLoading(false);
     }
   }, [effectiveTask]);
 
   useEffect(() => {
     void loadExecutions();
-  }, [loadExecutions]);
+  }, [loadExecutions, executionsRefreshToken]);
 
   if (snapshot.tasks.length === 0) {
     return <EmptyState title="No tasks" description="Execution provenance is per-task; this project has no tasks." />;
