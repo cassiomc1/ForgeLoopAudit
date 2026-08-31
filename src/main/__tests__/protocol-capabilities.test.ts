@@ -48,7 +48,7 @@ function validProtocolInfo(overrides: Record<string, unknown> = {}) {
 function currentCapabilities(overrides: Record<string, unknown> = {}): ForgeLoopCapabilitiesSummary {
   return {
     ...validCapabilities({
-    packageVersion: '1.7.0',
+    packageVersion: '1.8.0',
     features: {
       taskClaimRecovery: {
         version: 1,
