@@ -7,8 +7,8 @@
 **Target ForgeLoop protocol:** v1  
 **Default product mode:** Local, read-only observer  
 
-The current release line is `0.1.0-rc.6`, aligned to ForgeLoop `1.8.0` at
-source commit `a4360ac9b24b19c74171fdbac3163b892d896484` with protocol v1,
+The current release line is `0.1.0-rc.6`, aligned to ForgeLoop `1.8.1` at
+source commit `64a16c05e4838e75f7f38674dcf879e19285a83a` with protocol v1,
 schema v1 and Integration API v1. This document describes the implemented
 observer boundary and identifies genuine future work explicitly.
 
@@ -58,9 +58,9 @@ read-only ForgeLoop Studio renderer
 
 The UI must represent actual ForgeLoop protocol concepts and artifacts. It must not invent hidden lifecycle states, undocumented completion rules, synthetic evidence, or alternative transitions.
 
-### 2.1a ForgeLoop 1.8.0 Integration boundary
+### 2.1a ForgeLoop 1.8.1 Integration boundary
 
-Semantic facts come exclusively from the bundled `@cassiomc1/forgeloop/integration` public subpath (ForgeLoop 1.8.0, Integration API v1, protocol v1, schema v1):
+Semantic facts come exclusively from the bundled `@cassiomc1/forgeloop/integration` public subpath (ForgeLoop 1.8.1, Integration API v1, protocol v1, schema v1):
 
 - `protocol/info` — compatibility via `compatibility.schemaVersion` (there is no top-level `schemaVersion`);
 - `project/tasks` — canonical task discovery with filesystem parity diagnostics;
