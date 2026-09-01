@@ -2,8 +2,8 @@
 
 ForgeLoop Studio supports protocol v1, schema v1 and Integration API v1 from
 the pinned ForgeLoop source revision recorded in `schemas/provenance.json`
-(ForgeLoop **1.8.0**, commit
-`a4360ac9b24b19c74171fdbac3163b892d896484`). The runtime artifact registry
+(ForgeLoop **1.8.1**, commit
+`64a16c05e4838e75f7f38674dcf879e19285a83a`). The runtime artifact registry
 and `SUPPORTED_PROTOCOL.requiredSchemas` are contract-tested to remain
 identical. See the [trusted schema boundary](../schemas/README.md) and
 [vendored runtime lineage](../vendor/README.md) for their verification
@@ -13,7 +13,7 @@ procedures.
 
 | Project / Build | Integration API | Result |
 |---|---|---|
-| Pinned ForgeLoop build (`1.8.0 @ a4360ac...`) | Integration API v1 valid (`INTEGRATION_V1`) | Full tested Studio capability set: canonical task discovery, ownership, recovery, observability, durable actions, approvals, capability policy, trajectory projections, verification-execution provenance, adaptive execution-profile context, efficiency observability and the five 1.6.4 boundary features |
+| Pinned ForgeLoop build (`1.8.1 @ 64a16c0...`) | Integration API v1 valid (`INTEGRATION_V1`) | Full tested Studio capability set: canonical task discovery, ownership, recovery, observability, durable actions, approvals, capability policy, trajectory projections, verification-execution provenance, adaptive execution-profile context, efficiency observability and the five 1.6.4 boundary features |
 | Other protocol-v1 / Integration API v1 build | Required core capabilities present; optional capability absent | Core support remains `INTEGRATION_V1`; optional panels and verification-execution provenance are enabled only when their individual capability contracts are advertised; the affected feature is unavailable |
 | Any protocol-v1 build | Missing CORE required resources or capability drift | Rejected with `INCOMPATIBLE` (fails closed; missing core resources, unsupported recovery contract, or broken executor parity) |
 | Protocol-v1 project | Integration API unavailable | Degraded mode (`ARTIFACT_ONLY`): visual reading + schema validation; canonical ownership and optional canonical projections are unavailable |
@@ -90,8 +90,8 @@ Refresh the trusted schema set only from a controlled ForgeLoop checkout:
 ```bash
 node scripts/generate-schema-provenance.mjs \
   --source ../forgeloop \
-  --commit a4360ac9b24b19c74171fdbac3163b892d896484 \
-  --package-version 1.8.0
+  --commit 64a16c05e4838e75f7f38674dcf879e19285a83a \
+  --package-version 1.8.1
 npm run protocol:schemas:verify
 ```
 
