@@ -101,6 +101,7 @@ export interface ForgeLoopFeatureSupport {
   adaptiveExecutionProfiles?: boolean;
   executionProfileContext?: boolean;
   contextUsageObservability?: boolean;
+  structuralQuality?: boolean;
 }
 
 export type ExecutionProfileName = 'light' | 'balanced' | 'full';

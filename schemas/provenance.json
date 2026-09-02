@@ -1,8 +1,8 @@
 {
-  "forgeLoopPackageVersion": "1.8.0",
-  "forgeLoopGitCommit": "a4360ac9b24b19c74171fdbac3163b892d896484",
+  "forgeLoopPackageVersion": "1.9.0",
+  "forgeLoopGitCommit": "64dca84357d11989d16b0698e1ff6409ff0f0ddf",
   "protocolVersion": 1,
-  "generatedAt": "2026-08-31T18:14:16.676Z",
+  "generatedAt": "2026-09-02T04:44:29.463Z",
   "schemas": {
     "action.schema.json": {
       "sha256": "0066f1d303781060b3ccde0a7235eabcdff69940928a9e75fab5e68e70717e18",
@@ -33,7 +33,7 @@
       "upstreamPath": "schemas/code-manifest.schema.json"
     },
     "config.schema.json": {
-      "sha256": "12161998adf2b46760a6480a61510bd873190116b5cb3a78ad2ad04cd3bbf16a",
+      "sha256": "6a87a4c5828a8d0e7898d4b5126b6a453a8a17d65f802aa726a9bed659cc22bb",
       "upstreamPath": "schemas/config.schema.json"
     },
     "continuity.schema.json": {
@@ -89,7 +89,7 @@
       "upstreamPath": "schemas/policy-snapshot.schema.json"
     },
     "preflight.schema.json": {
-      "sha256": "bf5873352b9cdbf685a9ad8eb58fadbd90693e5c32cd270b1d17f724849eacb3",
+      "sha256": "64b474725abc9004d3a39e39e324e5ad3bfb8a02fc94e73cd84b272a5abe2e68",
       "upstreamPath": "schemas/preflight.schema.json"
     },
     "responsibility.schema.json": {

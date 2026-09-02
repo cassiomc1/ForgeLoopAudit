@@ -7,8 +7,8 @@
 **Target ForgeLoop protocol:** v1  
 **Default product mode:** Local, read-only observer  
 
-The current release line is `0.1.0-rc.6`, aligned to ForgeLoop `1.8.0` at
-source commit `a4360ac9b24b19c74171fdbac3163b892d896484` with protocol v1,
+The current release line is `0.1.0-rc.6`, aligned to ForgeLoop `1.9.0` at
+source commit `64dca84357d11989d16b0698e1ff6409ff0f0ddf` with protocol v1,
 schema v1 and Integration API v1. This document describes the implemented
 observer boundary and identifies genuine future work explicitly.
 
@@ -58,9 +58,9 @@ read-only ForgeLoop Studio renderer
 
 The UI must represent actual ForgeLoop protocol concepts and artifacts. It must not invent hidden lifecycle states, undocumented completion rules, synthetic evidence, or alternative transitions.
 
-### 2.1a ForgeLoop 1.8.0 Integration boundary
+### 2.1a ForgeLoop 1.9.0 Integration boundary
 
-Semantic facts come exclusively from the bundled `@cassiomc1/forgeloop/integration` public subpath (ForgeLoop 1.8.0, Integration API v1, protocol v1, schema v1):
+Semantic facts come exclusively from the bundled `@cassiomc1/forgeloop/integration` public subpath (ForgeLoop 1.9.0, Integration API v1, protocol v1, schema v1):
 
 - `protocol/info` — compatibility via `compatibility.schemaVersion` (there is no top-level `schemaVersion`);
 - `project/tasks` — canonical task discovery with filesystem parity diagnostics;
@@ -99,6 +99,16 @@ Context inflation and benchmark regression statuses are observational,
 non-blocking diagnostics. The panel preserves `NOT MEASURED` when trusted
 usage or quality data is absent and never changes lifecycle authority or
 completion state.
+
+### 2.1d ForgeLoop 1.9.0 Structural Quality capability
+
+ForgeLoop 1.9.0 advertises the provider-neutral `structuralQuality` feature
+and the read-only `task/structural-quality` resource. Studio preserves that
+capability metadata, including supported modes, provider neutrality and the
+quality command identities, without calculating a score, freshness, baseline
+or evaluation itself. Structural Quality remains unavailable when the
+upstream capability or resource is absent; Studio never invokes the external
+quality commands and never promotes an unavailable or unknown result to pass.
 
 ### 2.2 Read-only by default
 

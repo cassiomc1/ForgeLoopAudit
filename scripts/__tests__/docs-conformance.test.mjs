@@ -54,7 +54,7 @@ test('rejects a package release-version mismatch', () => {
 test('rejects a ForgeLoop provenance-version mismatch', () => {
   withRepository((root) => {
     updateJson(root, 'schemas/provenance.json', (provenance) => { provenance.forgeLoopPackageVersion = '1.6.3'; });
-    assert.throws(() => runDocConformance(root, { validateLineage: false }), /schema provenance must pin ForgeLoop 1\.8\.0/);
+    assert.throws(() => runDocConformance(root, { validateLineage: false }), /schema provenance must pin ForgeLoop 1\.9\.0/);
   });
 });
 

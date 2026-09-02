@@ -48,7 +48,7 @@ function validProtocolInfo(overrides: Record<string, unknown> = {}) {
 function currentCapabilities(overrides: Record<string, unknown> = {}): ForgeLoopCapabilitiesSummary {
   return {
     ...validCapabilities({
-    packageVersion: '1.8.0',
+    packageVersion: '1.9.0',
     features: {
       taskClaimRecovery: {
         version: 1,
@@ -126,6 +126,17 @@ function currentCapabilities(overrides: Record<string, unknown> = {}): ForgeLoop
         signingProviders: ['none', 'sigstore'],
         completionLedgerBound: true,
       },
+      structuralQuality: {
+        version: 1,
+        supported: true,
+        schemaVersion: 1,
+        providerNeutral: true,
+        modes: ['off', 'observe', 'gate'],
+        builtInProviders: ['sentrux'],
+        commands: ['quality-baseline', 'quality-verify', 'quality-status'],
+        baselineImmutableAfterExecution: true,
+        maxOutputBytes: 2097152,
+      },
     },
     resources: [
       'protocol/info',
@@ -146,6 +157,7 @@ function currentCapabilities(overrides: Record<string, unknown> = {}): ForgeLoop
       'task/responsibility',
       'task/verification-scope',
       'task/attestation',
+      'task/structural-quality',
     ],
     commands: [
       'history', 'trace', 'reflect', 'inspect', 'metrics', 'action-show',
@@ -222,6 +234,7 @@ describe('core/protocol/protocol-capabilities', () => {
         adaptiveExecutionProfiles: true,
         executionProfileContext: true,
         contextUsageObservability: true,
+        structuralQuality: true,
       });
     });
 

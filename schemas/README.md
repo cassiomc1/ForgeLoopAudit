@@ -4,8 +4,8 @@ This directory vendors the ForgeLoop protocol-v1 JSON Schemas used by Studio's A
 
 The schema filenames and protocol version are bound by `src/main/core/protocol/artifact-registry.ts`. Refresh these files only from the matching ForgeLoop protocol-v1 schema set and rerun the artifact validation fixtures.
 
-`provenance.json` currently pins ForgeLoop `1.8.0` at commit
-`a4360ac9b24b19c74171fdbac3163b892d896484` and records protocol v1, the
+`provenance.json` currently pins ForgeLoop `1.9.0` at commit
+`64dca84357d11989d16b0698e1ff6409ff0f0ddf` and records protocol v1, the
 upstream path and SHA-256 for every trusted schema. Trusted schemas include
 workspace binding, canonical handoffs, responsibility, verification scope,
 code manifests, in-toto statements, code-attestation predicates and

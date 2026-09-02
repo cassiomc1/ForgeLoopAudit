@@ -166,7 +166,7 @@ try {
   await capture(page, 'settings.png', 'Settings', async () => {
     await expect(page.getByText(`ForgeLoop Studio v${packageVersion}`, { exact: true })).toBeVisible();
     const protocolPanel = page.getByRole('heading', { name: 'ForgeLoop protocol', exact: true }).locator('..');
-    await expect(protocolPanel).toContainText('1.8.0');
+    await expect(protocolPanel).toContainText('1.9.0');
     await expect(protocolPanel).toContainText('INTEGRATION_V1');
   }, page.getByRole('heading', { name: 'ForgeLoop protocol', exact: true }));
 

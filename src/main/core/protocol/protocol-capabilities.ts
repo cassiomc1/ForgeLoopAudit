@@ -100,6 +100,7 @@ const EMPTY_FEATURE_SUPPORT: ForgeLoopFeatureSupport = Object.freeze({
   adaptiveExecutionProfiles: false,
   executionProfileContext: false,
   contextUsageObservability: false,
+  structuralQuality: false,
 });
 
 function hasResource(capabilities: ForgeLoopCapabilitiesSummary, resource: string): boolean {
@@ -222,6 +223,16 @@ export function deriveFeatureSupport(capabilities: ForgeLoopCapabilitiesSummary)
       && contextUsageObservability.sources.includes('HOST_REPORTED')
       && contextUsageObservability.sources.includes('UNKNOWN'),
   );
+  const structuralQuality = capabilities.features.structuralQuality;
+  const structuralQualitySupported = Boolean(
+    structuralQuality
+      && structuralQuality.version === 1
+      && structuralQuality.supported === true
+      && structuralQuality.schemaVersion === 1
+      && structuralQuality.providerNeutral === true
+      && structuralQuality.baselineImmutableAfterExecution === true
+      && hasResource(capabilities, 'task/structural-quality'),
+  );
 
   return {
     canonicalOwnership: coreResourcesPresent,
@@ -244,6 +255,7 @@ export function deriveFeatureSupport(capabilities: ForgeLoopCapabilitiesSummary)
     adaptiveExecutionProfiles: adaptiveExecutionProfilesSupported,
     executionProfileContext: executionProfileContextSupported,
     contextUsageObservability: contextUsageObservabilitySupported,
+    structuralQuality: structuralQualitySupported,
   };
 }
 
