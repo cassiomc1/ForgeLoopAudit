@@ -93,6 +93,18 @@ export interface ForgeLoopCodeAttestationFeatureSummary {
   completionLedgerBound: boolean;
 }
 
+export interface ForgeLoopStructuralQualityFeatureSummary {
+  version: number;
+  supported: boolean;
+  schemaVersion: number;
+  providerNeutral: boolean;
+  modes: string[];
+  builtInProviders: string[];
+  commands: string[];
+  baselineImmutableAfterExecution: boolean;
+  maxOutputBytes: number;
+}
+
 export interface ForgeLoopCommandCapabilitySummary {
   name: string;
   baseRiskClass?: string;
@@ -118,6 +130,7 @@ export interface ForgeLoopCapabilitiesSummary {
     responsibilityConstraints?: ForgeLoopResponsibilityConstraintsFeatureSummary;
     differentialVerificationScope?: ForgeLoopDifferentialVerificationScopeFeatureSummary;
     codeAttestation?: ForgeLoopCodeAttestationFeatureSummary;
+    structuralQuality?: ForgeLoopStructuralQualityFeatureSummary;
   };
   resources: string[];
   commands?: ForgeLoopCommandCapabilitySummary[];

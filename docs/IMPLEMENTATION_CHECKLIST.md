@@ -32,7 +32,7 @@ tests.
 ## ForgeLoop integration and trust boundary
 
 - [x] Detect ForgeLoop projects, including safe nested-project discovery.
-- [x] Load ForgeLoop `1.8.1` through the vendored Integration API v1.
+- [x] Load ForgeLoop `1.9.0` through the vendored Integration API v1, including the optional Structural Quality resource.
 - [x] Read `protocol/info` from `compatibility.schemaVersion`; no top-level
   schema version is inferred.
 - [x] Fail closed on unsupported protocol/schema versions, missing core

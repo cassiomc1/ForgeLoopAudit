@@ -6,6 +6,7 @@ import type {
   ForgeLoopCapabilitiesSummary,
   ForgeLoopReadOnlyResult,
   ForgeLoopResourceReadOptions,
+  ForgeLoopStructuralQualityFeatureSummary,
   ForgeLoopVerificationIsolationMode,
   ForgeLoopVerificationScopeMode,
 } from './types';
@@ -186,6 +187,17 @@ interface ForgeLoopIntegrationModule {
         signingProviders: unknown[];
         completionLedgerBound: boolean;
       };
+      structuralQuality?: {
+        version: number;
+        supported: boolean;
+        schemaVersion: number;
+        providerNeutral: boolean;
+        modes: unknown[];
+        builtInProviders: unknown[];
+        commands: unknown[];
+        baselineImmutableAfterExecution: boolean;
+        maxOutputBytes: number;
+      };
     };
     commands: Array<Record<string, unknown>>;
     resources: Array<{ name: string }>;
@@ -254,6 +266,7 @@ function buildAdapter(fl: ForgeLoopIntegrationModule): ForgeLoopIntegrationAdapt
       const responsibilityConstraints = raw.features.responsibilityConstraints;
       const differentialVerificationScope = raw.features.differentialVerificationScope;
       const codeAttestation = raw.features.codeAttestation;
+      const structuralQuality = raw.features.structuralQuality;
       return {
         packageVersion,
         protocolVersion: raw.protocolVersion,
@@ -365,6 +378,19 @@ function buildAdapter(fl: ForgeLoopIntegrationModule): ForgeLoopIntegrationAdapt
               signingProviders: stringArray(codeAttestation.signingProviders),
               completionLedgerBound: codeAttestation.completionLedgerBound === true,
             },
+          } : {}),
+          ...(structuralQuality ? {
+            structuralQuality: {
+              version: finiteNumber(structuralQuality.version, 0),
+              supported: structuralQuality.supported === true,
+              schemaVersion: finiteNumber(structuralQuality.schemaVersion, 0),
+              providerNeutral: structuralQuality.providerNeutral === true,
+              modes: stringArray(structuralQuality.modes),
+              builtInProviders: stringArray(structuralQuality.builtInProviders),
+              commands: stringArray(structuralQuality.commands),
+              baselineImmutableAfterExecution: structuralQuality.baselineImmutableAfterExecution === true,
+              maxOutputBytes: finiteNumber(structuralQuality.maxOutputBytes, 0),
+            } satisfies ForgeLoopStructuralQualityFeatureSummary,
           } : {}),
         },
         resources: raw.resources.map((resource) => resource.name),

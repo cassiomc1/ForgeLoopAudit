@@ -20,7 +20,7 @@ describe('core/integration/forgeloop-integration', () => {
 
   describe('package identity', () => {
     it('exposes the bundled ForgeLoop package version', () => {
-      expect(adapter.getPackageVersion()).toBe('1.8.1');
+      expect(adapter.getPackageVersion()).toBe('1.9.0');
     });
 
     it('keeps the version constant synchronized with the installed dependency pin', () => {
@@ -28,7 +28,7 @@ describe('core/integration/forgeloop-integration', () => {
         readFileSync(join(process.cwd(), 'node_modules', '@cassiomc1', 'forgeloop', 'package.json'), 'utf8'),
       ) as { version: string };
       expect(installed.version).toBe(FORGELOOP_PACKAGE_VERSION);
-      expect(FORGELOOP_UPSTREAM_COMMIT).toBe('64a16c05e4838e75f7f38674dcf879e19285a83a');
+      expect(FORGELOOP_UPSTREAM_COMMIT).toBe('64dca84357d11989d16b0698e1ff6409ff0f0ddf');
       const dependencySpec = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8')).dependencies as Record<string, string>;
       expect(dependencySpec).toHaveProperty('@cassiomc1/forgeloop');
     });
@@ -79,6 +79,7 @@ describe('core/integration/forgeloop-integration', () => {
         'task/responsibility',
         'task/verification-scope',
         'task/attestation',
+        'task/structural-quality',
       ]));
     });
 
@@ -112,6 +113,16 @@ describe('core/integration/forgeloop-integration', () => {
       expect(capabilities.features.responsibilityConstraints).toMatchObject({ version: 1, supported: true, immutableDuringPass: true, completionEnforced: true });
       expect(capabilities.features.differentialVerificationScope).toMatchObject({ version: 1, supported: true, modes: ['AUTO', 'CHANGED', 'CLAIMED', 'FULL'], impactedMode: false });
       expect(capabilities.features.codeAttestation).toMatchObject({ version: 1, supported: true, completionLedgerBound: true });
+      expect(capabilities.features.structuralQuality).toMatchObject({
+        version: 1,
+        supported: true,
+        schemaVersion: 1,
+        providerNeutral: true,
+        modes: ['off', 'observe', 'gate'],
+        builtInProviders: ['sentrux'],
+        commands: ['quality-baseline', 'quality-verify', 'quality-status'],
+        baselineImmutableAfterExecution: true,
+      });
       expect(capabilities.features.adaptiveExecutionProfiles).toMatchObject({
         version: 1,
         supported: true,
