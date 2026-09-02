@@ -98,6 +98,7 @@ export interface ForgeLoopFeatureSupport {
   responsibilityConstraints: boolean;
   differentialVerificationScope: boolean;
   codeAttestation: boolean;
+  advisoryContextProviders: boolean;
   adaptiveExecutionProfiles?: boolean;
   executionProfileContext?: boolean;
   contextUsageObservability?: boolean;
@@ -258,6 +259,27 @@ export interface CanonicalProjectionError {
   next?: string;
 }
 
+export type ContinuityLintStatus = 'PASS' | 'WARN';
+
+export interface ContinuityLintFindingView {
+  code: string;
+  severity: 'INFO' | 'WARN' | 'UNKNOWN';
+  field: string | null;
+  itemId: string | null;
+}
+
+export interface ContinuityLintView {
+  available: boolean;
+  source: CanonicalProjectionSource;
+  classification: string | null;
+  status: ContinuityLintStatus | null;
+  findings: ContinuityLintFindingView[];
+  reasonCodes: string[];
+  authority: 'OPERATIONAL_CONTEXT_ONLY';
+  evidenceAuthority: 'NONE';
+  error: CanonicalProjectionError | null;
+}
+
 export type WorkspaceBindingStatus =
   | 'UNBOUND'
   | 'MATCH'
@@ -279,6 +301,16 @@ export interface WorkspaceBindingView {
   error: CanonicalProjectionError | null;
 }
 
+export type HandoffAcceptanceStatus = 'OPEN' | 'ACCEPTED' | 'UNBOUND' | 'INCONSISTENT' | 'UNKNOWN';
+
+export interface HandoffAcceptanceView {
+  status: HandoffAcceptanceStatus;
+  consumerId: string | null;
+  harness: string | null;
+  acceptedAt: string | null;
+  reasonCodes: string[];
+}
+
 export interface CanonicalHandoffView {
   handoffId: string | null;
   taskId: string | null;
@@ -293,6 +325,7 @@ export interface CanonicalHandoffView {
   state: Record<string, unknown> | null;
   evidence: Record<string, unknown> | null;
   continuity: Record<string, unknown> | null;
+  acceptance: HandoffAcceptanceView | null;
 }
 
 export interface TaskHandoffsView {

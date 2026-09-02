@@ -219,20 +219,24 @@ No external service, network access or build step is required.
 | TASK-001 | Implement premium product catalog | COMPLETE | Full lifecycle plus unsigned code-attestation artifacts; policy does not claim a signature |
 | TASK-002 | Add shopping cart persistence | VERIFYING | Verification cycle with a rejected completion attempt and AUTO → CHANGED scope |
 | TASK-003 | Implement checkout API integration | EXECUTING | Portable workspace-binding warning plus intentional INVALID Responsibility Contract |
-| TASK-004 | Accessibility and keyboard navigation audit | BLOCKED | Failed gate, recovery route, mutable continuity and canonical handoff |
+| TASK-004 | Accessibility and keyboard navigation audit | BLOCKED | Failed gate, recovery route, mutable continuity and an accepted canonical handoff operational receipt |
 | TASK-005 | Improve image loading performance | PLANNED | Planned work with a recorded baseline |
 | TASK-006 | Security review of checkout flow | COMPLETE | Security policy gates and attestation policy metadata |
 
 TASK-004 is the continuity showcase: \`harness-a\` failed the keyboard-navigation
 gate, recorded findings, selected a recovery route and handed off to
-\`harness-b\`, which resumed from \`continuity.json\`.
+\`harness-b\`, which resumed from \`continuity.json\`. The generated ledger also
+contains a known \`HANDOFF_ACCEPTED\` event for the canonical handoff. Studio
+displays it as **Accepted — operational receipt only**; it is not review,
+completion or other evidence and transfers no claims or authority.
 
 The optional boundary capabilities are intentionally distributed across the
 tasks. TASK-003 contains a deterministic portable workspace binding, so a real
 checkout normally shows ForgeLoop's canonical MISMATCH or UNAVAILABLE result;
 the demo never pretends to know the host worktree. TASK-002 shows a persisted
 verification scope, TASK-003 shows responsibility constraints, and TASK-004
-shows that immutable handoffs are distinct from mutable Continuity. TASK-003's
+shows that immutable handoffs and their operational acceptance receipts are
+distinct from mutable Continuity. TASK-003's
 responsibility projection intentionally exercises ForgeLoop's INVALID fail-closed
 result (including route validation errors), so Studio does not reinterpret it as
 an accepted scope. TASK-001's

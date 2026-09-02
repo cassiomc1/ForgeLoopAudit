@@ -48,7 +48,7 @@ function validProtocolInfo(overrides: Record<string, unknown> = {}) {
 function currentCapabilities(overrides: Record<string, unknown> = {}): ForgeLoopCapabilitiesSummary {
   return {
     ...validCapabilities({
-    packageVersion: '1.9.0',
+    packageVersion: '1.10.0',
     features: {
       taskClaimRecovery: {
         version: 1,
@@ -101,10 +101,27 @@ function currentCapabilities(overrides: Record<string, unknown> = {}): ForgeLoop
         explicitRebinding: false,
       },
       canonicalHandoffs: {
-        version: 1,
+        version: 2,
         supported: true,
         immutable: true,
         lifecycleAuthority: false,
+        evidenceAuthority: false,
+        exactlyOnceAcceptance: true,
+        acceptanceLedgerBacked: true,
+        acceptanceCommand: 'handoff-accept',
+        acceptanceStatuses: ['OPEN', 'ACCEPTED', 'UNBOUND', 'INCONSISTENT'],
+      },
+      advisoryContextProviders: {
+        version: 1,
+        supported: true,
+        providerNeutral: true,
+        integrationApiOnly: true,
+        lazy: true,
+        optIn: true,
+        persistedByForgeLoop: false,
+        lifecycleAuthority: false,
+        evidenceAuthority: false,
+        executable: false,
       },
       responsibilityConstraints: {
         version: 1,
@@ -228,6 +245,7 @@ describe('core/protocol/protocol-capabilities', () => {
         verificationExecutionIsolation: true,
         workspaceBinding: true,
         canonicalHandoffs: true,
+        advisoryContextProviders: true,
         responsibilityConstraints: true,
         differentialVerificationScope: true,
         codeAttestation: true,
@@ -307,9 +325,38 @@ describe('core/protocol/protocol-capabilities', () => {
       expect(result.featureSupport.trajectoryEvaluations).toBe(false);
       expect(result.featureSupport.workspaceBinding).toBe(false);
       expect(result.featureSupport.canonicalHandoffs).toBe(false);
+      expect(result.featureSupport.advisoryContextProviders).toBe(false);
       expect(result.featureSupport.responsibilityConstraints).toBe(false);
       expect(result.featureSupport.differentialVerificationScope).toBe(false);
       expect(result.featureSupport.codeAttestation).toBe(false);
+    });
+
+    it.each([
+      ['wrong version', { version: 2 }],
+      ['provider is not neutral', { providerNeutral: false }],
+      ['not integration-only', { integrationApiOnly: false }],
+      ['not lazy', { lazy: false }],
+      ['not opt-in', { optIn: false }],
+      ['persisted', { persistedByForgeLoop: true }],
+      ['lifecycle authority', { lifecycleAuthority: true }],
+      ['evidence authority', { evidenceAuthority: true }],
+      ['executable', { executable: true }],
+    ])('degrades advisory context support without changing protocol-v1 compatibility for %s', (_name, overrides) => {
+      const current = currentCapabilities();
+      const feature = {
+        ...current.features.advisoryContextProviders,
+        ...overrides,
+      } as NonNullable<ForgeLoopCapabilitiesSummary['features']['advisoryContextProviders']>;
+      const result = negotiateCompatibilityMode({
+        protocolInfo: normalizeCanonicalProtocolInfo(validProtocolInfo()),
+        capabilities: {
+          ...current,
+          features: { ...current.features, advisoryContextProviders: feature },
+        },
+      });
+
+      expect(result.mode).toBe('INTEGRATION_V1');
+      expect(result.featureSupport.advisoryContextProviders).toBe(false);
     });
 
     it('keeps the protocol compatible while closing each incomplete 1.6.4 boundary feature', () => {

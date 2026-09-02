@@ -53,6 +53,7 @@ function unavailableSnapshot(): ProjectSnapshot {
       responsibilityConstraints: false,
       differentialVerificationScope: false,
       codeAttestation: false,
+      advisoryContextProviders: false,
     },
     },
     health: { status: 'VALID', source: 'FORGELOOP_STATUS_AGGREGATE' },

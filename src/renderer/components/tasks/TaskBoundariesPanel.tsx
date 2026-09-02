@@ -10,6 +10,7 @@ import type {
 import { AlertTriangle, CheckCircle, CircleHelp, GitBranch, Link2, Shield, UserRound } from 'lucide-react';
 import { OwnershipBadge } from '../task/OwnershipBadge';
 import { cn } from '../../lib/utils';
+import { HandoffAcceptanceBadge, HandoffAcceptanceDetail } from './HandoffAcceptanceBadge';
 
 interface TaskBoundariesPanelProps {
   task: TaskSummary;
@@ -118,6 +119,7 @@ function HandoffRow({ handoff }: { handoff: CanonicalHandoffView }) {
     <div className="rounded-8 bg-forge-secondary-surface p-3">
       <div className="flex flex-wrap items-center gap-2">
         <span className="font-mono text-xs text-forge-text-primary">{handoff.handoffId || 'Unnamed handoff'}</span>
+        <HandoffAcceptanceBadge acceptance={handoff.acceptance} />
         <span className="text-[11px] text-forge-text-muted">{handoff.createdAt || 'Unknown time'}</span>
         {handoff.phase && <span className="text-[11px] text-forge-text-muted">· {handoff.phase}</span>}
       </div>
@@ -128,6 +130,7 @@ function HandoffRow({ handoff }: { handoff: CanonicalHandoffView }) {
         <span>Digest: <strong className="font-mono">{compactHash(handoff.digest)}</strong></span>
       </div>
       {handoff.note && <p className="mt-2 text-xs text-forge-text-muted">Note: {handoff.note}</p>}
+      <div className="mt-2 border-t border-forge-border-subtle/60 pt-2"><HandoffAcceptanceDetail acceptance={handoff.acceptance} /></div>
     </div>
   );
 }

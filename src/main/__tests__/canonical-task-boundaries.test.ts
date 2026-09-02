@@ -25,6 +25,7 @@ const allFeatures: ForgeLoopFeatureSupport = {
   responsibilityConstraints: true,
   differentialVerificationScope: true,
   codeAttestation: true,
+  advisoryContextProviders: true,
 };
 
 function fakeAdapter(overrides: Partial<ForgeLoopIntegrationAdapter> = {}): ForgeLoopIntegrationAdapter {
@@ -62,11 +63,19 @@ describe('canonical task boundary projections', () => {
     const handoffs = normalizeHandoffs({
       count: 2,
       handoffs: [
-        { handoffId: 'handoff-old', createdAt: '2026-08-01T00:00:00.000Z', state: { phase: 'EXECUTING', revision: 1 } },
-        { handoffId: 'handoff-new', createdAt: '2026-08-02T00:00:00.000Z', state: { phase: 'VERIFYING', revision: 2 } },
+        { handoffId: 'handoff-old', createdAt: '2026-08-01T00:00:00.000Z', state: { phase: 'EXECUTING', revision: 1 }, acceptance: { status: 'OPEN' } },
+        { handoffId: 'handoff-new', createdAt: '2026-08-02T00:00:00.000Z', state: { phase: 'VERIFYING', revision: 2 }, acceptance: { status: 'ACCEPTED', consumerId: 'agent-42', harness: 'codex', acceptedAt: '2026-08-02T01:00:00.000Z', reasonCodes: [] } },
       ],
     });
     expect(handoffs.handoffs.map((handoff) => handoff.handoffId)).toEqual(['handoff-new', 'handoff-old']);
+    expect(handoffs.handoffs[0]?.acceptance).toEqual({
+      status: 'ACCEPTED',
+      consumerId: 'agent-42',
+      harness: 'codex',
+      acceptedAt: '2026-08-02T01:00:00.000Z',
+      reasonCodes: [],
+    });
+    expect(handoffs.handoffs[1]?.acceptance?.status).toBe('OPEN');
 
     expect(normalizeResponsibility({
       status: 'VALID',
@@ -157,6 +166,13 @@ describe('canonical task boundary projections', () => {
       available: true,
       count: 2,
       error: { code: 'E_HANDOFF_INVALID', message: 'Canonical handoff projection is invalid.' },
+    });
+    expect(normalizeHandoffs({ handoffs: [{ handoffId: 'handoff-unknown', acceptance: { status: 'FUTURE', reasonCodes: ['E_UNKNOWN'] } }] }).handoffs[0]?.acceptance).toEqual({
+      status: 'UNKNOWN',
+      consumerId: null,
+      harness: null,
+      acceptedAt: null,
+      reasonCodes: ['E_UNKNOWN'],
     });
 
     expect(normalizeResponsibility(null)).toMatchObject({ available: false, status: 'UNKNOWN' });

@@ -36,11 +36,11 @@ orphaned screenshot files.
 | `contract-inspector.png` | Contract | `TASK-006` | Security-review contract |
 | `evidence-matrix.png` | Evidence | `TASK-002` | `AUTO` → `CHANGED` verification scope |
 | `event-ledger.png` | Events | `TASK-004` | Live-updating recovery event ledger |
-| `continuity.png` | Continuity | `TASK-004` | Continuity and canonical handoff |
+| `continuity.png` | Continuity | `TASK-004` | Continuity and accepted canonical handoff operational receipt |
 | `diagnostics.png` | Diagnostics | `TASK-004` | Canonical diagnostic signals |
 | `actions.png` | Actions | `TASK-002` | Durable actions and approvals |
 | `policy.png` | Policy | `TASK-006` | Capability and task policy |
-| `settings.png` | Settings | — | Project context, Studio preferences and ForgeLoop capability metadata |
+| `settings.png` | Settings | — | Project context, Studio preferences, ForgeLoop 1.10.0 and advisory capability metadata |
 | `task-boundaries.png` | Overview | `TASK-003` | Workspace mismatch and invalid responsibility |
 
 ## Review checklist

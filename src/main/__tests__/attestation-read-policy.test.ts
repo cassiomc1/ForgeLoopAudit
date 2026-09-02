@@ -24,6 +24,7 @@ const features: ForgeLoopFeatureSupport = {
   responsibilityConstraints: true,
   differentialVerificationScope: true,
   codeAttestation: true,
+  advisoryContextProviders: false,
 };
 
 function config(mode: 'off' | 'optional' | 'required' = 'optional', provider = 'none', required = false): Record<string, unknown> {

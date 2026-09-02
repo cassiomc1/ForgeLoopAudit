@@ -21,6 +21,7 @@ import type {
   CapabilityPolicyView,
   WorkspaceBindingView,
   TaskHandoffsView,
+  ContinuityLintView,
   ResponsibilityView,
   VerificationScopeView,
   TaskAttestationView,
@@ -52,6 +53,7 @@ export interface ForgeLoopStudioAPI {
   getCapabilityPolicy(): Promise<CapabilityPolicyView>;
   getTaskWorkspaceBinding(taskId: string): Promise<WorkspaceBindingView>;
   getTaskHandoffs(taskId: string): Promise<TaskHandoffsView>;
+  getTaskContinuityLint(taskId: string): Promise<ContinuityLintView>;
   getTaskResponsibility(taskId: string): Promise<ResponsibilityView>;
   getTaskVerificationScope(taskId: string): Promise<VerificationScopeView>;
   getTaskAttestation(taskId: string): Promise<TaskAttestationView>;
@@ -119,6 +121,7 @@ export const IPC_CHANNELS = {
   GET_CAPABILITY_POLICY: 'studio:get-capability-policy',
   GET_TASK_WORKSPACE_BINDING: 'studio:get-task-workspace-binding',
   GET_TASK_HANDOFFS: 'studio:get-task-handoffs',
+  GET_TASK_CONTINUITY_LINT: 'studio:get-task-continuity-lint',
   GET_TASK_RESPONSIBILITY: 'studio:get-task-responsibility',
   GET_TASK_VERIFICATION_SCOPE: 'studio:get-task-verification-scope',
   GET_TASK_ATTESTATION: 'studio:get-task-attestation',

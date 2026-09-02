@@ -14,9 +14,9 @@
   },
   "bindings": {
     "contractFingerprint": "7f633cba5e18d89cfc31fdcd71e84371b0b2d0d2fc7110edaf098bebcf8af4d3",
-    "routeFingerprint": "6463794ef2227104a8018db272e2b4b0508a8430f4e6e085bcff15582cdaf4a5",
-    "stateFingerprint": "743027504c371a1c351492e25946c56b7479a19ddee411c4f45d269db2405dd2",
-    "receiptFingerprint": "b8c88e275a90145ef7210f20ef5c60c4f4ae753697b3e05a63e0c696862ef04e",
+    "routeFingerprint": "d7149da5d4c69769dcfef7858ec1385170fb3c74949c7558fe9c281bcc234b2a",
+    "stateFingerprint": "e9c706557388946b11ffb75dcf7b9023a41873cf4891794c865db91ca91e25c5",
+    "receiptFingerprint": "20a6902956f3088258d2dfb46fab153afd6bdc0fc70c2a049bfa34eb157964b2",
     "ledgerSeq": 18,
     "ledgerHash": "2f9dc007971a3050c7a0f301badd46fab488050d07091ea4fbac45bb9a37916b"
   },

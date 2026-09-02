@@ -30,6 +30,7 @@ export const STUDIO_READ_ONLY_COMMANDS = Object.freeze(
   new Set([
     'next',
     'progress',
+    'reconcile-continuity',
     'audit',
     'report',
     'policy-status',
@@ -166,6 +167,23 @@ interface ForgeLoopIntegrationModule {
         supported: boolean;
         immutable: boolean;
         lifecycleAuthority: boolean;
+        evidenceAuthority: boolean;
+        exactlyOnceAcceptance: boolean;
+        acceptanceLedgerBacked: boolean;
+        acceptanceCommand: string;
+        acceptanceStatuses: unknown[];
+      };
+      advisoryContextProviders?: {
+        version: number;
+        supported: boolean;
+        providerNeutral: boolean;
+        integrationApiOnly: boolean;
+        lazy: boolean;
+        optIn: boolean;
+        persistedByForgeLoop: boolean;
+        lifecycleAuthority: boolean;
+        evidenceAuthority: boolean;
+        executable: boolean;
       };
       responsibilityConstraints?: {
         version: number;
@@ -237,7 +255,11 @@ let cachedModule: Promise<ForgeLoopIntegrationModule> | null = null;
  */
 async function loadIntegrationModule(): Promise<ForgeLoopIntegrationModule> {
   if (!cachedModule) {
-    cachedModule = import('@cassiomc1/forgeloop/integration') as Promise<ForgeLoopIntegrationModule>;
+    // The upstream declaration intentionally types capability/resource payloads
+    // as generic records. This private adapter narrows the exact public
+    // contract after the module boundary; no ambient duplicate declaration is
+    // needed now that Studio resolves the vendored package's own declarations.
+    cachedModule = import('@cassiomc1/forgeloop/integration') as unknown as Promise<ForgeLoopIntegrationModule>;
   }
   return cachedModule;
 }
@@ -263,6 +285,7 @@ function buildAdapter(fl: ForgeLoopIntegrationModule): ForgeLoopIntegrationAdapt
       const verificationExecutionIsolation = raw.features.verificationExecutionIsolation;
       const workspaceBinding = raw.features.workspaceBinding;
       const canonicalHandoffs = raw.features.canonicalHandoffs;
+      const advisoryContextProviders = raw.features.advisoryContextProviders;
       const responsibilityConstraints = raw.features.responsibilityConstraints;
       const differentialVerificationScope = raw.features.differentialVerificationScope;
       const codeAttestation = raw.features.codeAttestation;
@@ -350,6 +373,27 @@ function buildAdapter(fl: ForgeLoopIntegrationModule): ForgeLoopIntegrationAdapt
               supported: canonicalHandoffs.supported === true,
               immutable: canonicalHandoffs.immutable === true,
               lifecycleAuthority: canonicalHandoffs.lifecycleAuthority === true,
+              evidenceAuthority: canonicalHandoffs.evidenceAuthority === true,
+              exactlyOnceAcceptance: canonicalHandoffs.exactlyOnceAcceptance === true,
+              acceptanceLedgerBacked: canonicalHandoffs.acceptanceLedgerBacked === true,
+              acceptanceCommand: typeof canonicalHandoffs.acceptanceCommand === 'string'
+                ? canonicalHandoffs.acceptanceCommand
+                : '',
+              acceptanceStatuses: stringArray(canonicalHandoffs.acceptanceStatuses),
+            },
+          } : {}),
+          ...(advisoryContextProviders ? {
+            advisoryContextProviders: {
+              version: finiteNumber(advisoryContextProviders.version, 0),
+              supported: advisoryContextProviders.supported === true,
+              providerNeutral: advisoryContextProviders.providerNeutral === true,
+              integrationApiOnly: advisoryContextProviders.integrationApiOnly === true,
+              lazy: advisoryContextProviders.lazy === true,
+              optIn: advisoryContextProviders.optIn === true,
+              persistedByForgeLoop: advisoryContextProviders.persistedByForgeLoop === true,
+              lifecycleAuthority: advisoryContextProviders.lifecycleAuthority === true,
+              evidenceAuthority: advisoryContextProviders.evidenceAuthority === true,
+              executable: advisoryContextProviders.executable === true,
             },
           } : {}),
           ...(responsibilityConstraints ? {

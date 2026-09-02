@@ -78,7 +78,9 @@ Use restrained font weights. Prefer whitespace and alignment over oversized head
 
 ## Current navigation and trust surfaces
 
-The current shell exposes these surfaces in order: Overview, Tasks, Flow,
+The current release is Studio `0.1.0-rc.7` with ForgeLoop `1.10.0` at
+`3bf721bac6a09c6291bfcbc507a66a2833ebddf4` (protocol v1, schema v1, Integration
+API v1). The current shell exposes these surfaces in order: Overview, Tasks, Flow,
 Contract, Evidence, Events, Executions, Continuity, Diagnostics, Actions,
 Policy and Settings. Task Boundaries is presented on the selected-task Overview
 surface rather than as a separate navigation item. Verification Scope and Code
@@ -97,11 +99,16 @@ Trust states must remain explicit and must never rely on color alone:
 | `INVALID` | Strong danger state with the canonical error code/message and fail-closed semantics |
 | `VERIFIED` | Positive trust label only when the canonical attestation result says so |
 | `ATTESTED` | Strongest trust label only when the canonical completion-ledger-bound attestation says so |
+| `ACCEPTED` | Operational receipt only; no claims, evidence, authority, delegation or completion state |
 
 `PROCESSED`, `VERIFIED` and `ATTESTED` are attestation trust levels, not
-verification-scope values. Handoffs and Continuity are context surfaces, not
-completion or review evidence. Optional capability failure should degrade only
-the affected surface and leave the core protocol mode visible.
+verification-scope values. `canonicalHandoffs v2` acceptance is rendered as
+**Accepted — operational receipt only**. Handoffs, acceptance receipts and
+Continuity are context surfaces, not completion or review evidence. The
+`advisoryContextProviders v1` row reports a host-provided capability as
+**Not loaded by Studio**; it never exposes memory or retrieved results.
+Optional capability failure should degrade only the affected surface and leave
+the core protocol mode visible.
 
 ## Signature view
 

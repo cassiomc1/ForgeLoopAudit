@@ -2,9 +2,9 @@
   "manifestVersion": 1,
   "sourceProject": "demo",
   "sourceProjectName": "ForgeShop",
-  "studioVersion": "0.1.0-rc.6",
-  "forgeLoopVersion": "1.9.0",
-  "forgeLoopCommit": "64dca84357d11989d16b0698e1ff6409ff0f0ddf",
+  "studioVersion": "0.1.0-rc.7",
+  "forgeLoopVersion": "1.10.0",
+  "forgeLoopCommit": "3bf721bac6a09c6291bfcbc507a66a2833ebddf4",
   "protocolVersion": 1,
   "schemaVersion": 1,
   "viewport": {
@@ -54,7 +54,7 @@
       "file": "continuity.png",
       "page": "Continuity",
       "taskId": "TASK-004",
-      "scenario": "Mutable continuity with an immutable canonical handoff"
+      "scenario": "Mutable continuity with an accepted canonical handoff operational receipt"
     },
     {
       "file": "diagnostics.png",

@@ -49,6 +49,15 @@ export class EventLedgerBuilder {
     return record;
   }
 
+  recomputeHashes() {
+    let previousHash = null;
+    for (const event of this.events) {
+      event.previousHash = previousHash;
+      event.hash = eventHash(event);
+      previousHash = event.hash;
+    }
+  }
+
   serialize() {
     if (this.events.length === 0) throw new Error(`Event ledger for ${this.taskId} is empty`);
     return `${this.events.map((event) => JSON.stringify(event)).join('\n')}\n`;

@@ -1,6 +1,8 @@
 # Dependency policy
 
-Production high/critical vulnerabilities block release. Full audit output is
+The current dependency baseline is Studio `0.1.0-rc.7` with ForgeLoop `1.10.0`
+from `3bf721bac6a09c6291bfcbc507a66a2833ebddf4` (protocol v1, schema v1,
+Integration API v1). Production high/critical vulnerabilities block release. Full audit output is
 retained as a CI artifact; development findings require an owner and an
 upstream remediation path. The lockfile is mandatory and install scripts are
 explicitly reviewed through `package.json.allowScripts`.

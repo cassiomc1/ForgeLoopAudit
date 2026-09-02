@@ -35,7 +35,7 @@ Settings → Diagnostics reports the negotiated `ForgeLoopCompatibilityMode` ver
 
 ## Ownership shows "OWNERSHIP UNAVAILABLE"
 
-Canonical ownership comes exclusively from the bundled ForgeLoop 1.9.0
+Canonical ownership comes exclusively from the bundled ForgeLoop 1.10.0
 Integration API (`task/ownership`). When the Integration API is unavailable,
 Studio degrades to `ARTIFACT_ONLY` mode: raw artifacts stay readable for
 inspection but ownership facts are shown as unavailable instead of being
@@ -86,7 +86,7 @@ Executions load lazily per task from `.forgeloop/task-state/<key>/executions/exe
 
 ## Task Boundaries shows an unavailable optional feature
 
-The Task Boundaries surface reads ForgeLoop 1.9.0 resources independently. A missing or incomplete workspace binding, canonical handoff, responsibility, verification-scope, attestation, execution-profile context, or Structural Quality resource advertisement keeps only the affected view unavailable while the project remains in `INTEGRATION_V1`. A valid workspace or handoff can still be displayed when responsibility is invalid or attestation is disabled.
+The Task Boundaries surface reads ForgeLoop 1.10.0 resources independently. A missing or incomplete workspace binding, canonical handoff, responsibility, verification-scope, attestation, execution-profile context, or Structural Quality resource advertisement keeps only the affected view unavailable while the project remains in `INTEGRATION_V1`. A valid workspace or handoff can still be displayed when responsibility is invalid or attestation is disabled.
 
 ## Workspace binding mismatch or unavailable
 
@@ -95,6 +95,28 @@ The Task Boundaries surface reads ForgeLoop 1.9.0 resources independently. A mis
 ## Canonical handoff is missing or invalid
 
 Studio reads only the fixed `handoffs/handoff-*.json` collection through the ForgeLoop Integration API or its bounded raw-detail reader. Errors such as `E_HANDOFF_INVALID`, `E_HANDOFF_TAMPERED` and `E_HANDOFF_NOT_FOUND` remain attached to the selected task. Handoffs are immutable snapshots and are not review evidence, completion evidence, authority or delegation. Do not edit them manually.
+
+## Handoff acceptance is shown as an operational receipt
+
+Studio reads the canonical `handoff.acceptance` projection. `ACCEPTED` is
+shown as **Accepted — operational receipt only** with no claims, evidence or
+authority transferred. `OPEN`, `UNBOUND` and `INCONSISTENT` remain explicit;
+Studio has no Accept button and never calls `handoff-accept`.
+
+## Advisory context providers are not loaded
+
+The Settings capability row is informational. When ForgeLoop advertises the
+complete `advisoryContextProviders v1` trust contract, Studio shows that the
+host provides the capability and that Studio did not load it. Studio does not
+call recall, count memory, display retrieved results or persist provider
+output. Incomplete or absent trust metadata is shown as **Not advertised**.
+
+## Continuity reconciliation shows WARN
+
+Continuity reconciliation is an operational read-only diagnostic. `WARN` means
+that ForgeLoop reported findings requiring attention; it does not fail a task,
+create evidence, authorize mutation or convert the finding into lifecycle
+state. Studio cannot rewrite, clear or mark a finding fixed.
 
 ## Responsibility is invalid
 

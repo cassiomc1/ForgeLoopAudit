@@ -46,7 +46,7 @@ test('accepts current documentation while excluding marked historical records', 
 
 test('rejects a package release-version mismatch', () => {
   withRepository((root) => {
-    updateJson(root, 'package.json', (packageJson) => { packageJson.version = '0.1.0-rc.7'; });
+    updateJson(root, 'package.json', (packageJson) => { packageJson.version = '0.1.0-rc.8'; });
     assert.throws(() => runDocConformance(root, { validateLineage: false }), /package\.json version/);
   });
 });
@@ -54,7 +54,7 @@ test('rejects a package release-version mismatch', () => {
 test('rejects a ForgeLoop provenance-version mismatch', () => {
   withRepository((root) => {
     updateJson(root, 'schemas/provenance.json', (provenance) => { provenance.forgeLoopPackageVersion = '1.6.3'; });
-    assert.throws(() => runDocConformance(root, { validateLineage: false }), /schema provenance must pin ForgeLoop 1\.9\.0/);
+    assert.throws(() => runDocConformance(root, { validateLineage: false }), /schema provenance must pin ForgeLoop 1\.10\.0/);
   });
 });
 

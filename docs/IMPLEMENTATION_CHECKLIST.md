@@ -32,7 +32,7 @@ tests.
 ## ForgeLoop integration and trust boundary
 
 - [x] Detect ForgeLoop projects, including safe nested-project discovery.
-- [x] Load ForgeLoop `1.9.0` through the vendored Integration API v1, including the optional Structural Quality resource.
+- [x] Load ForgeLoop `1.10.0` through the vendored Integration API v1, including the optional Structural Quality resource and exact capability contracts.
 - [x] Read `protocol/info` from `compatibility.schemaVersion`; no top-level
   schema version is inferred.
 - [x] Fail closed on unsupported protocol/schema versions, missing core
@@ -40,8 +40,9 @@ tests.
   durable recovery capability.
 - [x] Select only `INTEGRATION_V1`, `ARTIFACT_ONLY` or `INCOMPATIBLE`; no
   inferred legacy mode exists.
-- [~] Maintain an explicit v1 compatibility contract; a separate v2 adapter
-  registry is future work.
+- [x] Maintain the protocol/schema/Integration API v1 compatibility contract
+  while negotiating `canonicalHandoffs v2` and `advisoryContextProviders v1`
+  as additive feature metadata.
 - [x] Use canonical `project/tasks`, task status, ownership, contract and
   continuity projections for semantic state.
 - [x] Keep raw artifact readers bounded, schema-validated, path-contained and
@@ -61,12 +62,13 @@ Evidence: `src/main/core/integration/`,
 `src/main/core/protocol/`, `src/main/core/project/`,
 `src/main/core/tasks/`, `src/main/core/cli/` and their unit/integration tests.
 
-## ForgeLoop 1.6.4 additive boundary features
+## ForgeLoop 1.10.0 additive boundary features
 
 - [x] Workspace Binding: display `UNBOUND`, `MATCH`, `MISMATCH`, `INVALID` or
   `UNAVAILABLE`; Studio never binds or rebinds.
-- [x] Canonical Handoffs: display immutable snapshots separately from mutable
-  Continuity; Studio never creates handoffs or treats them as evidence.
+- [x] Canonical Handoffs v2: display immutable snapshots and the normalized
+  `OPEN`, `ACCEPTED`, `UNBOUND` or `INCONSISTENT` acceptance state separately
+  from mutable Continuity; Studio never creates or accepts handoffs.
 - [x] Responsibility Constraints: display `NOT_APPLICABLE`, `VALID` or
   `INVALID` with canonical errors; Studio never sets responsibility.
 - [x] Differential Verification Scope: preserve requested `AUTO`, `CHANGED`,
@@ -78,6 +80,14 @@ Evidence: `src/main/core/integration/`,
   for `off`, required external providers, unknown providers or unavailable
   configuration; external signing-provider verification is never automatic.
 - [x] Refresh these resources independently through targeted renderer epochs.
+- [x] Display an accepted handoff as **Accepted — operational receipt only**;
+  acceptance creates no claims, evidence, authority, delegation or completion
+  state, and the UI has no Accept control.
+- [x] Advertise `advisoryContextProviders v1` only when all trust fields are
+  exact; show host-provided/not-loaded status without loading memory, recalling
+  context, exposing retrieved results or persisting provider output.
+- [x] Add read-only continuity reconciliation with `PASS`/`WARN` status and
+  operational-context-only findings; warnings never become task failures.
 - [x] Verify trusted schema provenance and safe local `$ref` closure.
 
 Evidence: `src/main/core/integration/canonical-task-boundaries.ts`,
@@ -103,8 +113,9 @@ Evidence: `src/main/core/integration/canonical-task-boundaries.ts`,
   sequence/timestamp/hash details and bounded event inspection.
 - [x] Executions: lazy bounded execution provenance with generic details and
   capability-gated verification-isolation presentation.
-- [x] Continuity: canonical continuity, diagnostic context, sessions and
-  immutable handoff snapshots with explicit non-evidence wording.
+- [x] Continuity: canonical continuity, diagnostic context, sessions,
+  immutable handoff snapshots, operational acceptance receipts and typed
+  reconciliation findings with explicit non-evidence wording.
 - [x] Diagnostics, Actions, Policy and Settings: canonical read-only
   projections, capability-aware unavailable states, policy context and
   privacy-safe diagnostics.

@@ -137,6 +137,8 @@ try {
   await openSurface(page, 'Continuity', 'Continuity', 'TASK-004');
   await capture(page, 'continuity.png', 'Continuity', async () => {
     await expect(page.getByText('handoff-harness-a-to-b', { exact: true })).toBeVisible();
+    await expect(page.getByText('Accepted — operational receipt only', { exact: true })).toBeVisible();
+    await expect(page.getByText('consumer-forgeshop-harness-b', { exact: true })).toBeVisible();
     await expect(page.getByText('Immutable protocol snapshot — not review, completion, delegation, or authority evidence.', { exact: true })).toBeVisible();
   }, page.getByRole('heading', { name: 'Canonical Handoffs', exact: true }));
 
@@ -166,7 +168,9 @@ try {
   await capture(page, 'settings.png', 'Settings', async () => {
     await expect(page.getByText(`ForgeLoop Studio v${packageVersion}`, { exact: true })).toBeVisible();
     const protocolPanel = page.getByRole('heading', { name: 'ForgeLoop protocol', exact: true }).locator('..');
-    await expect(protocolPanel).toContainText('1.9.0');
+    await expect(protocolPanel).toContainText('1.10.0');
+    await expect(protocolPanel).toContainText('Advisory context providers');
+    await expect(protocolPanel).toContainText('Supported by ForgeLoop');
     await expect(protocolPanel).toContainText('INTEGRATION_V1');
   }, page.getByRole('heading', { name: 'ForgeLoop protocol', exact: true }));
 

@@ -35,6 +35,7 @@ describe('core/integration/studio-read-commands', () => {
         'policy-status',
         'progress',
         'reflect',
+        'reconcile-continuity',
         'report',
         'trace',
         'validate-receipt',
@@ -42,6 +43,7 @@ describe('core/integration/studio-read-commands', () => {
       ].sort(),
     );
     expect(isStudioReadOnlyCommand('next')).toBe(true);
+    expect(isStudioReadOnlyCommand('reconcile-continuity')).toBe(true);
     expect(isStudioReadOnlyCommand('complete')).toBe(false);
     expect(isStudioReadOnlyCommand('task-resume')).toBe(false);
     expect(isStudioReadOnlyCommand('run-check')).toBe(false);

@@ -4,6 +4,13 @@ This index separates current product guidance from historical records and
 points each topic to its canonical owner. ForgeLoop Studio is a local-first,
 read-only visual consumer; ForgeLoop remains the protocol authority.
 
+The current release baseline is Studio `0.1.0-rc.7` with vendored ForgeLoop
+`1.10.0` at immutable commit
+`3bf721bac6a09c6291bfcbc507a66a2833ebddf4`, using protocol v1, schema v1 and
+Integration API v1. The current capability additions are
+`canonicalHandoffs v2` and `advisoryContextProviders v1`; their trust and
+read-only display rules are owned by [Protocol compatibility](PROTOCOL_COMPATIBILITY.md).
+
 ## Start here
 
 - [Root README](../README.md) — product overview, trust model, compatibility,
