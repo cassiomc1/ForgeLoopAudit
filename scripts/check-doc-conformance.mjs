@@ -145,8 +145,8 @@ function validateCurrentFacts(root, packageJson, provenance, archiveName, archiv
   const current = Object.fromEntries(CURRENT_DOCS.map((file) => [file, readText(root, file)]));
   const currentText = Object.values(current).join('\n');
 
-  assertCondition(packageJson.version === '0.1.0-rc.6', `package.json version must remain 0.1.0-rc.6, got ${packageJson.version}`);
-  assertCondition(version === '1.9.0', `schema provenance must pin ForgeLoop 1.9.0, got ${version}`);
+  assertCondition(packageJson.version === '0.1.0-rc.7', `package.json version must remain 0.1.0-rc.7, got ${packageJson.version}`);
+  assertCondition(version === '1.10.0', `schema provenance must pin ForgeLoop 1.10.0, got ${version}`);
   assertCondition(typeof commit === 'string' && /^[a-f0-9]{40}$/u.test(commit), 'schema provenance must contain a 40-character ForgeLoop commit');
   assertCondition(provenance.protocolVersion === 1, 'schema provenance must pin protocol v1');
   assertCondition(!STALE_ACTIVE_RELEASE.test(currentText), 'current documentation contains a stale active RC number');
@@ -162,6 +162,9 @@ function validateCurrentFacts(root, packageJson, provenance, archiveName, archiv
       'Integration API v1',
       'read-only',
       'unsigned',
+      'exactly-once',
+      'operational receipt',
+      'advisory context',
     ],
     'FORGELOOP_STUDIO_IMPLEMENTATION_SPEC.md': [
       `ForgeLoop \`${version}\``,
@@ -170,6 +173,8 @@ function validateCurrentFacts(root, packageJson, provenance, archiveName, archiv
       'schema v1',
       'Integration API v1',
       'Current implementation and design reference',
+      'canonicalHandoffs v2',
+      'advisoryContextProviders v1',
     ],
     'docs/PROTOCOL_COMPATIBILITY.md': [
       `ForgeLoop **${version}**`,
@@ -182,6 +187,8 @@ function validateCurrentFacts(root, packageJson, provenance, archiveName, archiv
       'task/responsibility',
       'task/verification-scope',
       'task/attestation',
+      'canonicalHandoffs v2',
+      'advisoryContextProviders v1',
     ],
     'docs/RELEASE_MODEL.md': ['unsigned preview', 'release-matrix.json', 'SBOM-cyclonedx.json', 'tag-triggered workflow'],
     'docs/QUALITY_GATES.md': ['npm run verify:full', 'Ubuntu', 'macOS', 'Windows', 'CodeQL'],

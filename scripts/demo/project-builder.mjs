@@ -506,13 +506,17 @@ function trajectoryEvaluation(taskId) {
   return { ...base, evaluationFingerprint: canonicalFingerprint(base) };
 }
 
-function finalizeTaskArtifacts(artifacts) {
+function finalizeTaskArtifacts(artifacts, ledger) {
   const contract = artifacts['contract.json'];
   const state = artifacts['work-state.json'];
   const continuityArtifact = artifacts['continuity.json'];
   if (contract && state) {
     const contractFingerprint = canonicalFingerprint(contract);
     state.contractFingerprint = contractFingerprint;
+    const routeArtifact = artifacts['routing-result.json'];
+    if (routeArtifact) routeArtifact.contractFingerprint = contractFingerprint;
+    const routeFingerprint = routingFingerprint(artifacts);
+    state.routeFingerprint = routeFingerprint;
     const stateFingerprint = canonicalFingerprint(state);
     if (continuityArtifact) {
       continuityArtifact.contractFingerprint = contractFingerprint;
@@ -530,9 +534,26 @@ function finalizeTaskArtifacts(artifacts) {
     const receipt = artifacts['execution-receipt.json'];
     if (manifest) {
       manifest.bindings.contractFingerprint = contractFingerprint;
-      manifest.bindings.routeFingerprint = routingFingerprint(artifacts);
+      manifest.bindings.routeFingerprint = routeFingerprint;
       manifest.bindings.stateFingerprint = stateFingerprint;
       manifest.bindings.receiptFingerprint = receipt ? canonicalFingerprint(receipt) : manifest.bindings.receiptFingerprint;
+    }
+    const handoff = artifacts['handoffs/handoff-harness-a-to-b.json'];
+    if (handoff) {
+      handoff.state.workStateFingerprint = stateFingerprint;
+      handoff.state.contractFingerprint = contractFingerprint;
+      handoff.state.routeFingerprint = routeFingerprint;
+      if (continuityArtifact) handoff.continuity.fingerprint = canonicalFingerprint(continuityArtifact);
+      const { artifactDigest: _previousDigest, ...handoffBody } = handoff;
+      handoff.artifactDigest = canonicalFingerprint(handoffBody);
+      if (ledger) {
+        for (const event of ledger.events) {
+          if (event.details?.handoffId !== handoff.handoffId) continue;
+          if (event.event === 'HANDOFF_CREATED') event.details.digest = handoff.artifactDigest;
+          if (event.event === 'HANDOFF_ACCEPTED') event.details.handoffDigest = handoff.artifactDigest;
+        }
+        ledger.recomputeHashes();
+      }
     }
   }
   return artifacts;
@@ -987,6 +1008,12 @@ function buildA11yTask() {
     digest: handoff.artifactDigest,
   });
   ledger.append('SESSION_ACTIVATED', { harness: 'harness-b' });
+  ledger.append('HANDOFF_ACCEPTED', {
+    handoffId: handoff.handoffId,
+    handoffDigest: handoff.artifactDigest,
+    consumerId: 'consumer-forgeshop-harness-b',
+    harness: 'harness-b',
+  });
   ledger.append('RESUMED_FROM_CONTINUITY', { harness: 'harness-b', phase: 'CORRECTING' });
   const recoveryEvent = recoveryRecorded(ledger, {
     recoveryId: 'recovery-a11y-stale-lock',
@@ -1420,7 +1447,7 @@ export function buildForgeShopProject() {
   let eventCount = 0;
   for (const build of builders) {
     const { taskId, ledger, artifacts: rawArtifacts, executions = [] } = build();
-    const artifacts = finalizeAttestationArtifacts(finalizeTaskArtifacts(rawArtifacts), ledger);
+    const artifacts = finalizeAttestationArtifacts(finalizeTaskArtifacts(rawArtifacts, ledger), ledger);
     const key = taskKeyFor(taskId);
     for (const [name, value] of Object.entries(artifacts)) {
       const artifactName = name === 'events.ndjson'

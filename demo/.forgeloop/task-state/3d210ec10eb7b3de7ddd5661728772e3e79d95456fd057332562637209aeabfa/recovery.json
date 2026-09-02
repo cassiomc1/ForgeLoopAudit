@@ -3,9 +3,9 @@
   "protocolVersion": 1,
   "taskId": "TASK-004",
   "status": "RECOVERED",
-  "recoveredAt": "2026-08-06T11:17:00.000Z",
+  "recoveredAt": "2026-08-06T11:24:00.000Z",
   "recoveryId": "recovery-a11y-stale-lock",
-  "recoveryEventSeq": 12,
+  "recoveryEventSeq": 13,
   "classificationAtRecovery": "STALE",
   "reasonCodes": [
     "E_TASK_CLAIM_STALE"

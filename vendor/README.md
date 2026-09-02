@@ -1,14 +1,14 @@
 # Vendored ForgeLoop runtime dependency
 
-`cassiomc1-forgeloop-1.9.0-64dca84.tgz` is the packed ForgeLoop runtime used by
+`cassiomc1-forgeloop-1.10.0-3bf721b.tgz` is the packed ForgeLoop runtime used by
 ForgeLoop Studio through the public `@cassiomc1/forgeloop/integration` subpath.
 
 - Source repository: `cassiomc1/forgeloop`
-- Pinned commit: `64dca84357d11989d16b0698e1ff6409ff0f0ddf`
-- Package version: `1.9.0`
-- SHA-256: `dd6bec1bf889a8df70b8823b73bc5c2dc290fd482d6863c7d2f5d58b1a92e733`
+- Pinned commit: `3bf721bac6a09c6291bfcbc507a66a2833ebddf4`
+- Package version: `1.10.0`
+- SHA-256: `d0973751dc5f193349fb7bb0e7cfd2bd9b394415b9620c725964562d558ef901`
 
-The archive is pinned to the immutable ForgeLoop v1.9.0 release commit so
+The archive is pinned to the immutable ForgeLoop v1.10.0 release commit so
 packaged Studio builds do not depend on a sibling ForgeLoop checkout, a
 floating branch, or network package resolution at runtime.
 

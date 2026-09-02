@@ -66,6 +66,24 @@ export interface ForgeLoopCanonicalHandoffsFeatureSummary {
   supported: boolean;
   immutable: boolean;
   lifecycleAuthority: boolean;
+  evidenceAuthority: boolean;
+  exactlyOnceAcceptance: boolean;
+  acceptanceLedgerBacked: boolean;
+  acceptanceCommand: string;
+  acceptanceStatuses: string[];
+}
+
+export interface ForgeLoopAdvisoryContextProvidersFeatureSummary {
+  version: number;
+  supported: boolean;
+  providerNeutral: boolean;
+  integrationApiOnly: boolean;
+  lazy: boolean;
+  optIn: boolean;
+  persistedByForgeLoop: boolean;
+  lifecycleAuthority: boolean;
+  evidenceAuthority: boolean;
+  executable: boolean;
 }
 
 export interface ForgeLoopResponsibilityConstraintsFeatureSummary {
@@ -127,6 +145,7 @@ export interface ForgeLoopCapabilitiesSummary {
     verificationExecutionIsolation?: ForgeLoopVerificationExecutionIsolationFeatureSummary;
     workspaceBinding?: ForgeLoopWorkspaceBindingFeatureSummary;
     canonicalHandoffs?: ForgeLoopCanonicalHandoffsFeatureSummary;
+    advisoryContextProviders?: ForgeLoopAdvisoryContextProvidersFeatureSummary;
     responsibilityConstraints?: ForgeLoopResponsibilityConstraintsFeatureSummary;
     differentialVerificationScope?: ForgeLoopDifferentialVerificationScopeFeatureSummary;
     codeAttestation?: ForgeLoopCodeAttestationFeatureSummary;

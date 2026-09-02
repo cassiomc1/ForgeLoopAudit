@@ -12,8 +12,8 @@
     "phase": "BLOCKED",
     "revision": 1,
     "verificationCycle": 1,
-    "contractFingerprint": "c54a4b5c3f20bb9e9fe8172f8759a188b749a1a6f35359b32e73466e489441fa",
-    "routeFingerprint": "10cbd89b0d8aced5b3b22f9638e984c9c5a804cff7c65ea30e971a0ff72ca80b",
+    "contractFingerprint": "5e7d4a963c5252a6081a64942a9bfdb8d1b12fa28bf5d03a3be78936c283aca0",
+    "routeFingerprint": "71be7802895ca329ce9730f2d8df3e59aff898f97fd97934db4613cc2fb077e6",
     "repositoryFingerprint": {
       "branch": "main",
       "head": "3f9c1d2e77a4b5089c6e12ab34f5d6e7890abcde"
@@ -21,7 +21,8 @@
     "writeClaims": [],
     "changedPaths": [
       "src/catalog.ts"
-    ]
+    ],
+    "workStateFingerprint": "3200c892e133fbb0536635b9c972e423f692ce12622e3bab2848c76a3e2d9fad"
   },
   "evidence": {
     "executionRefs": [],
@@ -31,7 +32,7 @@
   },
   "continuity": {
     "ref": "continuity.json",
-    "fingerprint": "0d558136bba246a0f1a1683e24cd207fe8c59f4da8e1817b8396e96560824341"
+    "fingerprint": "1feeab0c7a2cba801bb9db0fc455ffb5bb5f0ae2b46af7ca6cff45f19fc12e4f"
   },
-  "artifactDigest": "cfd532b6dedebff5d44614e62bca1d642b16919650ac9791163127cee1039df4"
+  "artifactDigest": "7bf693d766edd2ed785f9362c5cecbddf6289bbcdfd0688ea6032a390f27dc50"
 }

@@ -88,4 +88,41 @@ describe('Task Boundaries presentation', () => {
     expect(html).not.toContain('0 recorded');
     expect(html).not.toContain('No canonical handoff snapshots recorded.');
   });
+
+  it('renders acceptance as an operational receipt without claims or evidence authority', () => {
+    const accepted: TaskHandoffsView = {
+      available: true,
+      source: 'FORGELOOP_INTEGRATION',
+      count: 1,
+      handoffs: [{
+        handoffId: 'handoff-harness-a-to-b',
+        taskId: 'TASK-003',
+        phase: 'VERIFYING',
+        revision: 2,
+        verificationCycle: 1,
+        createdAt: '2026-08-02T00:00:00.000Z',
+        digest: 'd'.repeat(64),
+        recipientHint: 'harness-b',
+        note: null,
+        intent: null,
+        state: null,
+        evidence: null,
+        continuity: null,
+        acceptance: {
+          status: 'ACCEPTED',
+          consumerId: 'consumer-42',
+          harness: 'harness-b',
+          acceptedAt: '2026-08-02T01:00:00.000Z',
+          reasonCodes: [],
+        },
+      }],
+      error: null,
+    };
+    const html = markup({ workspace: workspace('MATCH'), responsibility: responsibility('VALID'), handoffs: accepted });
+    expect(html).toContain('Accepted — operational receipt only');
+    expect(html).toContain('No claims transferred. No evidence or authority is created by acceptance.');
+    expect(html).toContain('consumer-42');
+    expect(html).toContain('harness-b');
+    expect(html).not.toContain('Accept handoff');
+  });
 });

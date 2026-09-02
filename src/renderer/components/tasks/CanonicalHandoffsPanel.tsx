@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ForgeLoopFeatureSupport, TaskHandoffsView } from '@shared/domain';
 import { Archive, CircleHelp } from 'lucide-react';
+import { HandoffAcceptanceBadge, HandoffAcceptanceDetail } from './HandoffAcceptanceBadge';
 
 interface CanonicalHandoffsPanelProps {
   taskId: string;
@@ -65,6 +66,7 @@ export function CanonicalHandoffsPanel({ taskId, featureSupport, handoffRefreshT
                   <summary className="cursor-pointer list-none">
                     <div className="flex flex-wrap items-center gap-2 text-xs">
                       <span className="font-mono text-forge-text-primary">{handoff.handoffId || 'Unnamed handoff'}</span>
+                      <HandoffAcceptanceBadge acceptance={handoff.acceptance} />
                       <span className="text-forge-text-muted">{handoff.createdAt || 'Unknown time'}</span>
                       {handoff.phase && <span className="text-forge-text-muted">· {handoff.phase}</span>}
                     </div>
@@ -77,6 +79,7 @@ export function CanonicalHandoffsPanel({ taskId, featureSupport, handoffRefreshT
                   </summary>
                   <div className="mt-3 space-y-2 border-t border-forge-border-subtle/60 pt-3 text-xs text-forge-text-secondary">
                     {handoff.note && <p>Actor note: {handoff.note}</p>}
+                    <HandoffAcceptanceDetail acceptance={handoff.acceptance} />
                     <p>Write claims: {Array.isArray(handoff.state?.writeClaims) && handoff.state.writeClaims.length > 0 ? handoff.state.writeClaims.join(', ') : 'None recorded'}</p>
                     <p>Changed paths: {Array.isArray(handoff.state?.changedPaths) && handoff.state.changedPaths.length > 0 ? handoff.state.changedPaths.join(', ') : 'None recorded'}</p>
                     <p>Execution references: {Array.isArray(handoff.evidence?.executionRefs) && handoff.evidence.executionRefs.length > 0 ? handoff.evidence.executionRefs.join(', ') : 'None recorded'}</p>

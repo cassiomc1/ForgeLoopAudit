@@ -5,6 +5,8 @@ import { readFileSync } from 'node:fs';
 import { demoHasDrift } from '../generate-demo-project.mjs';
 import { generateDemoFiles } from '../demo/write-demo-project.mjs';
 import { verifyDemoProject } from '../demo/verifier.mjs';
+import { taskKeyFor } from '../demo/fixtures.mjs';
+import { resolveHandoffAcceptance } from '@cassiomc1/forgeloop/integration';
 
 const DEMO_ROOT = join(process.cwd(), 'demo');
 
@@ -34,7 +36,7 @@ test('demo executions include current ForgeLoop isolation provenance', () => {
   )));
 });
 
-test('demo includes representative 1.6.4 boundary artifacts without fake trust', () => {
+test('demo includes representative canonical boundary artifacts without fake trust', () => {
   const { files } = generateDemoFiles();
   const paths = [...files.keys()];
   assert.ok(paths.some((path) => path.endsWith('/workspace-binding.json')));
@@ -47,6 +49,26 @@ test('demo includes representative 1.6.4 boundary artifacts without fake trust',
   assert.equal(config.verification.checkers[0].scopeMode, 'PATH_ARGUMENTS');
   assert.equal(config.attestation.mode, 'off');
   assert.equal(config.attestation.signing.provider, 'none');
+});
+
+test('demo handoff showcase carries canonical acceptance without promoting it to evidence', () => {
+  const { files } = generateDemoFiles();
+  const taskKey = taskKeyFor('TASK-004');
+  assert.ok(files.has(`.forgeloop/task-state/${taskKey}/handoffs/handoff-harness-a-to-b.json`), 'generated demo is missing the canonical handoff');
+  const eventsPath = `.forgeloop/task-state/${taskKey}/events.ndjson`;
+  const events = files.get(eventsPath).trim().split('\n').map((line) => JSON.parse(line));
+  const accepted = events.find((event) => event.event === 'HANDOFF_ACCEPTED');
+  assert.deepEqual(accepted?.details, {
+    handoffId: 'handoff-harness-a-to-b',
+    handoffDigest: JSON.parse(files.get(`.forgeloop/task-state/${taskKey}/handoffs/handoff-harness-a-to-b.json`)).artifactDigest,
+    consumerId: 'consumer-forgeshop-harness-b',
+    harness: 'harness-b',
+  });
+  const handoff = JSON.parse(files.get(`.forgeloop/task-state/${taskKey}/handoffs/handoff-harness-a-to-b.json`));
+  assert.equal(handoff.evidence.acceptance, undefined);
+  const projection = resolveHandoffAcceptance({ events, handoff, ledgerValid: true });
+  assert.equal(projection.status, 'ACCEPTED');
+  assert.equal(projection.consumerId, 'consumer-forgeshop-harness-b');
 });
 
 test('committed demo matches generator output exactly', () => {

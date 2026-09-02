@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "protocolVersion": 1,
-  "contractFingerprint": "2715311427a1ebd52271d85d407a99bba2893dd4fa40215f815847c7eb24739a",
+  "contractFingerprint": "0caf4cf4be85f7209c2ab016f9dc12924d73a9c7ae9cce6101e26427cf5cf24c",
   "input": {
     "taskId": "TASK-006",
     "project": "forgeshop"

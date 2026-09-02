@@ -1,6 +1,6 @@
 {
   "name": "forgeloop-studio",
-  "version": "0.1.0-rc.6",
+  "version": "0.1.0-rc.7",
   "description": "A real-time visual interface for the ForgeLoop engineering protocol",
   "main": "dist/main/index.cjs",
   "type": "module",
@@ -22,6 +22,7 @@
     "verify:forgeloop-lineage": "node scripts/verify-forgeloop-vendor-lineage.mjs",
     "docs:check": "node scripts/check-doc-conformance.mjs && node scripts/check-readme-screenshots.mjs",
     "screenshots:readme": "npm run build && node scripts/capture-readme-screenshots.mjs",
+    "screenshots:readme:check": "npm run screenshots:check",
     "screenshots:check": "node scripts/check-readme-screenshots.mjs",
     "demo:generate": "node scripts/generate-demo-project.mjs",
     "demo:verify": "node scripts/verify-demo-project.mjs",
@@ -57,7 +58,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@cassiomc1/forgeloop": "file:vendor/cassiomc1-forgeloop-1.9.0-64dca84.tgz",
+    "@cassiomc1/forgeloop": "file:vendor/cassiomc1-forgeloop-1.10.0-3bf721b.tgz",
     "@radix-ui/react-dropdown-menu": "^2.1.1",
     "@radix-ui/react-scroll-area": "^1.1.0",
     "@radix-ui/react-select": "^2.1.1",

@@ -4,7 +4,7 @@
   "taskId": "TASK-002",
   "contractFingerprint": "171ccd526116e7597454057e8b1ce5effdb5a5da1179c2e7d073eb092fd9191e",
   "routeFingerprint": "0cd7d61740375c338f22ef9db04d92c2af7deb4049fc07f3111e007cdd07302d",
-  "stateFingerprint": "302022a68a767e222d2e734ec099603b2434899cc1f0f01bec615f808805d609",
+  "stateFingerprint": "116a211919ca78e58d816db17e188c78ae51c8c864d7bcd430c85b86de0ca52b",
   "selectedGuides": [
     "test",
     "design"

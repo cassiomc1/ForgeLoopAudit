@@ -16,6 +16,7 @@ const FEATURE_LABELS: Array<[keyof ForgeLoopFeatureSupport, string]> = [
   ['verificationExecutionIsolation', 'Verification isolation'],
   ['workspaceBinding', 'Workspace binding'],
   ['canonicalHandoffs', 'Canonical handoffs'],
+  ['advisoryContextProviders', 'Advisory context providers'],
   ['responsibilityConstraints', 'Responsibility constraints'],
   ['differentialVerificationScope', 'Differential verification scope'],
   ['codeAttestation', 'Code attestation'],
@@ -257,7 +258,15 @@ export function Settings({ snapshot, detection, watcherStatus }: SettingsProps) 
             <div><p className="text-forge-text-muted">Compatibility</p><p className="mt-1 font-mono text-forge-text-primary">{snapshot?.protocol.compatibilityMode || (snapshot?.protocol.compatible ? 'COMPATIBLE' : 'UNKNOWN')}</p></div>
           </div>
           <p className="mt-4 text-xs text-forge-text-muted">ForgeLoop remains the source of truth. Protocol settings are read-only here; Studio does not execute or edit project checkers, bindings, responsibilities, or attestation policy.</p>
-          {snapshot?.protocol.featureSupport && <div className="mt-4 grid grid-cols-1 gap-2 md:grid-cols-2">{FEATURE_LABELS.map(([key, label]) => { const supported = snapshot.protocol.featureSupport?.[key] === true; return <div key={key} className="flex items-center justify-between rounded-8 bg-forge-secondary-surface px-3 py-2 text-xs"><span className="text-forge-text-secondary">{label}</span><span className={supported ? 'text-forge-success' : 'text-forge-text-muted'}>{supported ? 'Supported' : 'Unavailable'}</span></div>; })}</div>}
+          {snapshot?.protocol.featureSupport && <div className="mt-4 grid grid-cols-1 gap-2 md:grid-cols-2">{FEATURE_LABELS.map(([key, label]) => {
+            const supported = snapshot.protocol.featureSupport?.[key] === true;
+            const value = key === 'advisoryContextProviders'
+              ? supported
+                ? 'Status: Supported by ForgeLoop / Host-provided / Not loaded by Studio'
+                : 'Not advertised'
+              : supported ? 'Supported' : 'Unavailable';
+            return <div key={key} className="flex items-center justify-between gap-3 rounded-8 bg-forge-secondary-surface px-3 py-2 text-xs"><span className="text-forge-text-secondary">{label}</span><span className={supported ? 'text-forge-success' : 'text-forge-text-muted'}>{value}</span></div>;
+          })}</div>}
         </div>
       </div>
     </div>

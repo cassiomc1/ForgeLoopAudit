@@ -10,6 +10,8 @@ import type {
   CanonicalHandoffView,
   CanonicalProjectionError,
   ForgeLoopFeatureSupport,
+  HandoffAcceptanceStatus,
+  HandoffAcceptanceView,
   ResponsibilityStatus,
   ResponsibilityView,
   TaskAttestationView,
@@ -39,6 +41,22 @@ function stringArray(value: unknown): string[] {
 
 function recordValue(value: unknown): Record<string, unknown> | null {
   return isRecord(value) ? value : null;
+}
+
+const HANDOFF_ACCEPTANCE_STATUSES: readonly HandoffAcceptanceStatus[] = ['OPEN', 'ACCEPTED', 'UNBOUND', 'INCONSISTENT'];
+
+function normalizeHandoffAcceptance(value: unknown): HandoffAcceptanceView | null {
+  if (!isRecord(value)) return null;
+  const rawStatus = stringValue(value.status);
+  return {
+    status: HANDOFF_ACCEPTANCE_STATUSES.includes(rawStatus as HandoffAcceptanceStatus)
+      ? rawStatus as HandoffAcceptanceStatus
+      : 'UNKNOWN',
+    consumerId: stringValue(value.consumerId),
+    harness: stringValue(value.harness),
+    acceptedAt: stringValue(value.acceptedAt),
+    reasonCodes: stringArray(value.reasonCodes),
+  };
 }
 
 function projectionError(value: unknown, fallbackCode: string, fallbackMessage: string): CanonicalProjectionError {
@@ -219,6 +237,7 @@ function normalizeHandoff(value: unknown): CanonicalHandoffView {
     state,
     evidence: recordValue(handoff.evidence),
     continuity: recordValue(handoff.continuity),
+    acceptance: normalizeHandoffAcceptance(handoff.acceptance),
   };
 }
 

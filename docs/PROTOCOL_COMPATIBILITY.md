@@ -2,8 +2,8 @@
 
 ForgeLoop Studio supports protocol v1, schema v1 and Integration API v1 from
 the pinned ForgeLoop source revision recorded in `schemas/provenance.json`
-(ForgeLoop **1.9.0**, commit
-`64dca84357d11989d16b0698e1ff6409ff0f0ddf`). The runtime artifact registry
+(ForgeLoop **1.10.0**, commit
+`3bf721bac6a09c6291bfcbc507a66a2833ebddf4`). The runtime artifact registry
 and `SUPPORTED_PROTOCOL.requiredSchemas` are contract-tested to remain
 identical. See the [trusted schema boundary](../schemas/README.md) and
 [vendored runtime lineage](../vendor/README.md) for their verification
@@ -13,7 +13,7 @@ procedures.
 
 | Project / Build | Integration API | Result |
 |---|---|---|
-| Pinned ForgeLoop build (`1.9.0 @ 64dca84...`) | Integration API v1 valid (`INTEGRATION_V1`) | Full tested Studio capability set: canonical task discovery, ownership, recovery, observability, durable actions, approvals, capability policy, trajectory projections, verification-execution provenance, adaptive execution-profile context, efficiency observability, Structural Quality resource negotiation and the five 1.6.4 boundary features |
+| Pinned ForgeLoop build (`1.10.0 @ 3bf721b...`) | Integration API v1 valid (`INTEGRATION_V1`) | Full tested Studio capability set, including canonical handoffs v2 with exactly-once ledger-backed acceptance and advisory context providers v1; protocol/schema/API remain v1 |
 | Other protocol-v1 / Integration API v1 build | Required core capabilities present; optional capability absent | Core support remains `INTEGRATION_V1`; optional panels and verification-execution provenance are enabled only when their individual capability contracts are advertised; the affected feature is unavailable |
 | Any protocol-v1 build | Missing CORE required resources or capability drift | Rejected with `INCOMPATIBLE` (fails closed; missing core resources, unsupported recovery contract, or broken executor parity) |
 | Protocol-v1 project | Integration API unavailable | Degraded mode (`ARTIFACT_ONLY`): visual reading + schema validation; canonical ownership and optional canonical projections are unavailable |
@@ -29,7 +29,15 @@ Studio explicitly distinguishes core compatibility from additive optional featur
 - **Missing CORE required resources or contract drift &rarr; `INCOMPATIBLE`**: Core resources (`protocol/info`, `project/tasks`, `task/status`, `task/ownership`, `task/contract`, `task/continuity`), Integration API version mismatch, broken executor parity, or incomplete `taskClaimRecovery` fail closed to `INCOMPATIBLE`.
 - **Missing OPTIONAL resources or feature contracts &rarr; Affected feature unavailable**: Optional resources (`task/actions`, `task/action`, `task/approvals`, `task/metrics`, `task/evaluations`, `project/capability-policy`, `task/workspace-binding`, `task/handoffs`, `task/responsibility`, `task/verification-scope`, `task/attestation`) or observability command restrictions degrade individual panels/views gracefully without compromising core protocol compatibility.
 
-ForgeLoop 1.6.4 adds persisted workspace binding, canonical handoffs, responsibility constraints, differential verification scope and code attestation resources. Studio reads these resources through selected-task, read-only adapter methods and keeps their failures independent. The additive features are not core compatibility gates: when one is missing or incomplete, the project remains `INTEGRATION_V1` and only that feature is unavailable. Studio also displays persisted verification-execution isolation provenance without creating or attesting isolation environments.
+ForgeLoop 1.10.0 adds the canonical handoff acceptance and advisory context
+capability contracts while retaining the additive workspace binding,
+responsibility, differential verification scope and code attestation resources.
+Studio reads these resources through selected-task, read-only adapter methods
+and keeps their failures independent. The additive features are not core
+compatibility gates: when one is missing or incomplete, the project remains
+`INTEGRATION_V1` and only that feature is unavailable. Studio also displays
+persisted verification-execution isolation provenance without creating or
+attesting isolation environments.
 
 ## Adaptive execution-profile context and efficiency observability
 
@@ -42,19 +50,38 @@ remains unavailable. Usage is host/provider-reported or `UNKNOWN`; Studio does
 not estimate tokens, time or cost. Context inflation and benchmark regression
 statuses are observational diagnostics and never change lifecycle authority.
 
-## Canonical 1.6.4 resources
+## Canonical boundary resources
 
 The optional resources are consumed from the ForgeLoop Integration API rather than reconstructed from local artifacts:
 
 | Resource | Studio presentation | Non-goal |
 |---|---|---|
 | `task/workspace-binding` | Current binding status and bounded identity details | Studio never binds or rebinds a workspace |
-| `task/handoffs` | Immutable handoff snapshots in a separate Continuity surface | A handoff is not evidence, authority or delegation |
+| `task/handoffs` | Immutable handoff snapshots and normalized acceptance in a separate Continuity surface | A handoff or acceptance receipt is not evidence, authority or delegation |
 | `task/responsibility` | Responsibility status, frozen inputs, changed paths and errors | Studio never sets responsibility |
 | `task/verification-scope` | Persisted requested `AUTO`, `CHANGED`, `CLAIMED` or `FULL` mode and resolved `CHANGED`, `CLAIMED`, `FULL` or `UNRESOLVED` mode | Studio never computes scope and never presents `IMPACTED` |
 | `task/attestation` | Lazy status, trust level, signature state, signer and errors | Studio never creates or signs attestations; external signing-provider verification is never automatic |
 
-All five features degrade independently. A valid workspace or handoff resource remains visible if responsibility is invalid, verification scope is absent, or attestation is disabled.
+All boundary features degrade independently. A valid workspace or handoff
+resource remains visible if responsibility is invalid, verification scope is
+absent, or attestation is disabled.
+
+## Canonical handoff acceptance and advisory context
+
+`canonicalHandoffs v2` is supported only when ForgeLoop advertises immutable,
+non-authoritative, non-evidence, exactly-once, ledger-backed acceptance through
+the `handoff-accept` command and the statuses `OPEN`, `ACCEPTED`, `UNBOUND` and
+`INCONSISTENT`. Studio reads `handoff.acceptance` and renders an accepted
+handoff as **Accepted — operational receipt only**. The receipt does not create
+claims, evidence, authority, delegation or completion state, and Studio has no
+Accept control.
+
+`advisoryContextProviders v1` is optional and supported only when the provider
+is neutral, Integration API-only, lazy, opt-in, not persisted by ForgeLoop,
+non-authoritative, non-evidence and non-executable. Studio reports whether the
+host advertises this contract but does not load memory, call recall, display
+retrieved results or persist provider output. Missing or malformed trust fields
+show **Not advertised**.
 
 ## Verification Scope vs Attestation Coverage
 
@@ -72,7 +99,8 @@ Semantic facts come exclusively from the bundled `@cassiomc1/forgeloop/integrati
 - `project/tasks` — canonical task discovery; in `INTEGRATION_V1` it drives semantic task existence: filesystem namespaces only locate artifacts and produce diagnostics (extra namespaces are never promoted into tasks, corrupt namespaces never become synthetic `RECEIVED` tasks, and an unavailable discovery fails closed instead of falling back to the filesystem);
 - `task/status`, `task/ownership`, `task/contract`, `task/continuity` — canonical per-task facts.
 - `task/context` — optional ForgeLoop 1.7.0 execution-profile context; Studio consumes the bounded canonical projection and never classifies work locally or infers provider usage.
-- `task/workspace-binding`, `task/handoffs`, `task/responsibility`, `task/verification-scope`, `task/attestation` — optional ForgeLoop 1.6.4 boundary resources; Studio consumes their canonical status without reimplementing workspace identity, handoff validation, responsibility validation, scope resolution or attestation verification.
+- `task/workspace-binding`, `task/handoffs`, `task/responsibility`, `task/verification-scope`, `task/attestation` — optional ForgeLoop 1.10.0 boundary resources; Studio consumes their canonical status without reimplementing workspace identity, handoff validation, responsibility validation, scope resolution or attestation verification.
+- `canonicalHandoffs v2`, `advisoryContextProviders v1` — optional capability contracts; Studio fails closed on incomplete trust fields and never invokes mutating handoff or recall operations.
 - `executions/exec-*.json` — bounded read-only execution detail artifacts; Studio validates and displays persisted verification provenance, including recorded isolation metadata when available, without deriving sandbox semantics.
 - `history`, `trace`, `reflect`, `inspect` — canonical read-only observability projections; Studio does not recompute their semantics.
 - `task/actions`, `task/action`, `task/approvals`, `task/metrics`, `task/evaluations`, `project/capability-policy` — canonical read-only action, approval, policy and trajectory projections.
@@ -90,8 +118,8 @@ Refresh the trusted schema set only from a controlled ForgeLoop checkout:
 ```bash
 node scripts/generate-schema-provenance.mjs \
   --source ../forgeloop \
-  --commit 64dca84357d11989d16b0698e1ff6409ff0f0ddf \
-  --package-version 1.9.0
+  --commit 3bf721bac6a09c6291bfcbc507a66a2833ebddf4 \
+  --package-version 1.10.0
 npm run protocol:schemas:verify
 ```
 

@@ -7,8 +7,8 @@
 **Target ForgeLoop protocol:** v1  
 **Default product mode:** Local, read-only observer  
 
-The current release line is `0.1.0-rc.6`, aligned to ForgeLoop `1.9.0` at
-source commit `64dca84357d11989d16b0698e1ff6409ff0f0ddf` with protocol v1,
+The current release line is `0.1.0-rc.7`, aligned to ForgeLoop `1.10.0` at
+source commit `3bf721bac6a09c6291bfcbc507a66a2833ebddf4` with protocol v1,
 schema v1 and Integration API v1. This document describes the implemented
 observer boundary and identifies genuine future work explicitly.
 
@@ -58,9 +58,9 @@ read-only ForgeLoop Studio renderer
 
 The UI must represent actual ForgeLoop protocol concepts and artifacts. It must not invent hidden lifecycle states, undocumented completion rules, synthetic evidence, or alternative transitions.
 
-### 2.1a ForgeLoop 1.9.0 Integration boundary
+### 2.1a ForgeLoop 1.10.0 Integration boundary
 
-Semantic facts come exclusively from the bundled `@cassiomc1/forgeloop/integration` public subpath (ForgeLoop 1.9.0, Integration API v1, protocol v1, schema v1):
+Semantic facts come exclusively from the bundled `@cassiomc1/forgeloop/integration` public subpath (ForgeLoop 1.10.0, Integration API v1, protocol v1, schema v1):
 
 - `protocol/info` — compatibility via `compatibility.schemaVersion` (there is no top-level `schemaVersion`);
 - `project/tasks` — canonical task discovery with filesystem parity diagnostics;
@@ -70,19 +70,39 @@ Semantic facts come exclusively from the bundled `@cassiomc1/forgeloop/integrati
 
 Compatibility modes: `INTEGRATION_V1`, `ARTIFACT_ONLY`, `INCOMPATIBLE`. Capability drift fails closed. In `INTEGRATION_V1`, `project/tasks` drives semantic task existence, policy status and the canonical `next` action run through the Integration API, snapshot and GET_TASK share one canonical task read service, and the execution provenance reader enforces realpath/symlink boundaries on both the executions directory and each file. A legacy CLI mode is intentionally absent from the public mode set: no artifact-level signal reliably identifies older projects, so the Studio never infers legacy semantics. Operational state is derived from canonical ownership (`ACTIVE`, `RECOVERY_RESUME_REQUIRED`, `COMPLETED_RELEASED`, `BLOCKED`, `OWNERSHIP_INCONSISTENT`, `READ_ONLY_UNKNOWN`) — phase alone never proves claim release. The legacy external CLI remains an isolated read-only compatibility adapter for older projects; the normal `INTEGRATION_V1` snapshot never spawns it.
 
-### 2.1b ForgeLoop 1.6.4 boundary features
+### 2.1b ForgeLoop 1.10.0 boundary capabilities
 
-ForgeLoop 1.6.4 advertises five additive, independently negotiated feature families:
+ForgeLoop 1.10.0 advertises additive, independently negotiated boundary
+capabilities. Existing workspace, responsibility, verification-scope,
+attestation and handoff resources remain protocol-v1 compatible. The
+`canonicalHandoffs v2` and `advisoryContextProviders v1` contracts are
+additive capability metadata; they do not change protocol/schema/API v1:
 
 | Feature | Canonical resource | Studio contract |
 |---|---|---|
 | Workspace binding | `task/workspace-binding` | Display `UNBOUND`, `MATCH`, `MISMATCH`, `INVALID` or `UNAVAILABLE`; never bind or rebind |
-| Canonical handoffs | `task/handoffs` | Display immutable snapshots; never call `handoff-create` or label a handoff as evidence, authority or delegation |
+| Canonical handoffs | `task/handoffs` | Display immutable snapshots and canonical acceptance; never call `handoff-create`, `handoff-accept` or label a handoff/receipt as evidence, authority or delegation |
 | Responsibility constraints | `task/responsibility` | Display `NOT_APPLICABLE`, `VALID` or `INVALID` with exact upstream errors; never call `responsibility-set` |
 | Differential verification scope | `task/verification-scope` | Display requested `AUTO`, `CHANGED`, `CLAIMED` or `FULL` and resolved `CHANGED`, `CLAIMED`, `FULL` or `UNRESOLVED`; never compute scope or render `IMPACTED` as supported |
 | Code attestation | `task/attestation` | Display canonical status and independent `PROCESSED`, `VERIFIED` or `ATTESTED` trust levels; never create or sign attestations |
 
-The five resources are read through narrow, selected-task APIs and optional failures remain isolated. Attestation is lazy and panel-scoped. Studio never creates or signs attestations. Attestation status is loaded only for the selected task; Studio may request ForgeLoop's canonical local content verification when no external signing-provider execution is required. External signing-provider verification is never triggered automatically. Studio never binds a workspace, creates a handoff, sets responsibility or computes verification scope. Verification scope is distinct from attestation coverage, and mutable Continuity remains separate from immutable canonical handoffs.
+The resources are read through narrow, selected-task APIs and optional failures
+remain isolated. Handoff acceptance is normalized only from the canonical
+`handoff.acceptance` projection and is displayed as an operational receipt;
+acceptance transfers no claims, evidence or authority. Studio never creates or
+accepts handoffs. Advisory context providers are advertised through
+`advisoryContextProviders v1` only when all trust fields are exact: provider
+neutral, Integration API only, lazy, opt-in, not persisted by ForgeLoop,
+non-authoritative, non-evidence and non-executable. Studio does not invoke
+recall, load memory or persist advisory context. Attestation is lazy and
+panel-scoped. Studio never creates or signs attestations. Attestation status is
+loaded only for the selected task; Studio may request ForgeLoop's canonical
+local content verification when no external signing-provider execution is
+required. External signing-provider verification is never triggered
+automatically. Studio never binds a workspace, creates a handoff, sets
+responsibility or computes verification scope. Verification scope is distinct
+from attestation coverage, and mutable Continuity remains separate from
+immutable canonical handoffs.
 
 ### 2.1c ForgeLoop adaptive efficiency context
 
@@ -100,9 +120,9 @@ non-blocking diagnostics. The panel preserves `NOT MEASURED` when trusted
 usage or quality data is absent and never changes lifecycle authority or
 completion state.
 
-### 2.1d ForgeLoop 1.9.0 Structural Quality capability
+### 2.1d ForgeLoop 1.10.0 Structural Quality capability
 
-ForgeLoop 1.9.0 advertises the provider-neutral `structuralQuality` feature
+ForgeLoop 1.10.0 advertises the provider-neutral `structuralQuality` feature
 and the read-only `task/structural-quality` resource. Studio preserves that
 capability metadata, including supported modes, provider neutrality and the
 quality command identities, without calculating a score, freshness, baseline
@@ -1815,10 +1835,13 @@ following surfaces:
 - unsigned preview packaging with shared verification, native smoke and
   release-evidence contracts.
 
-The five 1.6.4 boundary features remain read-only. Studio does not create
-tasks, mutate lifecycle state, bind workspaces, create handoffs, set
+The 1.10.0 boundary capabilities remain read-only. Studio does not create
+tasks, mutate lifecycle state, bind workspaces, create or accept handoffs, set
 responsibility, compute verification scope, create/sign attestations or invoke
-external signing-provider verification automatically.
+external signing-provider verification automatically. Handoff acceptance is
+an operational receipt only, and advisory context is host-provided, lazy,
+opt-in, non-persisted, non-authoritative and non-executable; Studio does not
+load or recall it.
 
 ## Future / non-current
 

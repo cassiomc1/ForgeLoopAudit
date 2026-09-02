@@ -1,7 +1,9 @@
 # Release model
 
-ForgeLoop Studio currently produces unsigned preview artifacts. The release
-contract is defined by stable invariants rather than by a particular release
+ForgeLoop Studio `0.1.0-rc.7` currently produces unsigned preview artifacts.
+This release is aligned to ForgeLoop `1.10.0` at immutable commit
+`3bf721bac6a09c6291bfcbc507a66a2833ebddf`, with protocol v1, schema v1 and
+Integration API v1. The release contract is defined by stable invariants rather than by a particular release
 candidate number, and [`docs/releases/release-matrix.json`](releases/release-matrix.json)
 remains the machine-readable authority for the public asset matrix.
 

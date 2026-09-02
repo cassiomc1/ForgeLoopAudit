@@ -19,6 +19,7 @@ import { createCanonicalActionsService, type CanonicalActionsService } from '@ma
 import { createCanonicalTrajectoryService, type CanonicalTrajectoryService } from '@main/core/integration/canonical-trajectory';
 import { createCanonicalExecutionProfileContextService, type CanonicalExecutionProfileContextService } from '@main/core/integration/canonical-execution-profile';
 import { createCanonicalTaskBoundariesService, type CanonicalTaskBoundariesService } from '@main/core/integration/canonical-task-boundaries';
+import { createCanonicalContinuityLintService, type CanonicalContinuityLintService } from '@main/core/integration/canonical-continuity-lint';
 import { createCanonicalTaskReadService, type CanonicalTaskReadService } from '@main/core/tasks/canonical-task-read-service';
 import Store from 'electron-store';
 import { z } from 'zod';
@@ -50,6 +51,7 @@ let currentActions: CanonicalActionsService | null = null;
 let currentTrajectory: CanonicalTrajectoryService | null = null;
 let currentExecutionProfileContext: CanonicalExecutionProfileContextService | null = null;
 let currentTaskBoundaries: CanonicalTaskBoundariesService | null = null;
+let currentContinuityLint: CanonicalContinuityLintService | null = null;
 let currentWatcher: ReturnType<typeof createProjectWatcher> | null = null;
 let currentSnapshotBuilder: ProjectSnapshotBuilder | null = null;
 let currentMainWindow: BrowserWindow | null = null;
@@ -327,6 +329,13 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
     return currentTaskBoundaries.getHandoffs(getCurrentProjectRoot()!, safeTaskId);
   });
 
+  ipcMain.handle(IPC_CHANNELS.GET_TASK_CONTINUITY_LINT, async (event, taskId: string) => {
+    assertTrustedSender(event);
+    const safeTaskId = TaskIdSchema.parse(taskId);
+    if (!currentContinuityLint || !getCurrentProjectRoot()) throw ForgeLoopStudioError.unknown('No project open');
+    return currentContinuityLint.getLint(getCurrentProjectRoot()!, safeTaskId);
+  });
+
   ipcMain.handle(IPC_CHANNELS.GET_TASK_RESPONSIBILITY, async (event, taskId: string) => {
     assertTrustedSender(event);
     const safeTaskId = TaskIdSchema.parse(taskId);
@@ -468,6 +477,7 @@ async function openProject(projectRoot: string, projectKind: ProjectKind = 'PROJ
     // Layout v2 projects have no config.json, so read tolerantly.
     readAttestationConfig: () => currentProjectReader?.tryReadConfig() ?? null,
   });
+  currentContinuityLint = createCanonicalContinuityLintService({ integration });
   detectionResult.forgeLoopVersion = canonicalProtocolInfo?.packageVersion ?? detectionResult.forgeLoopVersion;
   detectionResult.compatibilityMode = negotiation.mode;
   detectionResult.warnings = [
@@ -584,6 +594,7 @@ async function closeProject(): Promise<void> {
   currentTrajectory = null;
   currentExecutionProfileContext = null;
   currentTaskBoundaries = null;
+  currentContinuityLint = null;
   currentSnapshotBuilder = null;
   snapshotGeneration = 0;
 }

@@ -94,6 +94,7 @@ const EMPTY_FEATURE_SUPPORT: ForgeLoopFeatureSupport = Object.freeze({
   verificationExecutionIsolation: false,
   workspaceBinding: false,
   canonicalHandoffs: false,
+  advisoryContextProviders: false,
   responsibilityConstraints: false,
   differentialVerificationScope: false,
   codeAttestation: false,
@@ -160,11 +161,31 @@ export function deriveFeatureSupport(capabilities: ForgeLoopCapabilitiesSummary)
   const canonicalHandoffs = capabilities.features.canonicalHandoffs;
   const canonicalHandoffsSupported = Boolean(
     canonicalHandoffs
-      && canonicalHandoffs.version === 1
+      && canonicalHandoffs.version === 2
       && canonicalHandoffs.supported === true
       && canonicalHandoffs.immutable === true
       && canonicalHandoffs.lifecycleAuthority === false
+      && canonicalHandoffs.evidenceAuthority === false
+      && canonicalHandoffs.exactlyOnceAcceptance === true
+      && canonicalHandoffs.acceptanceLedgerBacked === true
+      && canonicalHandoffs.acceptanceCommand === 'handoff-accept'
+      && ['OPEN', 'ACCEPTED', 'UNBOUND', 'INCONSISTENT']
+        .every((status) => canonicalHandoffs.acceptanceStatuses.includes(status))
       && hasResource(capabilities, 'task/handoffs'),
+  );
+  const advisoryContextProviders = capabilities.features.advisoryContextProviders;
+  const advisoryContextProvidersSupported = Boolean(
+    advisoryContextProviders
+      && advisoryContextProviders.version === 1
+      && advisoryContextProviders.supported === true
+      && advisoryContextProviders.providerNeutral === true
+      && advisoryContextProviders.integrationApiOnly === true
+      && advisoryContextProviders.lazy === true
+      && advisoryContextProviders.optIn === true
+      && advisoryContextProviders.persistedByForgeLoop === false
+      && advisoryContextProviders.lifecycleAuthority === false
+      && advisoryContextProviders.evidenceAuthority === false
+      && advisoryContextProviders.executable === false,
   );
   const responsibilityConstraints = capabilities.features.responsibilityConstraints;
   const responsibilityConstraintsSupported = Boolean(
@@ -249,6 +270,7 @@ export function deriveFeatureSupport(capabilities: ForgeLoopCapabilitiesSummary)
     verificationExecutionIsolation: verificationExecutionIsolationSupported,
     workspaceBinding: workspaceBindingSupported,
     canonicalHandoffs: canonicalHandoffsSupported,
+    advisoryContextProviders: advisoryContextProvidersSupported,
     responsibilityConstraints: responsibilityConstraintsSupported,
     differentialVerificationScope: differentialVerificationScopeSupported,
     codeAttestation: codeAttestationSupported,

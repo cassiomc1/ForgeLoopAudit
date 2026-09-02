@@ -20,7 +20,7 @@ describe('core/integration/forgeloop-integration', () => {
 
   describe('package identity', () => {
     it('exposes the bundled ForgeLoop package version', () => {
-      expect(adapter.getPackageVersion()).toBe('1.9.0');
+      expect(adapter.getPackageVersion()).toBe('1.10.0');
     });
 
     it('keeps the version constant synchronized with the installed dependency pin', () => {
@@ -28,7 +28,7 @@ describe('core/integration/forgeloop-integration', () => {
         readFileSync(join(process.cwd(), 'node_modules', '@cassiomc1', 'forgeloop', 'package.json'), 'utf8'),
       ) as { version: string };
       expect(installed.version).toBe(FORGELOOP_PACKAGE_VERSION);
-      expect(FORGELOOP_UPSTREAM_COMMIT).toBe('64dca84357d11989d16b0698e1ff6409ff0f0ddf');
+      expect(FORGELOOP_UPSTREAM_COMMIT).toBe('3bf721bac6a09c6291bfcbc507a66a2833ebddf4');
       const dependencySpec = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8')).dependencies as Record<string, string>;
       expect(dependencySpec).toHaveProperty('@cassiomc1/forgeloop');
     });
@@ -109,7 +109,29 @@ describe('core/integration/forgeloop-integration', () => {
         protocolProjectRootSeparateFromExecutionCwd: true,
       });
       expect(capabilities.features.workspaceBinding).toMatchObject({ version: 1, supported: true, optional: true, explicitRebinding: false });
-      expect(capabilities.features.canonicalHandoffs).toMatchObject({ version: 1, supported: true, immutable: true, lifecycleAuthority: false });
+      expect(capabilities.features.canonicalHandoffs).toMatchObject({
+        version: 2,
+        supported: true,
+        immutable: true,
+        lifecycleAuthority: false,
+        evidenceAuthority: false,
+        exactlyOnceAcceptance: true,
+        acceptanceLedgerBacked: true,
+        acceptanceCommand: 'handoff-accept',
+        acceptanceStatuses: ['OPEN', 'ACCEPTED', 'UNBOUND', 'INCONSISTENT'],
+      });
+      expect(capabilities.features.advisoryContextProviders).toEqual({
+        version: 1,
+        supported: true,
+        providerNeutral: true,
+        integrationApiOnly: true,
+        lazy: true,
+        optIn: true,
+        persistedByForgeLoop: false,
+        lifecycleAuthority: false,
+        evidenceAuthority: false,
+        executable: false,
+      });
       expect(capabilities.features.responsibilityConstraints).toMatchObject({ version: 1, supported: true, immutableDuringPass: true, completionEnforced: true });
       expect(capabilities.features.differentialVerificationScope).toMatchObject({ version: 1, supported: true, modes: ['AUTO', 'CHANGED', 'CLAIMED', 'FULL'], impactedMode: false });
       expect(capabilities.features.codeAttestation).toMatchObject({ version: 1, supported: true, completionLedgerBound: true });
@@ -208,6 +230,16 @@ describe('core/integration/forgeloop-integration', () => {
     it('accepts other allowlisted read-only commands', async () => {
       const result = await adapter.executeReadOnly<Record<string, unknown>>(scratchDir, 'validate-state');
       expect(result.metadata).toBeDefined();
+    });
+
+    it('accepts reconcile-continuity only when ForgeLoop classifies it as read-only', async () => {
+      const result = await adapter.executeReadOnly<Record<string, unknown>>(
+        scratchDir,
+        'reconcile-continuity',
+        { taskId: 'missing-task' },
+      );
+      expect(result.metadata).toBeDefined();
+      expect(result.metadata?.protocolVersion).toBe(1);
     });
 
     it('preserves canonical ForgeLoop error codes on unsupported programmatic commands', async () => {

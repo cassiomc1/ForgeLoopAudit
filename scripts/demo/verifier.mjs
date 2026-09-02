@@ -398,6 +398,14 @@ export async function verifyCanonicalDemoSemantics(root) {
   const handoffs = await readForgeLoopIntegrationResource('task/handoffs', { projectPath: root, taskId: 'TASK-004' });
   if (!Array.isArray(handoffs.data.handoffs) || handoffs.data.handoffs.length !== 1) {
     errors.push('TASK-004: canonical handoff showcase is missing');
+  } else {
+    const [handoff] = handoffs.data.handoffs;
+    if (!handoff.acceptance || !['OPEN', 'ACCEPTED', 'UNBOUND', 'INCONSISTENT'].includes(handoff.acceptance.status)) {
+      errors.push('TASK-004: canonical handoff acceptance projection is missing or unknown');
+    }
+    if (handoff.acceptance?.status === 'ACCEPTED' && handoff.evidence?.acceptance !== undefined) {
+      errors.push('TASK-004: handoff acceptance was promoted into evidence');
+    }
   }
   const attestation = await readForgeLoopIntegrationResource('task/attestation', { projectPath: root, taskId: 'TASK-001' });
   if (attestation.data.status !== 'DISABLED') {

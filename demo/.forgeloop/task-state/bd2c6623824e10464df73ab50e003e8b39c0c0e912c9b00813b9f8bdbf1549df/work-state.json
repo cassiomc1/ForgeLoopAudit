@@ -3,7 +3,7 @@
   "protocolVersion": 1,
   "taskId": "TASK-003",
   "contractFingerprint": "47a1842cce5b1d5ea332cafa57309fcf9c60e012836257608e0bc23453d280d5",
-  "routeFingerprint": "80f38c4e04f0f9c046a1254c24477786f654369b04f4edcc9bc13060f08b2c7c",
+  "routeFingerprint": "300017a260ccd885e86034f8bdbaf3f88f86f205cc5c7ce3d3b8ff5611db2ada",
   "repositoryFingerprint": {
     "branch": "main",
     "head": "3f9c1d2e77a4b5089c6e12ab34f5d6e7890abcde"

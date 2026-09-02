@@ -1,8 +1,8 @@
 {
-  "forgeLoopPackageVersion": "1.9.0",
-  "forgeLoopGitCommit": "64dca84357d11989d16b0698e1ff6409ff0f0ddf",
+  "forgeLoopPackageVersion": "1.10.0",
+  "forgeLoopGitCommit": "3bf721bac6a09c6291bfcbc507a66a2833ebddf4",
   "protocolVersion": 1,
-  "generatedAt": "2026-09-02T04:44:29.463Z",
+  "generatedAt": "2026-09-02T21:43:51.782Z",
   "schemas": {
     "action.schema.json": {
       "sha256": "0066f1d303781060b3ccde0a7235eabcdff69940928a9e75fab5e68e70717e18",
@@ -61,7 +61,7 @@
       "upstreamPath": "schemas/gate.schema.json"
     },
     "handoff-envelope.schema.json": {
-      "sha256": "44919e979428c4f7fd9a44885c385952e0b951452bc8915a64148d76aff56801",
+      "sha256": "2dd553852d53a02d93af8915b3c9fd055aad86efd4c97a5a96bda710cb28ecd6",
       "upstreamPath": "schemas/handoff-envelope.schema.json"
     },
     "in-toto-statement.schema.json": {
