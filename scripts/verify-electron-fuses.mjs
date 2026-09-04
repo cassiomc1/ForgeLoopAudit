@@ -11,11 +11,11 @@ function packagedApps(dir) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const path = join(dir, entry.name);
     if (entry.isDirectory() && entry.name.endsWith('.app')) {
-      if (existsSync(join(path, 'Contents', 'MacOS', 'ForgeLoop Studio'))) results.push({ path, platform: 'macOS' });
+      if (existsSync(join(path, 'Contents', 'MacOS', 'ForgeLoopAudit'))) results.push({ path, platform: 'macOS' });
       continue;
     }
-    if (entry.isFile() && entry.name === 'ForgeLoop Studio.exe') results.push({ path, platform: 'Windows' });
-    if (entry.isFile() && entry.name === 'forgeloop-studio' && dir.endsWith('linux-unpacked')) results.push({ path, platform: 'Linux' });
+    if (entry.isFile() && entry.name === 'ForgeLoopAudit.exe') results.push({ path, platform: 'Windows' });
+    if (entry.isFile() && entry.name === 'forgeloop-audit' && dir.endsWith('linux-unpacked')) results.push({ path, platform: 'Linux' });
     if (entry.isDirectory()) results.push(...packagedApps(path));
   }
   return results;

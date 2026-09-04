@@ -141,7 +141,7 @@ export function InspectorPanel({ task, onClose }: InspectorPanelProps) {
               <h3 className="text-xs font-semibold text-forge-text-muted uppercase tracking-wider mb-3">Evidence Coverage</h3>
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-forge-text-secondary">Studio Coverage Score</span>
+                  <span className="text-forge-text-secondary">ForgeLoopAudit Coverage Score</span>
                   <span className="font-mono text-forge-text-primary">{task.evidenceCoverage.coveragePercent}%</span>
                 </div>
                 <div className="w-full h-2 bg-forge-border-subtle rounded-full overflow-hidden">

@@ -1,4 +1,4 @@
-# ForgeLoop Studio — Current Implementation and Verification Matrix
+# ForgeLoopAudit — Current Implementation and Verification Matrix
 
 This is a current-state matrix, not an unchecked product backlog. Statuses are
 derived from the implementation, automated tests and workflow definitions in
@@ -22,8 +22,9 @@ this repository.
   rejection.
 - [x] Dark design tokens, responsive shell, semantic headings and loading,
   empty and error states.
-- [x] Current navigation: Overview, Tasks, Flow, Contract, Evidence, Events,
-  Executions, Continuity, Diagnostics, Actions, Policy and Settings.
+- [x] Auditor-first navigation: Audit Summary, Findings, Tasks, Evidence,
+  Quality, Policy & Trust, Audit History, Reports, Diagnostics and Settings;
+  protocol-object pages remain read-only drill-down surfaces.
 
 Evidence: `src/main/app.ts`, `src/preload/`, `src/main/security/`,
 `src/renderer/App.tsx`, `tests/e2e/accessibility.spec.ts` and Electron smoke
@@ -62,15 +63,41 @@ Evidence: `src/main/core/integration/`,
 `src/main/core/protocol/`, `src/main/core/project/`,
 `src/main/core/tasks/`, `src/main/core/cli/` and their unit/integration tests.
 
+## Auditor domain
+
+- [x] Canonical task audit runs through the bundled Integration API `audit`
+  command with the exact `taskId` input contract and preserves non-zero domain
+  exits.
+- [x] Canonical and derived findings retain source, code, evidence, artifacts,
+  remediation, stable fingerprints and rule versions; unknown canonical codes
+  remain `UNKNOWN`.
+- [x] Project aggregation exposes separate integrity, completion-readiness,
+  quality and trust verdicts plus visible coverage and non-authoritative score
+  suppression below 60% coverage.
+- [x] Structural Quality is consumed from `task/structural-quality`; no
+  provider is launched by ForgeLoopAudit.
+- [x] Conservative derived rules use only canonical reflection, evidence,
+  context-observability or recovery projections; missing inputs produce no
+  inferred finding.
+- [x] Audit history is retained in application data with a default limit of 50;
+  deterministic diffs and JSON/Markdown/SARIF reports include trust labels and
+  provenance.
+
+Evidence: `src/shared/audit.ts`, `src/main/core/audit/`,
+`src/main/ipc/project.handlers.ts`, `src/preload/index.ts`,
+`src/renderer/pages/AuditSummary.tsx`, `src/renderer/pages/Findings.tsx`,
+`src/renderer/pages/AuditHistory.tsx`, `src/renderer/pages/Reports.tsx` and
+audit-focused tests.
+
 ## ForgeLoop 1.10.0 additive boundary features
 
 - [x] Workspace Binding: display `UNBOUND`, `MATCH`, `MISMATCH`, `INVALID` or
-  `UNAVAILABLE`; Studio never binds or rebinds.
+  `UNAVAILABLE`; ForgeLoopAudit never binds or rebinds.
 - [x] Canonical Handoffs v2: display immutable snapshots and the normalized
   `OPEN`, `ACCEPTED`, `UNBOUND` or `INCONSISTENT` acceptance state separately
-  from mutable Continuity; Studio never creates or accepts handoffs.
+  from mutable Continuity; ForgeLoopAudit never creates or accepts handoffs.
 - [x] Responsibility Constraints: display `NOT_APPLICABLE`, `VALID` or
-  `INVALID` with canonical errors; Studio never sets responsibility.
+  `INVALID` with canonical errors; ForgeLoopAudit never sets responsibility.
 - [x] Differential Verification Scope: preserve requested `AUTO`, `CHANGED`,
   `CLAIMED` or `FULL` and resolved `CHANGED`, `CLAIMED`, `FULL` or
   `UNRESOLVED`; `IMPACTED` is unsupported.

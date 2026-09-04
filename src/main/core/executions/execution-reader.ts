@@ -1,7 +1,7 @@
 import { existsSync, lstatSync, readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { PathBoundary } from '@main/security/path-boundary';
-import { ForgeLoopStudioError } from '@shared/errors';
+import { ForgeLoopAuditError } from '@shared/errors';
 import { SchemaValidator } from '@main/core/protocol/validator';
 import { parseJsonSafely, RESOURCE_LIMITS } from '@main/security/resource-limits';
 import type { ExecutionPage, ExecutionRecord } from '@shared/domain';
@@ -45,7 +45,7 @@ export class ExecutionReader {
     // project boundary — never a symlink and never a regular file.
     const dirStat = lstatSync(executionsDir);
     if (!dirStat.isDirectory() || dirStat.isSymbolicLink()) {
-      throw ForgeLoopStudioError.pathBoundaryViolation(executionsDir, this.pathBoundary.getProjectRoot());
+      throw ForgeLoopAuditError.pathBoundaryViolation(executionsDir, this.pathBoundary.getProjectRoot());
     }
     const validatedExecutionsDir = this.pathBoundary.validatePath(executionsDir);
 

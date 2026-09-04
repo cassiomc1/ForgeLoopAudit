@@ -1,7 +1,7 @@
 import type { ForgeLoopCompatibilityMode } from './domain';
 
-export interface StudioDiagnostics {
-  studioVersion: string;
+export interface AuditRuntimeDiagnostics {
+  auditVersion: string;
   electronVersion: string;
   nodeVersion: string;
   platform: string;

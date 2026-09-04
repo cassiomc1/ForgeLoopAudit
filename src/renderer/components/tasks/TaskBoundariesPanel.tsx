@@ -151,7 +151,7 @@ export function TaskBoundariesPanel({
 
   useEffect(() => {
     let cancelled = false;
-    const api = window.forgeLoopStudio;
+    const api = window.forgeLoopAudit;
     const workspacePromise = workspaceAdvertised && typeof api?.getTaskWorkspaceBinding === 'function'
       ? api.getTaskWorkspaceBinding(task.taskId).catch(() => unavailableWorkspace(true))
       : Promise.resolve(unavailableWorkspace(workspaceAdvertised));
@@ -162,7 +162,7 @@ export function TaskBoundariesPanel({
 
   useEffect(() => {
     let cancelled = false;
-    const api = window.forgeLoopStudio;
+    const api = window.forgeLoopAudit;
     const handoffsPromise = handoffsAdvertised && typeof api?.getTaskHandoffs === 'function'
       ? api.getTaskHandoffs(task.taskId).catch(() => unavailableHandoffs(true))
       : Promise.resolve(unavailableHandoffs(handoffsAdvertised));
@@ -173,7 +173,7 @@ export function TaskBoundariesPanel({
 
   useEffect(() => {
     let cancelled = false;
-    const api = window.forgeLoopStudio;
+    const api = window.forgeLoopAudit;
     const responsibilityPromise = responsibilityAdvertised && typeof api?.getTaskResponsibility === 'function'
       ? api.getTaskResponsibility(task.taskId).catch(() => unavailableResponsibility(true))
       : Promise.resolve(unavailableResponsibility(responsibilityAdvertised));
@@ -251,7 +251,7 @@ export function TaskBoundariesContent({ task, data }: { task: TaskSummary; data:
             <BoundedList label="Current changed paths" values={responsibility.changedPaths} />
           </div>
           {responsibility.frozenInputs && <p className="mt-3 text-xs text-forge-text-muted">Frozen inputs: contract {String(responsibility.frozenInputs.contract)}, route {String(responsibility.frozenInputs.route)}, claims {String(responsibility.frozenInputs.claims)}</p>}
-          {responsibility.status === 'INVALID' && <p className="mt-3 flex items-center gap-1.5 text-xs text-forge-danger"><AlertTriangle className="h-3.5 w-3.5" />ForgeLoop rejected this responsibility contract; Studio preserves the canonical fail-closed result.</p>}
+          {responsibility.status === 'INVALID' && <p className="mt-3 flex items-center gap-1.5 text-xs text-forge-danger"><AlertTriangle className="h-3.5 w-3.5" />ForgeLoop rejected this responsibility contract; ForgeLoopAudit preserves the canonical fail-closed result.</p>}
           {responsibility.errors.length > 0 && <div className="mt-3 space-y-1 text-xs text-forge-danger">{responsibility.errors.slice(0, 4).map((error, index) => <p key={`${error.code}-${index}`}>{error.code}: {error.message}</p>)}</div>}
         </div>
 

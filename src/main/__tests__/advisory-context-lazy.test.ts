@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-describe('advisory context Studio boundary', () => {
+describe('advisory context ForgeLoopAudit boundary', () => {
   it('does not import or invoke recallAdvisoryContext during normal refresh paths', () => {
     for (const path of [
       'src/main/core/project/project-snapshot.ts',

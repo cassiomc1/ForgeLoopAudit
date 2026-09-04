@@ -1,6 +1,6 @@
 # Release model
 
-ForgeLoop Studio `0.1.0-rc.7` currently produces unsigned preview artifacts.
+ForgeLoopAudit `0.2.0-rc.1` currently produces unsigned preview artifacts.
 This release is aligned to ForgeLoop `1.10.0` at immutable commit
 `3bf721bac6a09c6291bfcbc507a66a2833ebddf`, with protocol v1, schema v1 and
 Integration API v1. The release contract is defined by stable invariants rather than by a particular release
@@ -16,7 +16,7 @@ A public release must satisfy all of the following:
 - each staged asset is covered exactly once by the matching platform checksum
   manifest;
 - release evidence binds the asset filename, SHA-256, platform, architecture,
-  Studio version, source commit, ForgeLoop lineage and unsigned-preview policy;
+  ForgeLoopAudit version, source commit, ForgeLoop lineage and unsigned-preview policy;
 - the lockfile SBOM is generated and normalized as `SBOM-cyclonedx.json`;
 - Electron fuses are applied and read back from the packaged application;
 - the source commit resolved from the release tag is the commit named by the

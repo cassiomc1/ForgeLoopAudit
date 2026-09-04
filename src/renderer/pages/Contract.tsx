@@ -20,7 +20,7 @@ export function Contract({ snapshot, selectedTaskId, onSelectedTaskChange }: Con
 
   useEffect(() => {
     if (selectedTask) {
-      window.forgeLoopStudio.getRawArtifact({
+      window.forgeLoopAudit.getRawArtifact({
         taskId: selectedTask.taskId,
         artifact: 'contract.json',
       }).then((content) => {

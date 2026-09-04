@@ -14,7 +14,7 @@ export function DemoProjectBanner() {
           </p>
           <p className="text-forge-text-muted text-xs mt-0.5">
             ForgeShop intentionally includes complete, verifying, executing, blocked, and planned tasks.
-            Schema, integrity, validation, and Studio errors are still real and are never hidden.
+            Schema, integrity, validation, and ForgeLoopAudit errors are still real and are never hidden.
           </p>
         </div>
       </div>

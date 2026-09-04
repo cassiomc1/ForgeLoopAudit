@@ -8,7 +8,7 @@ const DEMO_SOURCES = {
       name: 'forgeshop-demo',
       version: '0.1.0',
       private: true,
-      description: 'ForgeShop — the ForgeLoop Studio demo project (a small premium e-commerce application built through ForgeLoop).',
+      description: 'ForgeShop — the ForgeLoopAudit demo project (a small premium e-commerce application built through ForgeLoop).',
     },
     null,
     2,
@@ -198,17 +198,17 @@ export function generateDemoFiles() {
   }
   files.set(
     'README.md',
-    `# ForgeShop — ForgeLoop Studio demo project
+    `# ForgeShop — ForgeLoopAudit demo project
 
 ForgeShop is a fictional premium e-commerce web application being built through
 ForgeLoop. Everything under \`.forgeloop/\` is a real, schema-valid ForgeLoop
-project fixture — Studio reads it with exactly the same pipeline it uses for any
+project fixture — ForgeLoopAudit reads it with exactly the same pipeline it uses for any
 other project (ProjectDetector → PathBoundary → SchemaValidator → ProjectSnapshot).
 No external service, network access or build step is required.
 
 ## Open it
 
-1. Launch ForgeLoop Studio.
+1. Launch ForgeLoopAudit.
 2. Choose **Open Demo Project** on the start screen (or **Open Project** and select this \`demo/\` directory).
 3. Explore Overview, Tasks, Flow, Contract, Evidence, Events, Executions, Continuity, Diagnostics, Actions, Policy and Settings. The active task's Overview includes the read-only Task Boundaries surface.
 
@@ -226,7 +226,7 @@ No external service, network access or build step is required.
 TASK-004 is the continuity showcase: \`harness-a\` failed the keyboard-navigation
 gate, recorded findings, selected a recovery route and handed off to
 \`harness-b\`, which resumed from \`continuity.json\`. The generated ledger also
-contains a known \`HANDOFF_ACCEPTED\` event for the canonical handoff. Studio
+contains a known \`HANDOFF_ACCEPTED\` event for the canonical handoff. ForgeLoopAudit
 displays it as **Accepted — operational receipt only**; it is not review,
 completion or other evidence and transfers no claims or authority.
 
@@ -238,7 +238,7 @@ verification scope, TASK-003 shows responsibility constraints, and TASK-004
 shows that immutable handoffs and their operational acceptance receipts are
 distinct from mutable Continuity. TASK-003's
 responsibility projection intentionally exercises ForgeLoop's INVALID fail-closed
-result (including route validation errors), so Studio does not reinterpret it as
+result (including route validation errors), so ForgeLoopAudit does not reinterpret it as
 an accepted scope. TASK-001's
 attestation files are unsigned and the project policy is \`off\`; the fixture
 does not claim ATTESTED trust.
@@ -246,12 +246,12 @@ does not claim ATTESTED trust.
 ## Intentional scenario states
 
 ForgeShop is a scenario-rich demo, not a fixture where every task is expected
-to be complete. Studio labels these known states as demo scenarios so users can
+to be complete. ForgeLoopAudit labels these known states as demo scenarios so users can
 distinguish protocol examples from application failures.
 
 The scenario label never suppresses real validation or integrity errors.
 Schema errors, invalid artifacts, broken event hashes, policy-lock mismatches,
-unexpected phase drift, IPC errors, and Studio failures must still be treated as
+unexpected phase drift, IPC errors, and ForgeLoopAudit failures must still be treated as
 real defects.
 
 ## Regenerating

@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
 import { _electron as electron } from 'playwright';
 
-const REAL_PROJECT = process.env.FORGELOOP_STUDIO_REAL_PROJECT ?? '';
+const REAL_PROJECT = process.env.FORGELOOP_AUDIT_REAL_PROJECT ?? '';
 
-test.skip(!REAL_PROJECT, 'FORGELOOP_STUDIO_REAL_PROJECT not set');
+test.skip(!REAL_PROJECT, 'FORGELOOP_AUDIT_REAL_PROJECT not set');
 
 test('a real layout v2 project (manifest.json, no config.json) opens', async () => {
   const app = await electron.launch({
@@ -11,8 +11,8 @@ test('a real layout v2 project (manifest.json, no config.json) opens', async () 
     env: {
       ...process.env,
       NODE_ENV: 'production',
-      FORGELOOP_STUDIO_SMOKE: '1',
-      FORGELOOP_STUDIO_FIXTURE_PROJECT: REAL_PROJECT,
+      FORGELOOP_AUDIT_SMOKE: '1',
+      FORGELOOP_AUDIT_FIXTURE_PROJECT: REAL_PROJECT,
     },
   });
   try {
@@ -20,9 +20,9 @@ test('a real layout v2 project (manifest.json, no config.json) opens', async () 
     const errors: string[] = [];
     window.on('pageerror', (err) => errors.push(String(err)));
 
-    // The project must open into the overview instead of surfacing the
+    // The project must open into the audit summary instead of surfacing the
     // "Path does not exist: .../config.json" failure.
-    await expect(window.getByRole('heading', { name: 'Project Overview' })).toBeVisible({ timeout: 20_000 });
+    await expect(window.getByRole('heading', { name: 'Audit Summary' })).toBeVisible({ timeout: 20_000 });
     await expect(window.getByText(/does not contain a ForgeLoop project/i)).toHaveCount(0);
     await expect(window.getByText(/Path does not exist/i)).toHaveCount(0);
 

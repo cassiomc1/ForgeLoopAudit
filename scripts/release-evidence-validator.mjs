@@ -49,7 +49,7 @@ export function validateReleaseEvidence({
   if (evidence.sha256 !== actualSha256) throw new Error(`${evidenceName}: evidence sha256 does not match actual artifact bytes`);
   if (evidence.platform !== platform) throw new Error(`${evidenceName}: evidence platform ${evidence.platform} does not match ${platform}`);
   if (evidence.architecture !== architecture) throw new Error(`${evidenceName}: evidence architecture ${evidence.architecture} does not match ${architecture}`);
-  if (evidence.studioVersion !== expectedVersion) throw new Error(`${evidenceName}: evidence studioVersion ${evidence.studioVersion} does not match expected ${expectedVersion}`);
+  if (evidence.auditVersion !== expectedVersion) throw new Error(`${evidenceName}: evidence auditVersion ${evidence.auditVersion} does not match expected ${expectedVersion}`);
   if (evidence.signing !== expectedSigning) throw new Error(`${evidenceName}: evidence signing ${evidence.signing} does not match policy ${expectedSigning}`);
   if (expectedCommit && evidence.gitCommit !== expectedCommit) throw new Error(`${evidenceName}: evidence gitCommit does not match build commit ${expectedCommit}`);
   if (expectedWorkflowRunId && evidence.workflowRunId !== expectedWorkflowRunId) throw new Error(`${evidenceName}: evidence workflowRunId ${evidence.workflowRunId} does not match run ${expectedWorkflowRunId}`);

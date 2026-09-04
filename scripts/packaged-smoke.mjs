@@ -10,12 +10,12 @@ const output = join(process.cwd(), 'dist-electron');
 const candidates = [];
 if (process.platform === 'darwin') {
   for (const entry of readdirSync(output, { withFileTypes: true })) {
-    if (entry.isDirectory() && entry.name.startsWith('mac-')) candidates.push(join(output, entry.name, 'ForgeLoop Studio.app', 'Contents', 'MacOS', 'ForgeLoop Studio'));
+    if (entry.isDirectory() && entry.name.startsWith('mac-')) candidates.push(join(output, entry.name, 'ForgeLoopAudit.app', 'Contents', 'MacOS', 'ForgeLoopAudit'));
   }
 } else if (process.platform === 'win32') {
-  candidates.push(join(output, 'win-unpacked', 'ForgeLoop Studio.exe'));
+  candidates.push(join(output, 'win-unpacked', 'ForgeLoopAudit.exe'));
 } else {
-  candidates.push(join(output, 'linux-unpacked', 'forgeloop-studio'));
+  candidates.push(join(output, 'linux-unpacked', 'forgeloop-audit'));
 }
 const executablePath = candidates.find(existsSync);
 if (!executablePath) throw new Error(`Packaged Electron executable not found. Checked: ${candidates.join(', ')}`);
@@ -32,14 +32,14 @@ const expectedForgeLoopVersion = JSON.parse(readFileSync(join(process.cwd(), 'sc
 console.log(`Bundled demo project present at ${join(resourcesDir, 'demo')}`);
 
 const startedAt = performance.now();
-const smokeFile = join(tmpdir(), `forgeloop-studio-smoke-${process.pid}.json`);
+const smokeFile = join(tmpdir(), `forgeloop-audit-smoke-${process.pid}.json`);
 let child;
 let stdout = '';
 let stderr = '';
 try {
   console.log(`Packaged smoke executable=${executablePath}`);
   const args = process.platform === 'linux' ? ['--no-sandbox'] : [];
-  child = spawn(executablePath, args, { env: { ...process.env, NODE_ENV: 'production', FORGELOOP_STUDIO_SMOKE: '1', FORGELOOP_STUDIO_SMOKE_FILE: smokeFile }, stdio: ['ignore', 'pipe', 'pipe'] });
+  child = spawn(executablePath, args, { env: { ...process.env, NODE_ENV: 'production', FORGELOOP_AUDIT_SMOKE: '1', FORGELOOP_AUDIT_SMOKE_FILE: smokeFile }, stdio: ['ignore', 'pipe', 'pipe'] });
   child.stdout.on('data', (chunk) => { stdout = `${stdout}${chunk}`.slice(-20_000); });
   child.stderr.on('data', (chunk) => { stderr = `${stderr}${chunk}`.slice(-20_000); });
   await waitForSpawn(child, LAUNCH_TIMEOUT_MS);
@@ -48,7 +48,7 @@ try {
   const result = JSON.parse(readFileSync(smokeFile, 'utf8'));
   const title = result.title;
   const bridgeType = result.bridgeType;
-  if (title !== 'ForgeLoop Studio') throw new Error(`Unexpected packaged window title: ${title}`);
+  if (title !== 'ForgeLoopAudit') throw new Error(`Unexpected packaged window title: ${title}`);
   if (bridgeType !== 'object') throw new Error(`Preload bridge unavailable: ${bridgeType}`);
   // The packaged app must load the bundled @cassiomc1/forgeloop Integration
   // API from its own node_modules — no global ForgeLoop CLI required.

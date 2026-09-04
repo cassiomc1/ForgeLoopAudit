@@ -1,4 +1,5 @@
 import type { TaskSummary, ForgeLoopPhase } from '@shared/domain';
+import type { TaskAuditSummary } from '@shared/audit';
 import { cn } from '../../lib/utils';
 import { classifyDemoScenario } from '../../lib/demo-scenarios';
 import { DemoScenarioBadge } from '../demo/DemoScenarioBadge';
@@ -7,12 +8,13 @@ import { ChevronRight, AlertTriangle } from 'lucide-react';
 
 interface TaskRowProps {
   task: TaskSummary;
+  auditSummary?: TaskAuditSummary;
   isActive?: boolean;
   isDemoProject?: boolean;
   onClick?: () => void;
 }
 
-export function TaskRow({ task, isActive, isDemoProject, onClick }: TaskRowProps) {
+export function TaskRow({ task, auditSummary, isActive, isDemoProject, onClick }: TaskRowProps) {
   const demoScenario = isDemoProject
     ? classifyDemoScenario(task)
     : ({ kind: 'unknown' } as const);
@@ -63,10 +65,18 @@ export function TaskRow({ task, isActive, isDemoProject, onClick }: TaskRowProps
 
         <OwnershipBadge state={task.operationalState} />
 
+        {auditSummary ? (
+          <span className="text-xs text-forge-text-muted" aria-label={`Canonical audit ${auditSummary.status}; ${auditSummary.findingCount} findings`}>
+            Audit {auditSummary.status} · {auditSummary.findingCount} finding{auditSummary.findingCount === 1 ? '' : 's'}
+          </span>
+        ) : (
+          <span className="text-xs text-forge-text-muted" aria-label="Canonical audit pending">Audit pending</span>
+        )}
+
         <DemoScenarioBadge match={demoScenario} />
 
         {task.evidenceCoverage && (
-          <span title="Studio Coverage Score" aria-label="Studio Coverage Score" className="text-xs text-forge-text-muted font-mono w-10 text-right">
+          <span title="ForgeLoopAudit Coverage Score" aria-label="ForgeLoopAudit Coverage Score" className="text-xs text-forge-text-muted font-mono w-10 text-right">
             {task.evidenceCoverage.coveragePercent}%
           </span>
         )}

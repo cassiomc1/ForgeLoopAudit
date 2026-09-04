@@ -32,7 +32,7 @@ export function Events({ snapshot, selectedTaskId, eventsRefreshToken = 0, onSel
     const requestId = ++requestIdRef.current;
     setLoading(true);
     try {
-      const result = await window.forgeLoopStudio.getTaskEvents(taskId, append ? cursorRef.current : undefined, 100);
+      const result = await window.forgeLoopAudit.getTaskEvents(taskId, append ? cursorRef.current : undefined, 100);
       if (requestId !== requestIdRef.current) return;
 
       const previousEvents = eventsRef.current;
@@ -86,7 +86,7 @@ export function Events({ snapshot, selectedTaskId, eventsRefreshToken = 0, onSel
 
   const validateLedger = async () => {
     if (!selectedTask) return;
-    try { setValidation(await window.forgeLoopStudio.validateEventLedger(selectedTask.taskId)); }
+    try { setValidation(await window.forgeLoopAudit.validateEventLedger(selectedTask.taskId)); }
     catch { setValidation({ schema: 'INVALID', chain: 'INVALID', scope: 'LEDGER', errors: ['Ledger validation failed'] }); }
   };
 

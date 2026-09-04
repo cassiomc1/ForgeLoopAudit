@@ -8,7 +8,7 @@ import { openExternalIfAllowed } from './security/external-navigation';
 
 let mainWindow: BrowserWindow | null = null;
 let ipcRegistered = false;
-const isDevelopment = (process.env.NODE_ENV === 'development' || !app.isPackaged) && process.env.FORGELOOP_STUDIO_SMOKE !== '1';
+const isDevelopment = (process.env.NODE_ENV === 'development' || !app.isPackaged) && process.env.FORGELOOP_AUDIT_SMOKE !== '1';
 
 function createWindow(): BrowserWindow {
   const window = new BrowserWindow({
@@ -36,7 +36,7 @@ function createWindow(): BrowserWindow {
 
   window.on('ready-to-show', () => {
     window.show();
-    const smokeFile = process.env.FORGELOOP_STUDIO_SMOKE_FILE;
+    const smokeFile = process.env.FORGELOOP_AUDIT_SMOKE_FILE;
     if (smokeFile) {
       void (async () => {
         let forgeLoopPackageVersion: string | null = null;
@@ -46,7 +46,7 @@ function createWindow(): BrowserWindow {
         } catch (error) {
           console.error('Bundled ForgeLoop Integration API unavailable:', error);
         }
-        const bridgeType = await window.webContents.executeJavaScript('typeof window.forgeLoopStudio');
+        const bridgeType = await window.webContents.executeJavaScript('typeof window.forgeLoopAudit');
         writeFileSync(smokeFile, JSON.stringify({ title: window.getTitle(), bridgeType, forgeLoopPackageVersion }));
       })();
     }

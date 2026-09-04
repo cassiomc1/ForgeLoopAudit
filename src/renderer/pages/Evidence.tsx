@@ -28,7 +28,7 @@ export function Evidence({ snapshot, selectedTaskId, genericTaskRefreshToken = 0
   useEffect(() => {
     if (!selectedTaskKey) { setExecutionReceipt(null); return; }
     let cancelled = false;
-    window.forgeLoopStudio.getTask(selectedTaskKey).then((task) => { if (!cancelled) setExecutionReceipt(task.executionReceipt || null); }).catch(() => { if (!cancelled) setExecutionReceipt(null); });
+    window.forgeLoopAudit.getTask(selectedTaskKey).then((task) => { if (!cancelled) setExecutionReceipt(task.executionReceipt || null); }).catch(() => { if (!cancelled) setExecutionReceipt(null); });
     return () => { cancelled = true; };
   }, [genericTaskRefreshToken, selectedTaskKey]);
 
@@ -52,7 +52,7 @@ export function Evidence({ snapshot, selectedTaskId, genericTaskRefreshToken = 0
       error: { code: 'E_FEATURE_UNAVAILABLE', message: 'Differential Verification Scope is not advertised by this ForgeLoop build.' },
     };
     const scopePromise = scopeFeatureAvailable
-      ? window.forgeLoopStudio.getTaskVerificationScope(selectedTaskKey).catch(() => scopeUnavailable)
+      ? window.forgeLoopAudit.getTaskVerificationScope(selectedTaskKey).catch(() => scopeUnavailable)
       : Promise.resolve(scopeUnavailable);
     scopePromise.then((scope) => { if (!cancelled) setVerificationScope(scope); });
     return () => { cancelled = true; };
@@ -76,7 +76,7 @@ export function Evidence({ snapshot, selectedTaskId, genericTaskRefreshToken = 0
       errors: [{ code: 'E_FEATURE_UNAVAILABLE', message: 'Code attestation is not advertised by this ForgeLoop build.' }],
     };
     const attestationPromise = attestationFeatureAvailable
-      ? window.forgeLoopStudio.getTaskAttestation(selectedTaskKey).catch(() => attestationUnavailable)
+      ? window.forgeLoopAudit.getTaskAttestation(selectedTaskKey).catch(() => attestationUnavailable)
       : Promise.resolve(attestationUnavailable);
     attestationPromise.then((attestationView) => { if (!cancelled) setAttestation(attestationView); });
     return () => { cancelled = true; };
@@ -117,7 +117,7 @@ export function Evidence({ snapshot, selectedTaskId, genericTaskRefreshToken = 0
       {evidence && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-10 p-4">
-            <p className="text-xs text-forge-text-muted mb-1">Studio Coverage Score</p>
+            <p className="text-xs text-forge-text-muted mb-1">ForgeLoopAudit Coverage Score</p>
             <p className="text-2xl font-semibold text-forge-text-primary">{evidence.coveragePercent}%</p>
             <div className="mt-2 h-1.5 bg-forge-border-subtle rounded-full overflow-hidden">
               <div

@@ -20,7 +20,7 @@ export function attestationConfigUnavailablePolicy(): AttestationReadPolicy {
 }
 
 /**
- * Resolve only the Studio automatic-read decision from the schema-validated
+ * Resolve only the ForgeLoopAudit automatic-read decision from the schema-validated
  * ForgeLoop config. Project config remains protocol policy, not host authority.
  */
 export function resolveAttestationReadPolicy(config: unknown): AttestationReadPolicy {
@@ -64,24 +64,24 @@ export function readAttestationReadPolicy(readConfig?: () => unknown): Attestati
 export function attestationReadPolicyError(policyValue: AttestationReadPolicy): { code: string; message: string } {
   if (policyValue.reason === 'EXTERNAL_SIGNING_PROVIDER') {
     return {
-      code: 'STUDIO_ATTESTATION_EXTERNAL_VERIFICATION_REQUIRED',
-      message: 'This attestation uses an external signing provider. ForgeLoop Studio does not automatically execute signing-provider verification. Run the canonical ForgeLoop verification command explicitly.',
+      code: 'AUDIT_ATTESTATION_EXTERNAL_VERIFICATION_REQUIRED',
+      message: 'This attestation uses an external signing provider. ForgeLoopAudit does not automatically execute signing-provider verification. Run the canonical ForgeLoop verification command explicitly.',
     };
   }
   if (policyValue.reason === 'UNKNOWN_PROVIDER') {
     return {
-      code: 'STUDIO_ATTESTATION_EXTERNAL_VERIFICATION_REQUIRED',
-      message: 'This attestation uses an unknown signing provider. ForgeLoop Studio fails closed and does not automatically execute signing-provider verification. Run the canonical ForgeLoop verification command explicitly.',
+      code: 'AUDIT_ATTESTATION_EXTERNAL_VERIFICATION_REQUIRED',
+      message: 'This attestation uses an unknown signing provider. ForgeLoopAudit fails closed and does not automatically execute signing-provider verification. Run the canonical ForgeLoop verification command explicitly.',
     };
   }
   if (policyValue.reason === 'DISABLED') {
     return {
-      code: 'STUDIO_ATTESTATION_READ_DISABLED',
+      code: 'AUDIT_ATTESTATION_READ_DISABLED',
       message: 'Automatic attestation reads are disabled by the project policy.',
     };
   }
   return {
-    code: 'STUDIO_ATTESTATION_CONFIG_UNAVAILABLE',
-    message: 'ForgeLoop Studio could not validate the attestation signing policy, so automatic attestation reads are disabled.',
+    code: 'AUDIT_ATTESTATION_CONFIG_UNAVAILABLE',
+    message: 'ForgeLoopAudit could not validate the attestation signing policy, so automatic attestation reads are disabled.',
   };
 }

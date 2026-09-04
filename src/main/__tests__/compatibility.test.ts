@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { checkProtocolCompatibility, isVersionSupported, getSupportedVersions } from '@main/core/protocol/compatibility';
-import { ForgeLoopStudioError } from '@shared/errors';
+import { ForgeLoopAuditError } from '@shared/errors';
 
 describe('protocol/compatibility', () => {
   describe('checkProtocolCompatibility', () => {
@@ -26,7 +26,7 @@ describe('protocol/compatibility', () => {
           schemaVersion: 1,
           compatible: true,
         })
-      ).toThrow(ForgeLoopStudioError);
+      ).toThrow(ForgeLoopAuditError);
     });
 
     it('should include packageVersion when provided', () => {

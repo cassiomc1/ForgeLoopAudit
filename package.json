@@ -1,7 +1,7 @@
 {
-  "name": "forgeloop-studio",
-  "version": "0.1.0-rc.7",
-  "description": "A real-time visual interface for the ForgeLoop engineering protocol",
+  "name": "forgeloop-audit",
+  "version": "0.2.0-rc.1",
+  "description": "Read-only engineering auditor for ForgeLoop projects",
   "main": "dist/main/index.cjs",
   "type": "module",
   "scripts": {
@@ -21,13 +21,14 @@
     "dependency:policy": "node scripts/dependency-policy.mjs",
     "verify:forgeloop-lineage": "node scripts/verify-forgeloop-vendor-lineage.mjs",
     "docs:check": "node scripts/check-doc-conformance.mjs && node scripts/check-readme-screenshots.mjs",
+    "brand:check": "node scripts/check-brand-conformance.mjs",
     "screenshots:readme": "npm run build && node scripts/capture-readme-screenshots.mjs",
     "screenshots:readme:check": "npm run screenshots:check",
     "screenshots:check": "node scripts/check-readme-screenshots.mjs",
     "demo:generate": "node scripts/generate-demo-project.mjs",
     "demo:verify": "node scripts/verify-demo-project.mjs",
     "test:coverage": "vitest run --coverage",
-    "test:release-contracts": "node --test scripts/__tests__/release-contracts.test.mjs scripts/__tests__/verify-release-assets.test.mjs scripts/__tests__/large-ledger-fixture.test.mjs scripts/__tests__/release-workflow.test.mjs scripts/__tests__/public-release-workflow.test.mjs scripts/__tests__/ui-version.test.mjs scripts/__tests__/version-lineage.test.mjs scripts/__tests__/sbom-normalize.test.mjs scripts/__tests__/demo-project.test.mjs scripts/__tests__/forgeloop-vendor-lineage.test.mjs scripts/__tests__/docs-conformance.test.mjs",
+    "test:release-contracts": "node --test scripts/__tests__/release-contracts.test.mjs scripts/__tests__/verify-release-assets.test.mjs scripts/__tests__/large-ledger-fixture.test.mjs scripts/__tests__/release-workflow.test.mjs scripts/__tests__/public-release-workflow.test.mjs scripts/__tests__/ui-version.test.mjs scripts/__tests__/version-lineage.test.mjs scripts/__tests__/sbom-normalize.test.mjs scripts/__tests__/demo-project.test.mjs scripts/__tests__/forgeloop-vendor-lineage.test.mjs scripts/__tests__/docs-conformance.test.mjs scripts/__tests__/brand-conformance.test.mjs",
     "verify:critical-coverage": "node scripts/verify-critical-coverage.mjs",
     "verify:full": "node scripts/verify-full.mjs",
     "benchmark:large-project": "node scripts/benchmark-large-project.mjs",
@@ -43,7 +44,7 @@
     "package:mac": "npm run build && electron-builder --mac",
     "package:win": "npm run build && electron-builder --win",
     "package:linux": "npm run build && electron-builder --linux",
-    "verify": "npm run typecheck && npm run lint && npm test && npm run build",
+    "verify": "npm run typecheck && npm run lint && npm test && npm run brand:check && npm run docs:check && npm run build",
     "package:dir": "npm run build && electron-builder --dir",
     "test:packaged-smoke": "npm run package:dir && node scripts/packaged-smoke.mjs",
     "test:packaged-open-demo": "node scripts/packaged-open-demo.mjs",
@@ -51,9 +52,11 @@
   },
   "keywords": [
     "forgeloop",
-    "electron",
-    "visualizer",
-    "engineering-protocol"
+    "audit",
+    "engineering-audit",
+    "evidence",
+    "verification",
+    "electron"
   ],
   "author": "",
   "license": "MIT",
@@ -108,8 +111,8 @@
   },
   "build": {
     "afterPack": "scripts/after-pack-fuses.mjs",
-    "appId": "com.forgeloop.studio",
-    "productName": "ForgeLoop Studio",
+    "appId": "com.forgeloop.audit",
+    "productName": "ForgeLoopAudit",
     "directories": {
       "output": "dist-electron"
     },

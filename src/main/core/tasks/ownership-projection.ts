@@ -8,7 +8,7 @@ function optionalBoolean(value: unknown): boolean | null {
 
 /**
  * Project the canonical `task/ownership` integration resource into the
- * Studio's ownership summary DTO.
+ * ForgeLoopAudit's ownership summary DTO.
  *
  * This is a pure presentation projection: it never derives ownership from
  * raw artifacts and never casts unknown claim states into canonical values.

@@ -14,5 +14,5 @@ const digest = createHash('sha256').update(readFileSync(artifact)).digest('hex')
 const artifactName = basename(artifact);
 const gitCommit = process.env.GITHUB_SHA || execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repoRoot, encoding: 'utf8' }).trim();
 if (!/^[a-f0-9]{40}$/.test(gitCommit)) throw new Error(`Invalid git commit: ${gitCommit}`);
-const evidence = { studioVersion: pkg.version, gitCommit, forgeLoopCompatibility: { protocolVersion: 1, schemaProvenanceCommit: '19355e701e191d830c56d64e535835e925843bae' }, platform, architecture, artifact: artifactName, sha256: digest, signing: 'unsigned-preview', workflowRunId: process.env.GITHUB_RUN_ID || 'local' };
+const evidence = { auditVersion: pkg.version, gitCommit, forgeLoopCompatibility: { protocolVersion: 1, schemaProvenanceCommit: '19355e701e191d830c56d64e535835e925843bae' }, platform, architecture, artifact: artifactName, sha256: digest, signing: 'unsigned-preview', workflowRunId: process.env.GITHUB_RUN_ID || 'local' };
 writeFileSync(`${outputDir}/RELEASE-EVIDENCE-${artifactName}.json`, `${JSON.stringify(evidence, null, 2)}\n`);

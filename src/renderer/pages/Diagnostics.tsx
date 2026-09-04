@@ -69,12 +69,12 @@ export function Diagnostics({ snapshot, selectedTaskId, genericTaskRefreshToken 
     const metrics = features?.trajectoryMetrics === true;
     const evaluations = features?.trajectoryEvaluations === true;
     Promise.all([
-      observability ? window.forgeLoopStudio.getTaskHistory(selectedTask.taskId) : Promise.resolve(null),
-      observability ? window.forgeLoopStudio.getTaskTrace(selectedTask.taskId) : Promise.resolve(null),
-      observability ? window.forgeLoopStudio.getTaskReflection(selectedTask.taskId) : Promise.resolve(null),
-      observability ? window.forgeLoopStudio.getTaskInspection(selectedTask.taskId) : Promise.resolve(null),
-      metrics ? window.forgeLoopStudio.getTaskMetrics(selectedTask.taskId) : Promise.resolve(null),
-      evaluations ? window.forgeLoopStudio.getTaskEvaluations(selectedTask.taskId) : Promise.resolve(null),
+      observability ? window.forgeLoopAudit.getTaskHistory(selectedTask.taskId) : Promise.resolve(null),
+      observability ? window.forgeLoopAudit.getTaskTrace(selectedTask.taskId) : Promise.resolve(null),
+      observability ? window.forgeLoopAudit.getTaskReflection(selectedTask.taskId) : Promise.resolve(null),
+      observability ? window.forgeLoopAudit.getTaskInspection(selectedTask.taskId) : Promise.resolve(null),
+      metrics ? window.forgeLoopAudit.getTaskMetrics(selectedTask.taskId) : Promise.resolve(null),
+      evaluations ? window.forgeLoopAudit.getTaskEvaluations(selectedTask.taskId) : Promise.resolve(null),
     ]).then(([history, trace, reflection, inspection, metricsView, evaluationsView]) => {
       if (!cancelled) setViews({ history, trace, reflection, inspection, metrics: metricsView, evaluations: evaluationsView });
     }).catch((reason: unknown) => { if (!cancelled) setError(reason instanceof Error ? reason.message : 'Canonical diagnostics are unavailable.'); })
@@ -104,7 +104,7 @@ export function Diagnostics({ snapshot, selectedTaskId, genericTaskRefreshToken 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between gap-4"><div><h1 className="text-xl font-semibold text-forge-text-primary">Diagnostics</h1><p className="text-sm text-forge-text-muted mt-1">Canonical history, trace, reflection and trajectory signals</p></div><select className="input w-48" value={selectedTask?.taskId || ''} onChange={(event) => { const task = snapshot.tasks.find((entry) => entry.taskId === event.target.value) || null; setSelectedTask(task); if (task) onSelectedTaskChange?.(task.taskId); }}>{snapshot.tasks.map((task) => <option key={task.taskId} value={task.taskId}>{task.taskId}</option>)}</select></div>
-      {features?.observability !== true ? <div className="bg-forge-primary-surface border border-forge-warning/30 rounded-10 p-8 text-center"><Activity className="w-8 h-8 mx-auto mb-3 text-forge-warning" /><p className="text-sm font-medium text-forge-text-primary">Structured observability is not available</p><p className="mt-2 text-xs text-forge-text-muted">Not available with the bundled ForgeLoop capability set. Studio does not reconstruct trace or reflection semantics from raw events.</p></div> : loading ? <div className="card p-8 text-center text-sm text-forge-text-muted">Loading canonical diagnostics…</div> : (
+      {features?.observability !== true ? <div className="bg-forge-primary-surface border border-forge-warning/30 rounded-10 p-8 text-center"><Activity className="w-8 h-8 mx-auto mb-3 text-forge-warning" /><p className="text-sm font-medium text-forge-text-primary">Structured observability is not available</p><p className="mt-2 text-xs text-forge-text-muted">Not available with the bundled ForgeLoop capability set. ForgeLoopAudit does not reconstruct trace or reflection semantics from raw events.</p></div> : loading ? <div className="card p-8 text-center text-sm text-forge-text-muted">Loading canonical diagnostics…</div> : (
         <>
           {error && <div className="border border-forge-danger/30 bg-forge-danger/10 rounded-8 p-3 text-sm text-forge-danger">{error}</div>}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3"><div className="metric-card"><span className="metric-label">Task phase</span><span className="metric-value text-lg">{selectedTask?.phase || 'Unknown'}</span></div><div className="metric-card"><span className="metric-label">Reflection status</span><span className="metric-value text-lg">{text(reflection?.status)}</span></div><div className="metric-card"><span className="metric-label">Verification cycles</span><span className="metric-value text-lg">{text(reflection?.verificationCycles ?? trajectory.verificationCycles)}</span></div><div className={cn('metric-card', stalled && 'ring-1 ring-forge-danger/30')}><span className="metric-label">No effective gain cycles</span><span className={cn('metric-value text-lg', stalled && 'text-forge-danger')}>{text(noGain.length)}</span></div></div>

@@ -52,7 +52,7 @@ jobs:
       - run: node scripts/stage-release.mjs macos
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: forgeloop-studio-macos
+          name: forgeloop-audit-macos
           path: release-staging/macos/*
 
   windows:
@@ -83,7 +83,7 @@ jobs:
       - run: node scripts/stage-release.mjs windows
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: forgeloop-studio-windows
+          name: forgeloop-audit-windows
           path: release-staging/windows/*
 
   linux:
@@ -114,7 +114,7 @@ jobs:
       - run: node scripts/stage-release.mjs linux
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: forgeloop-studio-linux
+          name: forgeloop-audit-linux
           path: release-staging/linux/*
 
   assemble:
@@ -127,7 +127,7 @@ jobs:
       - run: npm ci
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          pattern: forgeloop-studio-*
+          pattern: forgeloop-audit-*
           path: release-assets
           merge-multiple: true
       - name: Remove staging-only release metadata from the public bundle
@@ -140,7 +140,7 @@ jobs:
         run: node scripts/verify-release-assets.mjs release-assets
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: forgeloop-studio-assembled
+          name: forgeloop-audit-assembled
           path: release-assets/*
 
   publish:
@@ -152,7 +152,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          pattern: forgeloop-studio-assembled
+          pattern: forgeloop-audit-assembled
           path: release-assets
           merge-multiple: true
       - name: Publish GitHub release assets

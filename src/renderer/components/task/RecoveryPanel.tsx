@@ -24,7 +24,7 @@ export function RecoveryPanel({ recovery }: RecoveryPanelProps) {
 
       {recovery.status === 'UNKNOWN' && (
         <p className="text-xs text-forge-danger">
-          A recovery artifact exists but canonical ownership is unavailable. The Studio cannot confirm its semantics.
+          A recovery artifact exists but canonical ownership is unavailable. The ForgeLoopAudit cannot confirm its semantics.
         </p>
       )}
 
@@ -104,7 +104,7 @@ export function RecoveryPanel({ recovery }: RecoveryPanelProps) {
         </p>
       ) : (
         <p className="text-[11px] text-forge-text-muted">
-          Recovery facts are read-only in the Studio. Resuming or recovering a task must be done through ForgeLoop.
+          Recovery facts are read-only in the ForgeLoopAudit. Resuming or recovering a task must be done through ForgeLoop.
         </p>
       )}
     </div>

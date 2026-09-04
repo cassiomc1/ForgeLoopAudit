@@ -1,4 +1,4 @@
-import { runStudioReadCommand } from './studio-read-commands';
+import { runAuditReadCommand } from './audit-read-commands';
 import type { ForgeLoopIntegrationAdapter } from './forgeloop-integration';
 import type {
   CanonicalHistoryViewModel,
@@ -70,7 +70,7 @@ async function readProjection<K extends CanonicalObservabilityKind>(
   if (featureSupport && featureSupport.observability !== true) return unavailable(feature, featureSupport);
 
   try {
-    const outcome = await runStudioReadCommand<Record<string, unknown>>(
+    const outcome = await runAuditReadCommand<Record<string, unknown>>(
       integration,
       projectRoot,
       feature,

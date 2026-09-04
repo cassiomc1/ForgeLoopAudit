@@ -3,18 +3,16 @@ import { fileURLToPath } from 'node:url';
 import { join, resolve } from 'node:path';
 
 const REQUIRED_FILES = [
-  'overview.png',
-  'tasks.png',
-  'lifecycle-flow.png',
-  'contract-inspector.png',
-  'evidence-matrix.png',
-  'event-ledger.png',
-  'continuity.png',
+  'audit-summary.png',
+  'findings.png',
+  'task-audit.png',
+  'evidence.png',
+  'quality.png',
+  'policy-trust.png',
+  'history-diff.png',
+  'report.png',
   'diagnostics.png',
-  'actions.png',
-  'policy.png',
   'settings.png',
-  'task-boundaries.png',
 ];
 
 function fail(message) {
@@ -62,7 +60,7 @@ export function runScreenshotCheck(root = process.cwd()) {
   assertCondition(manifest.manifestVersion === 1, 'manifestVersion must be 1');
   assertCondition(manifest.sourceProject === 'demo', 'sourceProject must be demo');
   assertCondition(manifest.sourceProjectName === 'ForgeShop', 'sourceProjectName must be ForgeShop');
-  assertCondition(manifest.studioVersion === packageJson.version, 'manifest Studio version does not match package.json');
+  assertCondition(manifest.auditVersion === packageJson.version, 'manifest ForgeLoopAudit version does not match package.json');
   assertCondition(manifest.forgeLoopVersion === provenance.forgeLoopPackageVersion, 'manifest ForgeLoop version does not match provenance');
   assertCondition(manifest.forgeLoopCommit === provenance.forgeLoopGitCommit, 'manifest ForgeLoop commit does not match provenance');
   assertCondition(manifest.protocolVersion === provenance.protocolVersion, 'manifest protocol version does not match provenance');

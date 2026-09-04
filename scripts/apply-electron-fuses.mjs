@@ -10,12 +10,12 @@ function packagedExecutables(dir) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const path = join(dir, entry.name);
     if (entry.isDirectory() && entry.name.endsWith('.app')) {
-      const executable = join(path, 'Contents', 'MacOS', 'ForgeLoop Studio');
+      const executable = join(path, 'Contents', 'MacOS', 'ForgeLoopAudit');
       if (existsSync(executable)) results.push({ executable, platform: 'macOS' });
       continue;
     }
-    if (entry.isFile() && entry.name === 'ForgeLoop Studio.exe') results.push({ executable: path, platform: 'Windows' });
-    if (entry.isFile() && entry.name === 'forgeloop-studio' && dir.endsWith('linux-unpacked')) results.push({ executable: path, platform: 'Linux' });
+    if (entry.isFile() && entry.name === 'ForgeLoopAudit.exe') results.push({ executable: path, platform: 'Windows' });
+    if (entry.isFile() && entry.name === 'forgeloop-audit' && dir.endsWith('linux-unpacked')) results.push({ executable: path, platform: 'Linux' });
     if (entry.isDirectory()) results.push(...packagedExecutables(path));
   }
   return results;

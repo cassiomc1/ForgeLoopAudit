@@ -1,5 +1,5 @@
 import { SUPPORTED_PROTOCOL_VERSIONS } from '@shared/constants';
-import { ForgeLoopStudioError } from '@shared/errors';
+import { ForgeLoopAuditError } from '@shared/errors';
 import type { ProtocolSummary } from '@shared/domain';
 import { evaluateProtocolCompatibility } from './compatibility-contract';
 
@@ -15,7 +15,7 @@ export function checkProtocolCompatibility(protocolInfo: ProtocolInfoResult): Pr
   const isSupported = SUPPORTED_PROTOCOL_VERSIONS.includes(protocolInfo.protocolVersion as typeof SUPPORTED_PROTOCOL_VERSIONS[number]);
 
   if (!isSupported) {
-    throw ForgeLoopStudioError.protocolUnsupported(protocolInfo.protocolVersion, 'unknown');
+    throw ForgeLoopAuditError.protocolUnsupported(protocolInfo.protocolVersion, 'unknown');
   }
 
   return {

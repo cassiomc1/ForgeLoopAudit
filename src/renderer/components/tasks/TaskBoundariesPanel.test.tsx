@@ -69,7 +69,7 @@ describe('Task Boundaries presentation', () => {
   it('keeps responsibility errors and the zero-handoff state explicit', () => {
     const html = markup({ workspace: workspace('MATCH'), responsibility: responsibility('INVALID'), handoffs: emptyHandoffs });
     expect(html).toContain('E_RESPONSIBILITY_SCOPE_VIOLATION');
-    expect(html).toContain('Studio preserves the canonical fail-closed result.');
+    expect(html).toContain('ForgeLoopAudit preserves the canonical fail-closed result.');
     expect(html).toContain('No canonical handoff snapshots recorded.');
     expect(html).toContain('Immutable protocol snapshot — not review, completion, delegation, or authority evidence.');
   });

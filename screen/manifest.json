@@ -2,7 +2,7 @@
   "manifestVersion": 1,
   "sourceProject": "demo",
   "sourceProjectName": "ForgeShop",
-  "studioVersion": "0.1.0-rc.7",
+  "auditVersion": "0.2.0-rc.1",
   "forgeLoopVersion": "1.10.0",
   "forgeLoopCommit": "3bf721bac6a09c6291bfcbc507a66a2833ebddf4",
   "protocolVersion": 1,
@@ -15,46 +15,52 @@
   "captureScript": "scripts/capture-readme-screenshots.mjs",
   "screenshots": [
     {
-      "file": "overview.png",
-      "page": "Overview",
-      "taskId": "TASK-003",
-      "scenario": "Project health and selected-task boundaries"
+      "file": "audit-summary.png",
+      "page": "Audit Summary",
+      "taskId": null,
+      "scenario": "Project integrity, completion readiness, quality, trust and coverage"
     },
     {
-      "file": "tasks.png",
+      "file": "findings.png",
+      "page": "Findings",
+      "taskId": null,
+      "scenario": "Canonical and derived findings with provenance"
+    },
+    {
+      "file": "task-audit.png",
       "page": "Tasks",
       "taskId": null,
-      "scenario": "Six ForgeShop tasks with mixed lifecycle states"
+      "scenario": "Six ForgeShop tasks with canonical audit state and finding counts"
     },
     {
-      "file": "lifecycle-flow.png",
-      "page": "Flow",
-      "taskId": "TASK-004",
-      "scenario": "Blocked lifecycle with recovery context"
-    },
-    {
-      "file": "contract-inspector.png",
-      "page": "Contract",
-      "taskId": "TASK-006",
-      "scenario": "Security-review contract and verification requirements"
-    },
-    {
-      "file": "evidence-matrix.png",
+      "file": "evidence.png",
       "page": "Evidence",
       "taskId": "TASK-002",
-      "scenario": "AUTO to CHANGED verification scope and attestation boundary"
+      "scenario": "Evidence coverage, verification scope and attestation boundary"
     },
     {
-      "file": "event-ledger.png",
-      "page": "Events",
-      "taskId": "TASK-004",
-      "scenario": "Canonical event ledger for the recovery scenario"
+      "file": "quality.png",
+      "page": "Quality",
+      "taskId": "TASK-001",
+      "scenario": "Canonical structural-quality projection without provider execution"
     },
     {
-      "file": "continuity.png",
-      "page": "Continuity",
-      "taskId": "TASK-004",
-      "scenario": "Mutable continuity with an accepted canonical handoff operational receipt"
+      "file": "policy-trust.png",
+      "page": "Policy & Trust",
+      "taskId": "TASK-006",
+      "scenario": "Policy, workspace, responsibility, handoff and attestation boundaries"
+    },
+    {
+      "file": "history-diff.png",
+      "page": "Audit History",
+      "taskId": null,
+      "scenario": "Manual audit snapshots stored outside the audited project"
+    },
+    {
+      "file": "report.png",
+      "page": "Reports",
+      "taskId": null,
+      "scenario": "Deterministic JSON, Markdown and SARIF report export"
     },
     {
       "file": "diagnostics.png",
@@ -63,28 +69,10 @@
       "scenario": "Canonical history, trace, reflection and evaluation signals"
     },
     {
-      "file": "actions.png",
-      "page": "Actions",
-      "taskId": "TASK-002",
-      "scenario": "Durable actions and approvals in read-only mode"
-    },
-    {
-      "file": "policy.png",
-      "page": "Policy",
-      "taskId": "TASK-006",
-      "scenario": "Project capability policy and selected-task policy state"
-    },
-    {
       "file": "settings.png",
       "page": "Settings",
       "taskId": null,
-      "scenario": "Studio preferences and ForgeLoop capability metadata"
-    },
-    {
-      "file": "task-boundaries.png",
-      "page": "Overview",
-      "taskId": "TASK-003",
-      "scenario": "Workspace binding mismatch and invalid responsibility"
+      "scenario": "ForgeLoopAudit preferences and ForgeLoop capability metadata"
     }
   ]
 }

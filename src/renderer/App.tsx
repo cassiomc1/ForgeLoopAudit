@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { ProjectDetectionResult, ProjectSnapshot, ProjectUpdate, WatcherStatus, StudioError, RecentProject, ForgeLoopStudioAPI } from '@shared/domain';
+import type { ProjectDetectionResult, ProjectSnapshot, ProjectUpdate, WatcherStatus, AuditAppError, RecentProject, ForgeLoopAuditAPI } from '@shared/domain';
+import type { ProjectAuditSnapshot } from '@shared/audit';
 import { AppShell } from './components/app-shell/AppShell';
 import { ProjectPicker } from './pages/ProjectPicker';
 import { Overview } from './pages/Overview';
@@ -11,9 +12,16 @@ import { Events } from './pages/Events';
 import { Executions } from './pages/Executions';
 import { Continuity } from './pages/Continuity';
 import { Policy } from './pages/Policy';
+import { PolicyTrust } from './pages/PolicyTrust';
 import { Diagnostics } from './pages/Diagnostics';
 import { Actions } from './pages/Actions';
 import { Settings } from './pages/Settings';
+import { AuditSummary } from './pages/AuditSummary';
+import { Findings } from './pages/Findings';
+import { Quality } from './pages/Quality';
+import { AuditHistory } from './pages/AuditHistory';
+import { Reports } from './pages/Reports';
+import { TaskAudit } from './pages/TaskAudit';
 import { EmptyState } from './components/ui/EmptyState';
 import { LoadingState } from './components/ui/LoadingState';
 import {
@@ -24,33 +32,44 @@ import {
 } from './projection-refresh';
 
 export const NAV_ITEMS = [
-  { id: 'overview', label: 'Overview', icon: 'layout-dashboard' },
+  { id: 'audit-summary', label: 'Audit Summary', icon: 'layout-dashboard' },
+  { id: 'findings', label: 'Findings', icon: 'clipboard-check' },
   { id: 'tasks', label: 'Tasks', icon: 'list-check' },
-  { id: 'flow', label: 'Flow', icon: 'git-branch' },
-  { id: 'contract', label: 'Contract', icon: 'file-text' },
   { id: 'evidence', label: 'Evidence', icon: 'clipboard-check' },
-  { id: 'events', label: 'Events', icon: 'history' },
-  { id: 'executions', label: 'Executions', icon: 'terminal' },
-  { id: 'continuity', label: 'Continuity', icon: 'repeat' },
+  { id: 'quality', label: 'Quality', icon: 'activity' },
+  { id: 'policy-trust', label: 'Policy & Trust', icon: 'shield' },
+  { id: 'audit-history', label: 'Audit History', icon: 'history' },
+  { id: 'reports', label: 'Reports', icon: 'file-text' },
   { id: 'diagnostics', label: 'Diagnostics', icon: 'activity' },
-  { id: 'actions', label: 'Actions', icon: 'activity' },
-  { id: 'policy', label: 'Policy', icon: 'shield' },
   { id: 'settings', label: 'Settings', icon: 'settings' },
 ] as const;
 
-export type NavItemId = typeof NAV_ITEMS[number]['id'];
+export const TASK_DETAIL_ITEMS = [
+  { id: 'task-audit', label: 'Audit', icon: 'clipboard-check' },
+  { id: 'contract', label: 'Contract', icon: 'file-text' },
+  { id: 'evidence', label: 'Evidence', icon: 'clipboard-check' },
+  { id: 'flow', label: 'Lifecycle', icon: 'git-branch' },
+  { id: 'events', label: 'Events', icon: 'repeat' },
+  { id: 'executions', label: 'Executions', icon: 'activity' },
+  { id: 'continuity', label: 'Continuity', icon: 'repeat' },
+  { id: 'actions', label: 'Actions', icon: 'zap' },
+  { id: 'overview', label: 'Boundaries', icon: 'shield' },
+] as const;
 
-function getApi(): ForgeLoopStudioAPI {
-  return (window as any).forgeLoopStudio;
+export type NavItemId = typeof NAV_ITEMS[number]['id'] | typeof TASK_DETAIL_ITEMS[number]['id'] | 'policy';
+
+function getApi(): ForgeLoopAuditAPI {
+  return (window as any).forgeLoopAudit;
 }
 
 export function App() {
   const [detectionResult, setDetectionResult] = useState<ProjectDetectionResult | null>(null);
   const [snapshot, setSnapshot] = useState<ProjectSnapshot | null>(null);
-  const [activeNav, setActiveNav] = useState<NavItemId>('overview');
+  const [audit, setAudit] = useState<ProjectAuditSnapshot | null>(null);
+  const [activeNav, setActiveNav] = useState<NavItemId>('audit-summary');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
-  const [error, setError] = useState<StudioError | null>(null);
+  const [error, setError] = useState<AuditAppError | null>(null);
   const [watcherStatus, setWatcherStatus] = useState<WatcherStatus>({ active: false });
   const [isLoading, setIsLoading] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -65,6 +84,15 @@ export function App() {
       setRecentProjects(projects);
     } catch (err) {
       console.error('Failed to load recent projects:', err);
+    }
+  }, [api]);
+
+  const refreshAudit = useCallback(async () => {
+    try {
+      setAudit(await api.getProjectAudit());
+    } catch (err) {
+      console.error('Failed to load ForgeLoopAudit audit:', err);
+      setAudit(null);
     }
   }, [api]);
 
@@ -85,13 +113,19 @@ export function App() {
         if (update.detection) setDetectionResult(update.detection);
         if (update.snapshot) setSnapshot(update.snapshot);
         setSelectedTaskId(null);
-        setActiveNav('overview');
+        setAudit(null);
+        setActiveNav('audit-summary');
         break;
       case 'snapshot-refreshed':
         if (update.snapshot) {
           setSnapshot(update.snapshot);
+          setAudit(null);
           setSelectedTaskId((current) => current && update.snapshot?.tasks.some((task) => task.taskId === current) ? current : null);
         }
+        break;
+      case 'audit-invalidated':
+      case 'finding-changed':
+        setAudit(null);
         break;
       case 'watcher-status':
         if (update.data) {
@@ -100,7 +134,7 @@ export function App() {
         break;
       case 'error':
         if (update.data) {
-          setError(update.data as StudioError);
+          setError(update.data as AuditAppError);
           setTimeout(() => setError(null), 5000);
         }
         break;
@@ -121,14 +155,15 @@ export function App() {
       const result = await api.selectProject();
       if (result) {
         setDetectionResult(result);
-        setActiveNav('overview');
+        setActiveNav('audit-summary');
         setSnapshot(await api.getProjectSnapshot());
+        await refreshAudit();
       }
     } catch (err) {
-      const studioError: StudioError = err instanceof Error
+      const auditError: AuditAppError = err instanceof Error
         ? { code: 'UNKNOWN_ERROR', message: err.message, recoverable: true }
         : { code: 'UNKNOWN_ERROR', message: 'Failed to open project', recoverable: true };
-      setError(studioError);
+      setError(auditError);
     } finally {
       setIsLoading(false);
     }
@@ -140,13 +175,14 @@ export function App() {
       setError(null);
       const result = await api.openRecentProject(path);
       setDetectionResult(result);
-      setActiveNav('overview');
+      setActiveNav('audit-summary');
       setSnapshot(await api.getProjectSnapshot());
+      await refreshAudit();
     } catch (err) {
-      const studioError: StudioError = err instanceof Error
+      const auditError: AuditAppError = err instanceof Error
         ? { code: 'UNKNOWN_ERROR', message: err.message, recoverable: true }
         : { code: 'UNKNOWN_ERROR', message: 'Failed to open project', recoverable: true };
-      setError(studioError);
+      setError(auditError);
     } finally {
       setIsLoading(false);
     }
@@ -158,13 +194,14 @@ export function App() {
       setError(null);
       const result = await api.openDemoProject();
       setDetectionResult(result);
-      setActiveNav('overview');
+      setActiveNav('audit-summary');
       setSnapshot(await api.getProjectSnapshot());
+      await refreshAudit();
     } catch (err) {
-      const studioError: StudioError = err instanceof Error
+      const auditError: AuditAppError = err instanceof Error
         ? { code: 'UNKNOWN_ERROR', message: err.message, recoverable: true }
         : { code: 'UNKNOWN_ERROR', message: 'Failed to open the demo project', recoverable: true };
-      setError(studioError);
+      setError(auditError);
     } finally {
       setIsLoading(false);
     }
@@ -175,7 +212,8 @@ export function App() {
       await api.closeProject();
       setDetectionResult(null);
       setSnapshot(null);
-      setActiveNav('overview');
+      setAudit(null);
+      setActiveNav('audit-summary');
       setSelectedTaskId(null);
       setWatcherStatus({ active: false });
       latestSnapshotGeneration.current = 0;
@@ -211,6 +249,12 @@ export function App() {
     }
 
     switch (activeNav) {
+      case 'audit-summary':
+        return <AuditSummary audit={audit} snapshot={snapshot} detection={detectionResult} onRefresh={refreshAudit} onTaskSelect={(taskId) => { setSelectedTaskId(taskId); setActiveNav('findings'); }} onViewFindings={() => setActiveNav('findings')} />;
+      case 'findings':
+        return <Findings audit={audit} onTaskSelect={(taskId) => { setSelectedTaskId(taskId); setActiveNav('tasks'); }} />;
+      case 'task-audit':
+        return <TaskAudit snapshot={snapshot} audit={audit} selectedTaskId={selectedTaskId} onSelectedTaskChange={setSelectedTaskId} onRefreshAudit={refreshAudit} />;
       case 'overview':
         return <Overview
           snapshot={snapshot}
@@ -224,11 +268,11 @@ export function App() {
             handoffs: taskRefresh('handoffs'),
             responsibility: taskRefresh('responsibility'),
           }}
-          onTaskSelect={(taskId) => { setSelectedTaskId(taskId); setActiveNav('flow'); }}
+          onTaskSelect={(taskId) => { setSelectedTaskId(taskId); setActiveNav('task-audit'); }}
           onViewAllTasks={() => setActiveNav('tasks')}
         />;
       case 'tasks':
-        return <Tasks snapshot={snapshot} isDemoProject={isDemoProject} onTaskSelect={(taskId) => { setSelectedTaskId(taskId); setActiveNav('flow'); }} />;
+        return <Tasks snapshot={snapshot} audit={audit} isDemoProject={isDemoProject} onTaskSelect={(taskId) => { setSelectedTaskId(taskId); setActiveNav('task-audit'); }} />;
       case 'flow':
         return <Flow snapshot={snapshot} selectedTaskId={selectedTaskId} onSelectedTaskChange={setSelectedTaskId} />;
       case 'contract':
@@ -249,10 +293,18 @@ export function App() {
         return <Executions snapshot={snapshot} selectedTaskId={selectedTaskId} executionsRefreshToken={taskRefresh('executions')} onSelectedTaskChange={setSelectedTaskId} />;
       case 'continuity':
         return <Continuity snapshot={snapshot} selectedTaskId={selectedTaskId} handoffRefreshToken={taskRefresh('handoffs')} onSelectedTaskChange={setSelectedTaskId} onOpenDiagnostics={() => setActiveNav('diagnostics')} />;
+      case 'quality':
+        return <Quality snapshot={snapshot} selectedTaskId={selectedTaskId} onSelectedTaskChange={setSelectedTaskId} />;
+      case 'audit-history':
+        return <AuditHistory audit={audit} onRefreshAudit={refreshAudit} />;
+      case 'reports':
+        return <Reports audit={audit} onRefreshAudit={refreshAudit} />;
       case 'diagnostics':
         return <Diagnostics snapshot={snapshot} selectedTaskId={selectedTaskId} genericTaskRefreshToken={projectionRefreshEpochs.genericTask} evaluationsRefreshToken={taskRefresh('evaluations')} onSelectedTaskChange={setSelectedTaskId} />;
       case 'actions':
         return <Actions snapshot={snapshot} selectedTaskId={selectedTaskId} actionsRefreshToken={taskRefresh('actions')} onSelectedTaskChange={setSelectedTaskId} />;
+      case 'policy-trust':
+        return <PolicyTrust snapshot={snapshot} selectedTaskId={selectedTaskId} capabilityPolicyRefreshToken={projectionRefreshEpochs.capabilityPolicy} onSelectedTaskChange={setSelectedTaskId} />;
       case 'policy':
         return <Policy snapshot={snapshot} selectedTaskId={selectedTaskId} capabilityPolicyRefreshToken={projectionRefreshEpochs.capabilityPolicy} onSelectedTaskChange={setSelectedTaskId} />;
       case 'settings':
@@ -269,7 +321,7 @@ export function App() {
       branch={snapshot?.project.branch}
       head={snapshot?.project.head}
       protocolVersion={detectionResult.protocolVersion}
-      health={snapshot?.health.status ?? 'UNKNOWN'}
+      health={audit?.verdict.integrity ?? snapshot?.health.status ?? 'UNKNOWN'}
       watcherStatus={watcherStatus}
       activeNav={activeNav}
       onNavChange={setActiveNav}
@@ -277,6 +329,8 @@ export function App() {
       onSidebarToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
       onCloseProject={handleCloseProject}
       navItems={NAV_ITEMS}
+      taskDetailItems={TASK_DETAIL_ITEMS}
+      selectedTaskId={selectedTaskId}
       isLoading={isLoading}
       error={error}
     >

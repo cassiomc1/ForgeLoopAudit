@@ -7,7 +7,7 @@ import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } 
 const FORGELOOP_PACKAGE = '@cassiomc1/forgeloop';
 const CURRENT_DOCS = [
   'README.md',
-  'FORGELOOP_STUDIO_IMPLEMENTATION_SPEC.md',
+  'FORGELOOP_AUDIT_IMPLEMENTATION_SPEC.md',
   'demo/README.md',
   'schemas/README.md',
   'vendor/README.md',
@@ -145,7 +145,7 @@ function validateCurrentFacts(root, packageJson, provenance, archiveName, archiv
   const current = Object.fromEntries(CURRENT_DOCS.map((file) => [file, readText(root, file)]));
   const currentText = Object.values(current).join('\n');
 
-  assertCondition(packageJson.version === '0.1.0-rc.7', `package.json version must remain 0.1.0-rc.7, got ${packageJson.version}`);
+  assertCondition(packageJson.version === '0.2.0-rc.1', `package.json version must remain 0.2.0-rc.1, got ${packageJson.version}`);
   assertCondition(version === '1.10.0', `schema provenance must pin ForgeLoop 1.10.0, got ${version}`);
   assertCondition(typeof commit === 'string' && /^[a-f0-9]{40}$/u.test(commit), 'schema provenance must contain a 40-character ForgeLoop commit');
   assertCondition(provenance.protocolVersion === 1, 'schema provenance must pin protocol v1');
@@ -166,7 +166,7 @@ function validateCurrentFacts(root, packageJson, provenance, archiveName, archiv
       'operational receipt',
       'advisory context',
     ],
-    'FORGELOOP_STUDIO_IMPLEMENTATION_SPEC.md': [
+    'FORGELOOP_AUDIT_IMPLEMENTATION_SPEC.md': [
       `ForgeLoop \`${version}\``,
       commit,
       'protocol v1',

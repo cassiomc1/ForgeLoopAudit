@@ -1,3 +1,15 @@
+import type {
+  AuditDiff,
+  AuditExportOptions,
+  AuditExportResult,
+  AuditFinding,
+  AuditFindingFilter,
+  AuditSnapshotMetadata,
+  ProjectAuditSnapshot,
+  StructuralQualityAuditView,
+  TaskAuditSnapshot,
+} from './audit';
+
 export type ForgeLoopPhase =
   | 'RECEIVED'
   | 'DISCOVERING'
@@ -922,7 +934,7 @@ export interface TaskSnapshot {
   attestation?: TaskAttestationView;
 }
 
-export type StudioErrorCode =
+export type AuditAppErrorCode =
   | 'PROJECT_NOT_FORGELOOP'
   | 'PROJECT_DISCOVERY_AMBIGUOUS'
   | 'PROTOCOL_UNSUPPORTED'
@@ -937,8 +949,8 @@ export type StudioErrorCode =
   | 'PERMISSION_DENIED'
   | 'UNKNOWN_ERROR';
 
-export interface StudioError {
-  code: StudioErrorCode;
+export interface AuditAppError {
+  code: AuditAppErrorCode;
   message: string;
   recoverable: boolean;
   details?: string;
@@ -1036,11 +1048,19 @@ export interface WatcherStatus {
   error?: string;
 }
 
-export interface ForgeLoopStudioAPI {
+export interface ForgeLoopAuditAPI {
   selectProject(): Promise<ProjectDetectionResult | null>;
   openRecentProject(path: string): Promise<ProjectDetectionResult>;
   openDemoProject(): Promise<ProjectDetectionResult>;
   closeProject(): Promise<void>;
+  getProjectAudit(): Promise<ProjectAuditSnapshot>;
+  getTaskAudit(taskId: string): Promise<TaskAuditSnapshot>;
+  getAuditFindings(filter?: AuditFindingFilter): Promise<AuditFinding[]>;
+  getTaskStructuralQuality(taskId: string): Promise<StructuralQualityAuditView>;
+  saveAuditBaseline(): Promise<AuditSnapshotMetadata>;
+  listAuditHistory(): Promise<AuditSnapshotMetadata[]>;
+  compareAudits(baseAuditId: string, currentAuditId?: string): Promise<AuditDiff>;
+  exportAuditReport(options: AuditExportOptions): Promise<AuditExportResult>;
   getProjectSnapshot(): Promise<ProjectSnapshot>;
   getTask(taskId: string): Promise<TaskSnapshot>;
   getTaskEvents(taskId: string, cursor?: string, limit?: number): Promise<EventPage>;
@@ -1070,7 +1090,7 @@ export interface ForgeLoopStudioAPI {
 }
 
 export interface ProjectUpdate {
-  type: 'task-added' | 'task-updated' | 'task-removed' | 'project-health-changed' | 'policy-changed' | 'session-changed' | 'action-changed' | 'approval-changed' | 'evaluation-changed' | 'capability-policy-changed' | 'workspace-binding-changed' | 'handoff-changed' | 'responsibility-changed' | 'verification-scope-changed' | 'attestation-changed' | 'snapshot-refreshed' | 'project-opened' | 'watcher-status' | 'error';
+  type: 'task-added' | 'task-updated' | 'task-removed' | 'project-health-changed' | 'policy-changed' | 'session-changed' | 'action-changed' | 'approval-changed' | 'evaluation-changed' | 'capability-policy-changed' | 'workspace-binding-changed' | 'handoff-changed' | 'responsibility-changed' | 'verification-scope-changed' | 'attestation-changed' | 'audit-invalidated' | 'audit-refreshed' | 'finding-changed' | 'snapshot-refreshed' | 'project-opened' | 'watcher-status' | 'error';
   taskId?: string;
   snapshot?: ProjectSnapshot;
   detection?: ProjectDetectionResult;

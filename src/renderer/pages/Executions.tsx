@@ -133,7 +133,7 @@ export function Executions({ snapshot, selectedTaskId, executionsRefreshToken = 
     setIsLoading(true);
     setError(null);
     try {
-      const result = await (window as any).forgeLoopStudio.getTaskExecutions(taskId);
+      const result = await (window as any).forgeLoopAudit.getTaskExecutions(taskId);
       if (requestId !== requestIdRef.current) return;
       setPage(result);
       setRawJson(null);
@@ -163,7 +163,7 @@ export function Executions({ snapshot, selectedTaskId, executionsRefreshToken = 
             Read-only command execution provenance from current ForgeLoop artifacts
           </p>
           <p className="text-xs text-forge-text-muted mt-2 max-w-2xl">
-            Isolation information is persisted by ForgeLoop. Studio displays the recorded provenance and does not create or verify execution sandboxes itself.
+            Isolation information is persisted by ForgeLoop. ForgeLoopAudit displays the recorded provenance and does not create or verify execution sandboxes itself.
           </p>
           {!isolationFeatureAvailable && (
             <p className="text-xs text-forge-text-muted mt-2 max-w-2xl" role="status">

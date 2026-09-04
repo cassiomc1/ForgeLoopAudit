@@ -1,10 +1,10 @@
-# ForgeLoop Studio Documentation
+# ForgeLoopAudit Documentation
 
 This index separates current product guidance from historical records and
-points each topic to its canonical owner. ForgeLoop Studio is a local-first,
-read-only visual consumer; ForgeLoop remains the protocol authority.
+points each topic to its canonical owner. ForgeLoopAudit is a local-first,
+read-only engineering auditor; ForgeLoop remains the protocol authority.
 
-The current release baseline is Studio `0.1.0-rc.7` with vendored ForgeLoop
+The current release baseline is ForgeLoopAudit `0.2.0-rc.1` with vendored ForgeLoop
 `1.10.0` at immutable commit
 `3bf721bac6a09c6291bfcbc507a66a2833ebddf4`, using protocol v1, schema v1 and
 Integration API v1. The current capability additions are
@@ -15,7 +15,7 @@ read-only display rules are owned by [Protocol compatibility](PROTOCOL_COMPATIBI
 
 - [Root README](../README.md) — product overview, trust model, compatibility,
   demo and development commands.
-- [ForgeLoop Studio implementation specification](../FORGELOOP_STUDIO_IMPLEMENTATION_SPEC.md)
+- [ForgeLoopAudit implementation specification](../FORGELOOP_AUDIT_IMPLEMENTATION_SPEC.md)
   — architecture, security boundaries, UI model and current implementation
   contract.
 - [ForgeShop demo guide](../demo/README.md) — generated fixture truth and
@@ -28,7 +28,9 @@ read-only display rules are owned by [Protocol compatibility](PROTOCOL_COMPATIBI
 | Topic | Canonical document | Implementation or machine source |
 |---|---|---|
 | Product purpose and getting started | [Root README](../README.md) | `src/renderer/`, `package.json` |
-| Architecture and security | [Implementation specification](../FORGELOOP_STUDIO_IMPLEMENTATION_SPEC.md) | `src/main/`, `src/preload/`, `src/renderer/` |
+| Architecture and security | [Implementation specification](../FORGELOOP_AUDIT_IMPLEMENTATION_SPEC.md) | `src/main/`, `src/preload/`, `src/renderer/` |
+| Audit findings, coverage and provenance | [Implementation specification](../FORGELOOP_AUDIT_IMPLEMENTATION_SPEC.md) | `src/shared/audit.ts`, `src/main/core/audit/` |
+| Audit history, diffs and reports | [Implementation specification](../FORGELOOP_AUDIT_IMPLEMENTATION_SPEC.md) | `src/main/core/audit/audit-snapshot-store.ts`, `audit-diff.ts`, `audit-report.ts` |
 | ForgeLoop compatibility | [Protocol compatibility](PROTOCOL_COMPATIBILITY.md) | `src/main/core/protocol/`, `src/main/core/integration/` |
 | Operational recovery and failures | [Troubleshooting](TROUBLESHOOTING.md) | `src/main/`, `src/renderer/` |
 | Verification contract | [Quality gates](QUALITY_GATES.md) | `scripts/verify-full.mjs`, `.github/workflows/` |

@@ -1,6 +1,6 @@
 import type { ProjectReader } from '@main/core/project/project-reader';
 import type { ForgeLoopIntegrationAdapter } from '@main/core/integration/forgeloop-integration';
-import { runStudioReadCommand } from '@main/core/integration/studio-read-commands';
+import { runAuditReadCommand } from '@main/core/integration/audit-read-commands';
 import { buildTaskSummary, buildRecoverySummary } from './task-reader';
 import { normalizeOwnership } from './ownership-projection';
 import { resolveOperationalState } from './operational-state';
@@ -68,7 +68,7 @@ export function createCanonicalTaskReadService(options: {
         integration.readTaskContinuity(projectRoot, taskId).catch(() => null),
       ]);
 
-      const nextOutcome = await runStudioReadCommand<Record<string, unknown>>(
+      const nextOutcome = await runAuditReadCommand<Record<string, unknown>>(
         integration,
         projectRoot,
         'next',

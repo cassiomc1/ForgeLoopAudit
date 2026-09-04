@@ -37,7 +37,7 @@ export function CanonicalHandoffsPanel({ taskId, featureSupport, handoffRefreshT
 
   useEffect(() => {
     let cancelled = false;
-    const api = window.forgeLoopStudio;
+    const api = window.forgeLoopAudit;
     const read = advertised && typeof api?.getTaskHandoffs === 'function'
       ? api.getTaskHandoffs(taskId).catch(() => unavailable(true))
       : Promise.resolve(unavailable(advertised));

@@ -27,6 +27,17 @@ import type {
   TaskAttestationView,
   ExecutionProfileContextView,
 } from '@shared/domain';
+import type {
+  AuditDiff,
+  AuditExportOptions,
+  AuditExportResult,
+  AuditFinding,
+  AuditFindingFilter,
+  AuditSnapshotMetadata,
+  ProjectAuditSnapshot,
+  StructuralQualityAuditView,
+  TaskAuditSnapshot,
+} from '@shared/audit';
 import { IPC_CHANNELS } from '@shared/ipc';
 
 const api = {
@@ -34,6 +45,14 @@ const api = {
   openRecentProject: (path: string): Promise<ProjectDetectionResult> => ipcRenderer.invoke(IPC_CHANNELS.OPEN_RECENT_PROJECT, path),
   openDemoProject: (): Promise<ProjectDetectionResult> => ipcRenderer.invoke(IPC_CHANNELS.OPEN_DEMO_PROJECT),
   closeProject: (): Promise<void> => ipcRenderer.invoke(IPC_CHANNELS.CLOSE_PROJECT),
+  getProjectAudit: (): Promise<ProjectAuditSnapshot> => ipcRenderer.invoke(IPC_CHANNELS.GET_PROJECT_AUDIT),
+  getTaskAudit: (taskId: string): Promise<TaskAuditSnapshot> => ipcRenderer.invoke(IPC_CHANNELS.GET_TASK_AUDIT, taskId),
+  getAuditFindings: (filter?: AuditFindingFilter): Promise<AuditFinding[]> => ipcRenderer.invoke(IPC_CHANNELS.GET_AUDIT_FINDINGS, filter),
+  getTaskStructuralQuality: (taskId: string): Promise<StructuralQualityAuditView> => ipcRenderer.invoke(IPC_CHANNELS.GET_TASK_STRUCTURAL_QUALITY, taskId),
+  saveAuditBaseline: (): Promise<AuditSnapshotMetadata> => ipcRenderer.invoke(IPC_CHANNELS.SAVE_AUDIT_BASELINE),
+  listAuditHistory: (): Promise<AuditSnapshotMetadata[]> => ipcRenderer.invoke(IPC_CHANNELS.LIST_AUDIT_HISTORY),
+  compareAudits: (baseAuditId: string, currentAuditId?: string): Promise<AuditDiff> => ipcRenderer.invoke(IPC_CHANNELS.COMPARE_AUDITS, baseAuditId, currentAuditId),
+  exportAuditReport: (options: AuditExportOptions): Promise<AuditExportResult> => ipcRenderer.invoke(IPC_CHANNELS.EXPORT_AUDIT_REPORT, options),
   getProjectSnapshot: (): Promise<ProjectSnapshot> => ipcRenderer.invoke(IPC_CHANNELS.GET_PROJECT_SNAPSHOT),
   getTask: (taskId: string): Promise<TaskSnapshot> => ipcRenderer.invoke(IPC_CHANNELS.GET_TASK, taskId),
   getTaskEvents: (taskId: string, cursor?: string, limit?: number): Promise<EventPage> =>
@@ -78,12 +97,12 @@ const api = {
   },
 };
 
-contextBridge.exposeInMainWorld('forgeLoopStudio', api);
+contextBridge.exposeInMainWorld('forgeLoopAudit', api);
 
-export type ForgeLoopStudioApi = typeof api;
+export type ForgeLoopAuditApi = typeof api;
 
 declare global {
   interface Window {
-    forgeLoopStudio: ForgeLoopStudioApi;
+    forgeLoopAudit: ForgeLoopAuditApi;
   }
 }

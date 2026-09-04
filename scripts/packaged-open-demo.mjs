@@ -9,12 +9,12 @@ const output = join(process.cwd(), 'dist-electron');
 const candidates = [];
 if (process.platform === 'darwin') {
   for (const entry of readdirSync(output, { withFileTypes: true })) {
-    if (entry.isDirectory() && entry.name.startsWith('mac-')) candidates.push(join(output, entry.name, 'ForgeLoop Studio.app', 'Contents', 'MacOS', 'ForgeLoop Studio'));
+    if (entry.isDirectory() && entry.name.startsWith('mac-')) candidates.push(join(output, entry.name, 'ForgeLoopAudit.app', 'Contents', 'MacOS', 'ForgeLoopAudit'));
   }
 } else if (process.platform === 'win32') {
-  candidates.push(join(output, 'win-unpacked', 'ForgeLoop Studio.exe'));
+  candidates.push(join(output, 'win-unpacked', 'ForgeLoopAudit.exe'));
 } else {
-  candidates.push(join(output, 'linux-unpacked', 'forgeloop-studio'));
+  candidates.push(join(output, 'linux-unpacked', 'forgeloop-audit'));
 }
 const executablePath = candidates.find(existsSync);
 if (!executablePath) throw new Error(`Packaged Electron executable not found. Checked: ${candidates.join(', ')}`);
@@ -58,7 +58,7 @@ try {
   }
   if (!page) throw new Error('No window page found in the packaged app');
 
-  await waitForText(page, 'ForgeLoop Studio', 'Project Picker heading');
+  await waitForText(page, 'ForgeLoopAudit', 'Project Picker heading');
   const openDemo = page.getByRole('button', { name: 'Open Demo Project' });
   await expectVisible(openDemo, 'Open Demo Project button');
   await openDemo.click();
@@ -73,7 +73,7 @@ try {
   }
 
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
-  await waitForText(page, `ForgeLoop Studio v${packageVersion}`, 'runtime version in Settings About');
+  await waitForText(page, `ForgeLoopAudit v${packageVersion}`, 'runtime version in Settings About');
 
   await page.getByRole('button', { name: 'Policy', exact: true }).click();
   await waitForHeading(page, 'Policy', 'Policy page');

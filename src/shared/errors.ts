@@ -1,21 +1,21 @@
-import type { StudioError, StudioErrorCode } from './domain';
-export type { StudioError, StudioErrorCode } from './domain';
+import type { AuditAppError, AuditAppErrorCode } from './domain';
+export type { AuditAppError, AuditAppErrorCode } from './domain';
 
-export class ForgeLoopStudioError extends Error {
-  public readonly code: StudioErrorCode;
+export class ForgeLoopAuditError extends Error {
+  public readonly code: AuditAppErrorCode;
   public readonly recoverable: boolean;
   public readonly details?: string;
 
-  constructor(code: StudioErrorCode, message: string, recoverable: boolean, details?: string) {
+  constructor(code: AuditAppErrorCode, message: string, recoverable: boolean, details?: string) {
     super(message);
-    this.name = 'ForgeLoopStudioError';
+    this.name = 'ForgeLoopAuditError';
     this.code = code;
     this.recoverable = recoverable;
     this.details = details;
   }
 
-  static projectNotForgeLoop(path: string): ForgeLoopStudioError {
-    return new ForgeLoopStudioError(
+  static projectNotForgeLoop(path: string): ForgeLoopAuditError {
+    return new ForgeLoopAuditError(
       'PROJECT_NOT_FORGELOOP',
       `The selected directory does not contain a ForgeLoop project (.forgeloop/ not found)`,
       true,
@@ -23,8 +23,8 @@ export class ForgeLoopStudioError extends Error {
     );
   }
 
-  static projectDiscoveryAmbiguous(path: string, candidates: string[]): ForgeLoopStudioError {
-    return new ForgeLoopStudioError(
+  static projectDiscoveryAmbiguous(path: string, candidates: string[]): ForgeLoopAuditError {
+    return new ForgeLoopAuditError(
       'PROJECT_DISCOVERY_AMBIGUOUS',
       'Multiple ForgeLoop projects were found below the selected directory. Select one project folder directly.',
       true,
@@ -32,17 +32,17 @@ export class ForgeLoopStudioError extends Error {
     );
   }
 
-  static protocolUnsupported(version: number, path: string): ForgeLoopStudioError {
-    return new ForgeLoopStudioError(
+  static protocolUnsupported(version: number, path: string): ForgeLoopAuditError {
+    return new ForgeLoopAuditError(
       'PROTOCOL_UNSUPPORTED',
-      `ForgeLoop protocol version ${version} is not supported by this version of ForgeLoop Studio`,
+      `ForgeLoop protocol version ${version} is not supported by this version of ForgeLoopAudit`,
       false,
       `Path: ${path}, Protocol version: ${version}`
     );
   }
 
-  static artifactInvalid(artifact: string, reason: string): ForgeLoopStudioError {
-    return new ForgeLoopStudioError(
+  static artifactInvalid(artifact: string, reason: string): ForgeLoopAuditError {
+    return new ForgeLoopAuditError(
       'ARTIFACT_INVALID',
       `Invalid ForgeLoop artifact: ${artifact}`,
       true,
@@ -50,8 +50,8 @@ export class ForgeLoopStudioError extends Error {
     );
   }
 
-  static artifactUnreadable(artifact: string, reason: string): ForgeLoopStudioError {
-    return new ForgeLoopStudioError(
+  static artifactUnreadable(artifact: string, reason: string): ForgeLoopAuditError {
+    return new ForgeLoopAuditError(
       'ARTIFACT_UNREADABLE',
       `Cannot read ForgeLoop artifact: ${artifact}`,
       true,
@@ -59,8 +59,8 @@ export class ForgeLoopStudioError extends Error {
     );
   }
 
-  static cliNotFound(command: string): ForgeLoopStudioError {
-    return new ForgeLoopStudioError(
+  static cliNotFound(command: string): ForgeLoopAuditError {
+    return new ForgeLoopAuditError(
       'CLI_NOT_FOUND',
       `ForgeLoop CLI not found. Please ensure 'forgeloop' is in your PATH.`,
       false,
@@ -68,8 +68,8 @@ export class ForgeLoopStudioError extends Error {
     );
   }
 
-  static cliFailed(command: string, exitCode: number, stderr: string): ForgeLoopStudioError {
-    return new ForgeLoopStudioError(
+  static cliFailed(command: string, exitCode: number, stderr: string): ForgeLoopAuditError {
+    return new ForgeLoopAuditError(
       'CLI_FAILED',
       `ForgeLoop CLI command failed with exit code ${exitCode}`,
       true,
@@ -77,8 +77,8 @@ export class ForgeLoopStudioError extends Error {
     );
   }
 
-  static pathBoundaryViolation(path: string, boundary: string): ForgeLoopStudioError {
-    return new ForgeLoopStudioError(
+  static pathBoundaryViolation(path: string, boundary: string): ForgeLoopAuditError {
+    return new ForgeLoopAuditError(
       'PATH_BOUNDARY_VIOLATION',
       `Path traversal attempt detected`,
       false,
@@ -86,8 +86,8 @@ export class ForgeLoopStudioError extends Error {
     );
   }
 
-  static ledgerInvalid(line: number, reason: string): ForgeLoopStudioError {
-    return new ForgeLoopStudioError(
+  static ledgerInvalid(line: number, reason: string): ForgeLoopAuditError {
+    return new ForgeLoopAuditError(
       'LEDGER_INVALID',
       `Invalid event ledger at line ${line}`,
       true,
@@ -95,8 +95,8 @@ export class ForgeLoopStudioError extends Error {
     );
   }
 
-  static watcherFailed(reason: string): ForgeLoopStudioError {
-    return new ForgeLoopStudioError(
+  static watcherFailed(reason: string): ForgeLoopAuditError {
+    return new ForgeLoopAuditError(
       'WATCHER_FAILED',
       `Filesystem watcher failed`,
       true,
@@ -104,8 +104,8 @@ export class ForgeLoopStudioError extends Error {
     );
   }
 
-  static projectRemoved(path: string): ForgeLoopStudioError {
-    return new ForgeLoopStudioError(
+  static projectRemoved(path: string): ForgeLoopAuditError {
+    return new ForgeLoopAuditError(
       'PROJECT_REMOVED',
       `The selected project directory no longer exists`,
       true,
@@ -113,8 +113,8 @@ export class ForgeLoopStudioError extends Error {
     );
   }
 
-  static permissionDenied(path: string): ForgeLoopStudioError {
-    return new ForgeLoopStudioError(
+  static permissionDenied(path: string): ForgeLoopAuditError {
+    return new ForgeLoopAuditError(
       'PERMISSION_DENIED',
       `Permission denied accessing project`,
       false,
@@ -122,11 +122,11 @@ export class ForgeLoopStudioError extends Error {
     );
   }
 
-  static unknown(message: string, details?: string): ForgeLoopStudioError {
-    return new ForgeLoopStudioError('UNKNOWN_ERROR', message, true, details);
+  static unknown(message: string, details?: string): ForgeLoopAuditError {
+    return new ForgeLoopAuditError('UNKNOWN_ERROR', message, true, details);
   }
 
-  toJSON(): StudioError {
+  toJSON(): AuditAppError {
     return {
       code: this.code,
       message: this.message,
