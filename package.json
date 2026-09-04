@@ -72,7 +72,7 @@
     "@xyflow/react": "^12.3.0",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
-    "chokidar": "^3.6.0",
+    "chokidar": "^5.0.0",
     "clsx": "^2.1.1",
     "electron-store": "^11.0.2",
     "lucide-react": "^0.447.0",
