@@ -1,22 +1,22 @@
-# ForgeLoop Studio RC3 Final Corrections Implementation Plan
+# ForgeLoopAudit RC3 Final Corrections Implementation Plan
 
-> Historical record. This document describes the repository state and implementation target at the time it was written. It is not the current ForgeLoop Studio specification. See the [current documentation index](../../README.md).
+> Historical record. This document describes the repository state and implementation target at the time it was written. It is not the current ForgeLoopAudit specification. See the [current documentation index](../../README.md).
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox syntax for tracking.
 
 **Goal:** Turn the remaining RC3 verification gaps into executable, CI-enforced, release-verifiable gates without creating the `v0.1.0-rc.3` tag.
 
-**Architecture:** Preserve ForgeLoop as the protocol authority and Studio as a read-only observer. Strengthen existing contracts through real coverage thresholds, platform-aware packaging verification, measured benchmarks, deterministic E2E/conformance fixtures, per-artifact release evidence, and public post-publish checks.
+**Architecture:** Preserve ForgeLoop as the protocol authority and Audit as a read-only observer. Strengthen existing contracts through real coverage thresholds, platform-aware packaging verification, measured benchmarks, deterministic E2E/conformance fixtures, per-artifact release evidence, and public post-publish checks.
 
 **Tech Stack:** Electron 43, electron-builder, TypeScript, Vitest/V8 coverage, Playwright, Axe, GitHub Actions, CycloneDX/npm SBOM, AJV, Node.js scripts.
 
-**Spec:** `/Users/cassio/Downloads/FORGELOOP_STUDIO_RC3_FINAL_CORRECTION_PLAN.md`
+**Spec:** `/Users/cassio/Downloads/FORGELOOP_AUDIT_RC3_FINAL_CORRECTION_PLAN.md`
 
 ## Global Constraints
 
 - RC3 remains `0.1.0-rc.3` and explicitly `unsigned-preview`.
 - Do not create or move the `v0.1.0-rc.3` tag.
-- ForgeLoop remains the sole lifecycle authority; Studio remains read-only.
+- ForgeLoop remains the sole lifecycle authority; Audit remains read-only.
 - Do not exclude security-critical modules merely to inflate coverage.
 - Do not use the development Electron binary for packaged fuse mutation.
 - All release evidence must represent final public filenames and hashes.

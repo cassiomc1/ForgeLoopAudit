@@ -1,6 +1,6 @@
 # RC3 Assembly Rehearsal Implementation Plan
 
-> Historical record. This document describes the repository state and implementation target at the time it was written. It is not the current ForgeLoop Studio specification. See the [current documentation index](../../README.md).
+> Historical record. This document describes the repository state and implementation target at the time it was written. It is not the current ForgeLoopAudit specification. See the [current documentation index](../../README.md).
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
@@ -10,7 +10,7 @@
 
 **Tech Stack:** GitHub Actions YAML, Node.js scripts, npm, Node test runner.
 
-**Spec:** `/Users/cassio/Downloads/FORGELOOP_STUDIO_RC3_PRETAG_FINAL_REVIEW.md`
+**Spec:** `/Users/cassio/Downloads/FORGELOOP_AUDIT_RC3_PRETAG_FINAL_REVIEW.md`
 
 ## Global Constraints
 
@@ -41,12 +41,12 @@
 - Modify: `.github/workflows/release.yml`
 
 **Interfaces:**
-- Consumes: the three existing `forgeloop-studio-{macos,windows,linux}` artifacts.
-- Produces: `forgeloop-studio-assembled` containing the verified flat release bundle.
+- Consumes: the three existing `forgeloop-audit-{macos,windows,linux}` artifacts.
+- Produces: `forgeloop-audit-assembled` containing the verified flat release bundle.
 
 - [ ] Add `assemble` with `needs: [macos, windows, linux]`, `runs-on: ubuntu-latest`, and no tag-only `if` condition.
-- [ ] Move checkout, Node setup, npm install, artifact download, SBOM generation, and release-asset verification into `assemble`; upload `release-assets/*` as `forgeloop-studio-assembled`.
-- [ ] Change `publish` to `needs: [assemble]`, retain the tag-only condition, download only `forgeloop-studio-assembled` with `merge-multiple: true`, and retain the existing release action.
+- [ ] Move checkout, Node setup, npm install, artifact download, SBOM generation, and release-asset verification into `assemble`; upload `release-assets/*` as `forgeloop-audit-assembled`.
+- [ ] Change `publish` to `needs: [assemble]`, retain the tag-only condition, download only `forgeloop-audit-assembled` with `merge-multiple: true`, and retain the existing release action.
 - [ ] Run the workflow topology contract and YAML lint/parsing checks available in the repository.
 
 ### Task 3: Verify and deliver

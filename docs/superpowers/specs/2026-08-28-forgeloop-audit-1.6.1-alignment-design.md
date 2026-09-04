@@ -1,14 +1,14 @@
-# ForgeLoop Studio 1.6.1 Alignment Design
+# ForgeLoopAudit 1.6.1 Alignment Design
 
-> Historical record. This document describes the repository state and implementation target at the time it was written. It is not the current ForgeLoop Studio specification. See the [current documentation index](../../README.md).
+> Historical record. This document describes the repository state and implementation target at the time it was written. It is not the current ForgeLoopAudit specification. See the [current documentation index](../../README.md).
 
 **Date:** 2026-08-28
 **Status:** Approved for implementation
-**Source:** `FORGELOOP_STUDIO_UPDATE_1_6_1.md` supplied for this task
+**Source:** `FORGELOOP_AUDIT_UPDATE_1_6_1.md` supplied for this task
 
 ## Goal
 
-Align the read-only ForgeLoop Studio runtime and trusted protocol artifacts with
+Align the read-only ForgeLoopAudit runtime and trusted protocol artifacts with
 ForgeLoop v1.6.1 at immutable commit
 `f331100cff175a4ce990fa843b397fcf720b40f5`, while accepting valid legacy
 protocol-v1 execution artifacts and exposing persisted verification-execution
@@ -31,7 +31,7 @@ reviewable.
 
 ## Architecture
 
-ForgeLoop remains the semantic authority. Studio will consume the bundled
+ForgeLoop remains the semantic authority. Audit will consume the bundled
 `@cassiomc1/forgeloop/integration` read-only surface, normalize the new
 capability explicitly, and derive feature support only when the complete
 version-1 isolation capability contract is advertised. Missing or incomplete
@@ -47,7 +47,7 @@ missing field is converted into a guessed execution kind or isolation mode.
 The Executions page will display only persisted metadata, using an explicit
 “Not recorded by this artifact” state when data is absent. It will distinguish
 the protocol project root from the execution cwd and will state that isolation
-is recorded by ForgeLoop rather than created or attested by Studio.
+is recorded by ForgeLoop rather than created or attested by Audit.
 
 ## Components and data flow
 
@@ -72,9 +72,9 @@ is recorded by ForgeLoop rather than created or attested by Studio.
   schema; the validator will not be loosened as a workaround.
 - Symlink, path-escape, size, count, malformed JSON, and invalid-schema guards
   remain unchanged.
-- Studio will not call `run-check`, `run-action`, `reconcile-closure`, or any
+- Audit will not call `run-check`, `run-action`, `reconcile-closure`, or any
   other mutating/external-execution command as part of this work.
-- Studio will not invoke `createForgeLoopContext()` to become a verification
+- Audit will not invoke `createForgeLoopContext()` to become a verification
   adapter and will not reproduce ForgeLoop isolation invariants locally.
 
 ## Verification contract
@@ -97,6 +97,6 @@ The implementation must prove:
 ## Delivery decision
 
 This task requests implementation, pull-request creation, and merge. It does
-not request a Studio release publication, tag, or version bump, so the existing
-Studio package version remains unchanged unless a repository gate proves that a
+not request a Audit release publication, tag, or version bump, so the existing
+Audit package version remains unchanged unless a repository gate proves that a
 version update is required for the requested code delivery.

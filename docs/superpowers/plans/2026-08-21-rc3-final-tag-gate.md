@@ -1,6 +1,6 @@
 # RC3 Final Tag Gate Implementation Plan
 
-> Historical record. This document describes the repository state and implementation target at the time it was written. It is not the current ForgeLoop Studio specification. See the [current documentation index](../../README.md).
+> Historical record. This document describes the repository state and implementation target at the time it was written. It is not the current ForgeLoopAudit specification. See the [current documentation index](../../README.md).
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
@@ -10,7 +10,7 @@
 
 **Tech Stack:** GitHub Actions YAML, Node.js ESM, node:test, Ajv, GitHub REST API.
 
-**Spec:** `/Users/cassio/Downloads/FORGELOOP_STUDIO_RC3_FINAL_TAG_GATE_REVIEW.md`
+**Spec:** `/Users/cassio/Downloads/FORGELOOP_AUDIT_RC3_FINAL_TAG_GATE_REVIEW.md`
 
 ## Global Constraints
 

@@ -1,17 +1,17 @@
 
-# ForgeLoop Studio 1.6.1 Alignment Implementation Plan
+# ForgeLoopAudit 1.6.1 Alignment Implementation Plan
 
-> Historical record. This document describes the repository state and implementation target at the time it was written. It is not the current ForgeLoop Studio specification. See the [current documentation index](../../README.md).
+> Historical record. This document describes the repository state and implementation target at the time it was written. It is not the current ForgeLoopAudit specification. See the [current documentation index](../../README.md).
 
 > For agentic workers: REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox syntax for tracking.
 
-**Goal:** Align Studio's vendored ForgeLoop runtime, trusted schemas, read-only execution reader, optional capability model, Executions presentation, demo fixtures, and current-version documentation with ForgeLoop v1.6.1 at commit f331100cff175a4ce990fa843b397fcf720b40f5.
+**Goal:** Align Audit's vendored ForgeLoop runtime, trusted schemas, read-only execution reader, optional capability model, Executions presentation, demo fixtures, and current-version documentation with ForgeLoop v1.6.1 at commit f331100cff175a4ce990fa843b397fcf720b40f5.
 
-**Architecture:** Keep ForgeLoop as the semantic authority and Studio as a local-first read-only observer. Pin the runtime and schemas to the same immutable upstream commit, preserve valid legacy protocol-v1 artifacts, normalize verificationExecutionIsolation explicitly as an additive feature, and display only persisted execution provenance.
+**Architecture:** Keep ForgeLoop as the semantic authority and Audit as a local-first read-only observer. Pin the runtime and schemas to the same immutable upstream commit, preserve valid legacy protocol-v1 artifacts, normalize verificationExecutionIsolation explicitly as an additive feature, and display only persisted execution provenance.
 
 **Tech Stack:** Node.js 20+, npm, TypeScript, React 19, Electron/Vite, Vitest, Playwright, Ajv, ForgeLoop Integration API v1, JSON Schema draft 2020-12.
 
-**Spec:** docs/superpowers/specs/2026-08-28-forgeloop-studio-1.6.1-alignment-design.md
+**Spec:** docs/superpowers/specs/2026-08-28-forgeloop-audit-1.6.1-alignment-design.md
 
 ## Global Constraints
 
@@ -20,10 +20,10 @@
 - execution.schema.json is copied from the controlled upstream checkout and remains strict with additionalProperties false.
 - Valid legacy protocol-v1 execution artifacts remain accepted; missing provenance is never converted into an inferred default.
 - verificationExecutionIsolation is optional: incomplete or absent capability data yields false, never INCOMPATIBLE by itself.
-- Studio must not add process execution, protocol mutation, verification adapters, sandbox creation, or duplicated ForgeLoop isolation invariants.
+- Audit must not add process execution, protocol mutation, verification adapters, sandbox creation, or duplicated ForgeLoop isolation invariants.
 - Generated schemas, provenance, lockfiles, and demo artifacts are changed through their canonical generators or package tools.
 - Preserve unrelated pre-existing files, especially screen/.DS_Store; do not clean or force-reset the workspace.
-- No Studio release/tag/publication or version bump is included because the request is implementation, PR creation, merge, and local synchronization.
+- No Audit release/tag/publication or version bump is included because the request is implementation, PR creation, merge, and local synchronization.
 
 ---
 
@@ -77,7 +77,7 @@ git commit -m "test: cover ForgeLoop 1.6.1 execution compatibility"
 
 ~~~bash
 FORGELOOP_UPSTREAM_DIR=/Users/cassio/Documents/github/forgeloop
-FORGELOOP_PACKAGE_WORKTREE=/private/tmp/forgeloop-studio-v1.6.1
+FORGELOOP_PACKAGE_WORKTREE=/private/tmp/forgeloop-audit-v1.6.1
 git -C "$FORGELOOP_UPSTREAM_DIR" status --short --branch
 git -C "$FORGELOOP_UPSTREAM_DIR" worktree add --detach "$FORGELOOP_PACKAGE_WORKTREE" f331100cff175a4ce990fa843b397fcf720b40f5
 ~~~
@@ -98,7 +98,7 @@ npm run protocol:schemas:verify
 ~~~bash
 git add package.json package-lock.json schemas vendor
 git rm vendor/cassiomc1-forgeloop-1.6.0-1eb8088.tgz
-git commit -m "chore(protocol): align ForgeLoop Studio with ForgeLoop v1.6.1"
+git commit -m "chore(protocol): align ForgeLoopAudit with ForgeLoop v1.6.1"
 ~~~
 
 ### Task 3: Normalize the v1.6.1 Integration API capability additively
@@ -177,7 +177,7 @@ npm test -- --run src/renderer/pages/execution-display.test.ts
 - [ ] Step 5: Update Executions.tsx with neutral badges only when recorded, the eight expanded provenance rows, the absent label for legacy records, and this boundary copy:
 
 ~~~text
-Isolation information is persisted by ForgeLoop. Studio displays the recorded provenance and does not create or verify execution sandboxes itself.
+Isolation information is persisted by ForgeLoop. Audit displays the recorded provenance and does not create or verify execution sandboxes itself.
 ~~~
 
 Keep the raw JSON control unchanged.
@@ -237,7 +237,7 @@ git commit -m "test(demo): exercise ForgeLoop execution provenance"
 - Produces: consistent current-runtime docs without rewriting historical release references or transitive dependency versions.
 
 - [ ] Step 1: Update docs/PROTOCOL_COMPATIBILITY.md to ForgeLoop 1.6.1 at the target commit, retain protocol/schema/Integration API v1, describe persisted verification-execution provenance, and state that missing optional capability keeps protocol-v1 compatibility while disabling the feature.
-- [ ] Step 2: Update README.md and schemas/README.md to say Studio reads/displays persisted isolation provenance and does not provide execution isolation. Update current stack/runtime references to 1.6.1.
+- [ ] Step 2: Update README.md and schemas/README.md to say Audit reads/displays persisted isolation provenance and does not provide execution isolation. Update current stack/runtime references to 1.6.1.
 - [ ] Step 3: Update vendor/README.md with source repository cassiomc1/forgeloop, exact commit, package version, and the computed archive SHA-256.
 - [ ] Step 4: Review every current-runtime match without changing unrelated transitive dependency versions.
 
@@ -285,7 +285,7 @@ git diff --check
 ~~~
 
 Read each exit code and output before claiming a gate passes.
-- [ ] Step 2: Inspect status, changed paths, and the read-only boundary. Confirm no new run-check, run-action, reconcile-closure, createForgeLoopContext, execFile, or spawn path was added to Studio, no schema was loosened, and no unrelated file is staged.
+- [ ] Step 2: Inspect status, changed paths, and the read-only boundary. Confirm no new run-check, run-action, reconcile-closure, createForgeLoopContext, execFile, or spawn path was added to Audit, no schema was loosened, and no unrelated file is staged.
 - [ ] Step 3: Request independent code review with exact base/head SHAs and the approved spec. Fix Critical and Important findings, rerun affected tests and full verification, and document Minor findings.
 - [ ] Step 4: Push the branch and create one PR against main. The PR body must cover runtime/schema P0, additive capability, read-only UI, demo coverage, exact verification, and non-goals.
 - [ ] Step 5: Inspect all PR checks. Queued, cancelled, missing, startup-failure, or unavailable required checks are unverified. Do not change branch protection without separate explicit authorization.
