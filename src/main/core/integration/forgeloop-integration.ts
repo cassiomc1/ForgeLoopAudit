@@ -1,4 +1,4 @@
-import { ForgeLoopStudioError } from '@shared/errors';
+import { ForgeLoopAuditError } from '@shared/errors';
 import provenance from '../../../../schemas/provenance.json';
 import type {
   CanonicalOwnershipResource,
@@ -22,11 +22,11 @@ export const FORGELOOP_PACKAGE_VERSION = provenance.forgeLoopPackageVersion;
 export const FORGELOOP_UPSTREAM_COMMIT = provenance.forgeLoopGitCommit;
 
 /**
- * Commands the Studio may invoke through the canonical read runtime beyond
+ * Commands the ForgeLoopAudit may invoke through the canonical read runtime beyond
  * dedicated integration resources. Every entry must classify as READ_ONLY
  * inside ForgeLoop; the guard re-verifies at invocation time.
  */
-export const STUDIO_READ_ONLY_COMMANDS = Object.freeze(
+export const AUDIT_READ_ONLY_COMMANDS = Object.freeze(
   new Set([
     'next',
     'progress',
@@ -76,6 +76,8 @@ export interface ForgeLoopIntegrationAdapter {
   readTaskOwnership(projectRoot: string, taskId: string): Promise<CanonicalOwnershipResource>;
   readTaskContract(projectRoot: string, taskId: string): Promise<Record<string, unknown>>;
   readTaskContinuity(projectRoot: string, taskId: string): Promise<Record<string, unknown>>;
+  /** Present when the negotiated structural-quality capability is advertised. */
+  readTaskStructuralQuality?: (projectRoot: string, taskId: string) => Promise<Record<string, unknown>>;
   /** Present when the canonical execution-profile context capability is advertised. */
   readTaskContext?: (projectRoot: string, taskId: string) => Promise<Record<string, unknown>>;
   readTaskWorkspaceBinding?: (projectRoot: string, taskId: string) => Promise<Record<string, unknown>>;
@@ -99,7 +101,7 @@ export interface ForgeLoopIntegrationAdapter {
 
 function assertReadProjectRoot(projectRoot: string): void {
   if (typeof projectRoot !== 'string' || projectRoot.length === 0) {
-    throw ForgeLoopStudioError.pathBoundaryViolation(String(projectRoot), 'integration adapter requires a resolved project root');
+    throw ForgeLoopAuditError.pathBoundaryViolation(String(projectRoot), 'integration adapter requires a resolved project root');
   }
 }
 
@@ -258,7 +260,7 @@ async function loadIntegrationModule(): Promise<ForgeLoopIntegrationModule> {
     // The upstream declaration intentionally types capability/resource payloads
     // as generic records. This private adapter narrows the exact public
     // contract after the module boundary; no ambient duplicate declaration is
-    // needed now that Studio resolves the vendored package's own declarations.
+    // needed now that ForgeLoopAudit resolves the vendored package's own declarations.
     cachedModule = import('@cassiomc1/forgeloop/integration') as unknown as Promise<ForgeLoopIntegrationModule>;
   }
   return cachedModule;
@@ -478,6 +480,11 @@ function buildAdapter(fl: ForgeLoopIntegrationModule): ForgeLoopIntegrationAdapt
       return readResource<Record<string, unknown>>(fl, 'task/continuity', { projectPath: projectRoot, taskId });
     },
 
+    async readTaskStructuralQuality(projectRoot: string, taskId: string): Promise<Record<string, unknown>> {
+      assertReadProjectRoot(projectRoot);
+      return readResource<Record<string, unknown>>(fl, 'task/structural-quality', { projectPath: projectRoot, taskId });
+    },
+
     async readTaskContext(projectRoot: string, taskId: string): Promise<Record<string, unknown>> {
       assertReadProjectRoot(projectRoot);
       return readResource<Record<string, unknown>>(fl, 'task/context', { projectPath: projectRoot, taskId });
@@ -547,7 +554,7 @@ function buildAdapter(fl: ForgeLoopIntegrationModule): ForgeLoopIntegrationAdapt
       try {
         classification = fl.classifyForgeLoopInvocation(command, input);
       } catch (error) {
-        throw ForgeLoopStudioError.cliFailed(
+        throw ForgeLoopAuditError.cliFailed(
           command,
           -1,
           `Command has no canonical integration classification: ${error instanceof Error ? error.message : String(error)}`,
@@ -559,10 +566,10 @@ function buildAdapter(fl: ForgeLoopIntegrationModule): ForgeLoopIntegrationAdapt
         classification.mutatesProtocol !== false ||
         classification.executesExternalProcess !== false
       ) {
-        throw ForgeLoopStudioError.cliFailed(
+        throw ForgeLoopAuditError.cliFailed(
           command,
           -1,
-          `Studio refuses non-read-only ForgeLoop invocation: ${classification.riskClass}`,
+          `ForgeLoopAudit refuses non-read-only ForgeLoop invocation: ${classification.riskClass}`,
         );
       }
 

@@ -1,6 +1,6 @@
 import { lstat, readdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { ForgeLoopStudioError } from '@shared/errors';
+import { ForgeLoopAuditError } from '@shared/errors';
 import { CONFIG_FILE, MANIFEST_FILE, LEGACY_MANIFEST_FILE } from '@shared/constants';
 
 const PROJECT_MARKER_FILES = [CONFIG_FILE, MANIFEST_FILE, LEGACY_MANIFEST_FILE];
@@ -77,7 +77,7 @@ export async function resolveForgeLoopProjectRoot(selectedDirectory: string): Pr
   const candidates = await discoverForgeLoopProjects(selectedRoot);
 
   if (candidates.length > 1) {
-    throw ForgeLoopStudioError.projectDiscoveryAmbiguous(selectedRoot, candidates);
+    throw ForgeLoopAuditError.projectDiscoveryAmbiguous(selectedRoot, candidates);
   }
 
   return candidates[0] ?? selectedRoot;

@@ -10,10 +10,10 @@ import { resolveForgeLoopProjectRoot } from '@main/core/project/project-discover
 
 const schemasDir = resolve(process.cwd(), 'schemas');
 // Opt-in regression check against a real layout v2 project. Set
-// FORGELOOP_STUDIO_REAL_PROJECT to a forgeloop 1.6.x-initialized directory to
+// FORGELOOP_AUDIT_REAL_PROJECT to a forgeloop 1.6.x-initialized directory to
 // exercise the pipeline that previously failed with
 // "Path does not exist: .../config.json". Skipped when unset or absent.
-const REAL_PROJECT = process.env.FORGELOOP_STUDIO_REAL_PROJECT ?? '';
+const REAL_PROJECT = process.env.FORGELOOP_AUDIT_REAL_PROJECT ?? '';
 
 describe.skipIf(!REAL_PROJECT || !existsSync(REAL_PROJECT))('real layout v2 project opens', () => {
   it('resolves the project root via discovery (manifest marker)', async () => {

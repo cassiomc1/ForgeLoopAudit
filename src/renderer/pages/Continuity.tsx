@@ -12,7 +12,7 @@ export function Continuity({ snapshot, selectedTaskId, onSelectedTaskChange, onO
     let cancelled = false;
     setContinuityLint(null);
     if (!selectedTask) return () => { cancelled = true; };
-    const read = window.forgeLoopStudio.getTaskContinuityLint?.(selectedTask.taskId);
+    const read = window.forgeLoopAudit.getTaskContinuityLint?.(selectedTask.taskId);
     if (!read) return () => { cancelled = true; };
     read.then((result) => { if (!cancelled) setContinuityLint(result); }).catch(() => { if (!cancelled) setContinuityLint(null); });
     return () => { cancelled = true; };

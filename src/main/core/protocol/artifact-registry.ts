@@ -4,7 +4,7 @@ import registry from './artifact-registry.json';
 
 export const ARTIFACT_SCHEMAS = registry as Record<ArtifactName, string>;
 
-/** Schemas used by canonical provider/status payloads without being persisted as Studio artifacts. */
+/** Schemas used by canonical provider/status payloads without being persisted as ForgeLoopAudit artifacts. */
 export const AUXILIARY_TRUSTED_SCHEMAS = [
   'code-attestation.schema.json',
   'attestation-verification-result.schema.json',
@@ -12,7 +12,7 @@ export const AUXILIARY_TRUSTED_SCHEMAS = [
 
 export type ArtifactScope = 'PROJECT' | 'TASK' | 'COLLECTION' | 'SESSION';
 
-export interface StudioArtifactDefinition {
+export interface AuditArtifactDefinition {
   key: ArtifactName;
   schema: string;
   scope: ArtifactScope;
@@ -79,7 +79,7 @@ export const OPTIONAL_TASK_ARTIFACTS: ArtifactName[] = [
   'handoff.json',
 ];
 
-export const ARTIFACT_DEFINITIONS: Record<ArtifactName, StudioArtifactDefinition> = {
+export const ARTIFACT_DEFINITIONS: Record<ArtifactName, AuditArtifactDefinition> = {
   'config.json': { key: 'config.json', schema: ARTIFACT_SCHEMAS['config.json'], scope: 'PROJECT', authoritative: true },
   'sources.json': { key: 'sources.json', schema: ARTIFACT_SCHEMAS['sources.json'], scope: 'PROJECT', authoritative: true },
   'task.json': { key: 'task.json', schema: ARTIFACT_SCHEMAS['task.json'], scope: 'TASK', authoritative: true },
@@ -115,7 +115,7 @@ export function getSchemaForArtifact(artifact: ArtifactName): string {
   return ARTIFACT_SCHEMAS[artifact];
 }
 
-export function getArtifactDefinition(artifact: ArtifactName): StudioArtifactDefinition {
+export function getArtifactDefinition(artifact: ArtifactName): AuditArtifactDefinition {
   return ARTIFACT_DEFINITIONS[artifact];
 }
 

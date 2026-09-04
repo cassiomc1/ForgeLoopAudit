@@ -14,17 +14,17 @@ const provenanceCommit = '19355e701e191d830c56d64e535835e925843bae';
 
 const DISTRIBUTABLES = {
   macos: [
-    `ForgeLoop.Studio-${version}-arm64.dmg`,
-    `ForgeLoop.Studio-${version}-x64.dmg`,
-    `ForgeLoop.Studio-${version}-arm64.zip`,
-    `ForgeLoop.Studio-${version}-x64.zip`,
+    `ForgeLoopAudit-${version}-arm64.dmg`,
+    `ForgeLoopAudit-${version}-x64.dmg`,
+    `ForgeLoopAudit-${version}-arm64.zip`,
+    `ForgeLoopAudit-${version}-x64.zip`,
   ],
   windows: [
-    `ForgeLoop.Studio.Setup.${version}.exe`,
-    `ForgeLoop.Studio.${version}.exe`,
+    `ForgeLoopAudit Setup ${version}.exe`,
+    `ForgeLoopAudit ${version}.exe`,
   ],
   linux: [
-    `ForgeLoop.Studio-${version}.AppImage`,
+    `ForgeLoopAudit-${version}.AppImage`,
   ],
 };
 
@@ -37,7 +37,7 @@ function architectureFor(platform, name) {
 
 function evidenceFor(name, platform, { commit = headCommit, runId = 'local', ...overrides } = {}) {
   return {
-    studioVersion: version,
+    auditVersion: version,
     gitCommit: commit,
     forgeLoopCompatibility: { protocolVersion: 1, schemaProvenanceCommit: provenanceCommit },
     platform,
@@ -155,10 +155,10 @@ test('rejects evidence claiming the wrong architecture', () => {
   });
 });
 
-test('rejects evidence carrying the wrong Studio version', () => {
+test('rejects evidence carrying the wrong ForgeLoopAudit version', () => {
   withBundle(({ assets, root }) => {
-    mutateEvidence(assets, DISTRIBUTABLES.macos[1], (item) => { item.studioVersion = '9.9.9'; });
-    assert.throws(() => runVerifier({ root }), /studioVersion 9\.9\.9 does not match expected/);
+    mutateEvidence(assets, DISTRIBUTABLES.macos[1], (item) => { item.auditVersion = '9.9.9'; });
+    assert.throws(() => runVerifier({ root }), /auditVersion 9\.9\.9 does not match expected/);
   });
 });
 

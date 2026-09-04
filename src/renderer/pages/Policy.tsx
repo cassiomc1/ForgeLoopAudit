@@ -23,7 +23,7 @@ export function Policy({ snapshot, selectedTaskId, capabilityPolicyRefreshToken 
     if (!selectedTask) { setTaskPolicy(null); return; }
     let cancelled = false;
     setPolicyLoading(true);
-    window.forgeLoopStudio.getPolicyStatus(selectedTask.taskId)
+    window.forgeLoopAudit.getPolicyStatus(selectedTask.taskId)
       .then((result) => { if (!cancelled) setTaskPolicy(result); })
       .catch(() => { if (!cancelled) setTaskPolicy(null); })
       .finally(() => { if (!cancelled) setPolicyLoading(false); });
@@ -35,7 +35,7 @@ export function Policy({ snapshot, selectedTaskId, capabilityPolicyRefreshToken 
       setCapabilityPolicy(null);
       return () => { cancelled = true; };
     }
-    window.forgeLoopStudio.getCapabilityPolicy()
+    window.forgeLoopAudit.getCapabilityPolicy()
       .then((result) => { if (!cancelled) setCapabilityPolicy(result); })
       .catch(() => { if (!cancelled) setCapabilityPolicy(null); });
     return () => { cancelled = true; };

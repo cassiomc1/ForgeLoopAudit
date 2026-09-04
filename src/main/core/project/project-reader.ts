@@ -1,6 +1,6 @@
 import { readFileSync, readdirSync, lstatSync, existsSync, openSync, readSync, closeSync, fstatSync } from 'fs';
 import { join } from 'path';
-import { ForgeLoopStudioError } from '@shared/errors';
+import { ForgeLoopAuditError } from '@shared/errors';
 import { parseJsonSafely, RESOURCE_LIMITS } from '@main/security/resource-limits';
 import { PathBoundary } from '@main/security/path-boundary';
 import { CONFIG_FILE, SOURCES_FILE, MANIFEST_FILE, LEGACY_MANIFEST_FILE, TASK_STATE_DIR, SESSIONS_DIR, POLICY_DIR } from '@shared/constants';
@@ -43,7 +43,7 @@ function isCanonicalArtifact(name: string, value: unknown): boolean {
 
 function assertJsonFileSize(relativePath: string, size: number): void {
   if (size > RESOURCE_LIMITS.JSON_MAX_SIZE_BYTES) {
-    throw ForgeLoopStudioError.artifactInvalid(
+    throw ForgeLoopAuditError.artifactInvalid(
       relativePath,
       `JSON artifact exceeds maximum size of ${RESOURCE_LIMITS.JSON_MAX_SIZE_BYTES} bytes`,
     );
@@ -132,7 +132,7 @@ export class ProjectDetector {
       // facts are later re-negotiated through the bundled integration.
       const manifest = this.readDetectionManifest();
       if (!manifest) {
-        throw ForgeLoopStudioError.projectNotForgeLoop(projectRoot);
+        throw ForgeLoopAuditError.projectNotForgeLoop(projectRoot);
       }
       protocolVersion = 1;
       schemaVersion = manifest.schemaVersion;
@@ -169,19 +169,19 @@ export class ProjectDetector {
       const configPath = this.pathBoundary.validateForgeLoopPath(CONFIG_FILE);
       const configStat = lstatSync(configPath);
       if (!configStat.isFile() || configStat.isSymbolicLink()) {
-        throw ForgeLoopStudioError.artifactInvalid(CONFIG_FILE, 'Symbolic links and non-file config artifacts are not allowed');
+        throw ForgeLoopAuditError.artifactInvalid(CONFIG_FILE, 'Symbolic links and non-file config artifacts are not allowed');
       }
       assertJsonFileSize(CONFIG_FILE, configStat.size);
       const content = readFileSync(configPath, 'utf8');
       const config = parseJsonSafely<ForgeLoopConfig>(content);
       const validation = this.validator.validate(ARTIFACT_SCHEMAS['config.json'], config);
       if (!validation.valid) {
-        throw ForgeLoopStudioError.artifactInvalid(CONFIG_FILE, validation.errors?.join('; ') || 'Config schema validation failed');
+        throw ForgeLoopAuditError.artifactInvalid(CONFIG_FILE, validation.errors?.join('; ') || 'Config schema validation failed');
       }
       return config;
     } catch (error) {
-      if (error instanceof ForgeLoopStudioError) throw error;
-      throw ForgeLoopStudioError.artifactInvalid(CONFIG_FILE, `Failed to parse config: ${error instanceof Error ? error.message : String(error)}`);
+      if (error instanceof ForgeLoopAuditError) throw error;
+      throw ForgeLoopAuditError.artifactInvalid(CONFIG_FILE, `Failed to parse config: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -192,12 +192,12 @@ export class ProjectDetector {
       try {
         const stat = lstatSync(candidate);
         if (!stat.isFile() || stat.isSymbolicLink()) {
-          throw ForgeLoopStudioError.artifactInvalid(name, 'Symbolic links and non-file manifest artifacts are not allowed');
+          throw ForgeLoopAuditError.artifactInvalid(name, 'Symbolic links and non-file manifest artifacts are not allowed');
         }
         assertJsonFileSize(name, stat.size);
         const parsed = parseJsonSafely<Record<string, unknown>>(readFileSync(this.pathBoundary.validatePath(candidate), 'utf8'));
         if (!isRecord(parsed) || typeof parsed.schemaVersion !== 'number') {
-          throw ForgeLoopStudioError.artifactInvalid(name, 'Manifest does not satisfy the canonical layout shape');
+          throw ForgeLoopAuditError.artifactInvalid(name, 'Manifest does not satisfy the canonical layout shape');
         }
         const manifest: ForgeLoopManifest = { schemaVersion: parsed.schemaVersion };
         if (typeof parsed.layoutVersion === 'number') manifest.layoutVersion = parsed.layoutVersion;
@@ -205,8 +205,8 @@ export class ProjectDetector {
         if (typeof parsed.packageVersion === 'string') manifest.packageVersion = parsed.packageVersion;
         return manifest;
       } catch (error) {
-        if (error instanceof ForgeLoopStudioError) throw error;
-        throw ForgeLoopStudioError.artifactInvalid(name, `Failed to parse manifest: ${error instanceof Error ? error.message : String(error)}`);
+        if (error instanceof ForgeLoopAuditError) throw error;
+        throw ForgeLoopAuditError.artifactInvalid(name, `Failed to parse manifest: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
     return null;
@@ -247,15 +247,15 @@ export class ProjectReader {
     const validatedPath = this.pathBoundary.validatePath(configPath);
     const stat = lstatSync(validatedPath);
     if (!stat.isFile() || stat.isSymbolicLink()) {
-      throw ForgeLoopStudioError.artifactInvalid(CONFIG_FILE, 'Symbolic links and non-file config artifacts are not allowed');
+      throw ForgeLoopAuditError.artifactInvalid(CONFIG_FILE, 'Symbolic links and non-file config artifacts are not allowed');
     }
     assertJsonFileSize(CONFIG_FILE, stat.size);
     const content = readFileSync(validatedPath, 'utf8');
     const config = parseJsonSafely<ForgeLoopConfig>(content);
     const validated = this.validateArtifact('config.json', config);
-    if (validated.error) throw ForgeLoopStudioError.artifactInvalid(CONFIG_FILE, validated.error);
+    if (validated.error) throw ForgeLoopAuditError.artifactInvalid(CONFIG_FILE, validated.error);
     if (typeof config.protocolVersion !== 'number' || typeof config.schemaVersion !== 'number') {
-      throw ForgeLoopStudioError.artifactInvalid(CONFIG_FILE, 'Config does not satisfy the canonical protocol shape');
+      throw ForgeLoopAuditError.artifactInvalid(CONFIG_FILE, 'Config does not satisfy the canonical protocol shape');
     }
     return config;
   }
@@ -273,13 +273,13 @@ export class ProjectReader {
     const validatedPath = this.pathBoundary.validatePath(sourcesPath);
     const stat = lstatSync(validatedPath);
     if (!stat.isFile() || stat.isSymbolicLink()) {
-      throw ForgeLoopStudioError.artifactInvalid(SOURCES_FILE, 'Symbolic links and non-file source artifacts are not allowed');
+      throw ForgeLoopAuditError.artifactInvalid(SOURCES_FILE, 'Symbolic links and non-file source artifacts are not allowed');
     }
     assertJsonFileSize(SOURCES_FILE, stat.size);
     const content = readFileSync(validatedPath, 'utf8');
     const sources = parseJsonSafely<ForgeLoopSources>(content);
     const validated = this.validateArtifact('sources.json', sources);
-    if (validated.error) throw ForgeLoopStudioError.artifactInvalid(SOURCES_FILE, validated.error);
+    if (validated.error) throw ForgeLoopAuditError.artifactInvalid(SOURCES_FILE, validated.error);
     return validated.value as ForgeLoopSources;
   }
 
@@ -307,11 +307,11 @@ export class ProjectReader {
   readTaskDescriptor(taskKey: string): Record<string, unknown> {
     const taskPath = join(this.forgeLoopRoot, TASK_STATE_DIR, taskKey, 'task.json');
     const stat = lstatSync(taskPath);
-    if (!stat.isFile() || stat.isSymbolicLink()) throw ForgeLoopStudioError.artifactInvalid('task.json', 'Symbolic links and non-file descriptors are not allowed');
+    if (!stat.isFile() || stat.isSymbolicLink()) throw ForgeLoopAuditError.artifactInvalid('task.json', 'Symbolic links and non-file descriptors are not allowed');
     assertJsonFileSize('task.json', stat.size);
     const parsed = parseJsonSafely(readFileSync(this.pathBoundary.validatePath(taskPath), 'utf8'));
     const validated = this.validateArtifact('task.json', parsed);
-    if (validated.error) throw ForgeLoopStudioError.artifactInvalid('task.json', validated.error);
+    if (validated.error) throw ForgeLoopAuditError.artifactInvalid('task.json', validated.error);
     return validated.value as Record<string, unknown>;
   }
 
@@ -320,7 +320,7 @@ export class ProjectReader {
     const validatedPath = this.pathBoundary.validatePath(taskDir);
 
     if (!existsSync(validatedPath)) {
-      throw ForgeLoopStudioError.artifactUnreadable(`task-state/${taskKey}`, 'Task directory not found');
+      throw ForgeLoopAuditError.artifactUnreadable(`task-state/${taskKey}`, 'Task directory not found');
     }
 
     const artifacts: Record<string, unknown> = {};
@@ -392,20 +392,20 @@ export class ProjectReader {
     const validatedPath = this.pathBoundary.validatePath(sessionPath);
     const stat = lstatSync(validatedPath);
     if (!stat.isFile() || stat.isSymbolicLink()) {
-      throw ForgeLoopStudioError.artifactInvalid('session.json', 'Symbolic links and non-file session artifacts are not allowed');
+      throw ForgeLoopAuditError.artifactInvalid('session.json', 'Symbolic links and non-file session artifacts are not allowed');
     }
     assertJsonFileSize('session.json', stat.size);
     const content = readFileSync(validatedPath, 'utf8');
     const parsed = parseJsonSafely(content);
     const validated = this.validateArtifact('session.json', parsed);
-    if (validated.error) throw ForgeLoopStudioError.artifactInvalid('session.json', validated.error);
+    if (validated.error) throw ForgeLoopAuditError.artifactInvalid('session.json', validated.error);
     return validated.value as Record<string, unknown>;
   }
 
   readEventPreview(taskKey: string, maxBytes = 64 * 1024): string {
     const eventPath = this.pathBoundary.resolveForgeLoopPathLexically(join(TASK_STATE_DIR, taskKey, 'events.ndjson'));
     if (!existsSync(eventPath)) return '';
-    if (lstatSync(eventPath).isSymbolicLink()) throw ForgeLoopStudioError.artifactInvalid('events.ndjson', 'Symbolic links are not allowed');
+    if (lstatSync(eventPath).isSymbolicLink()) throw ForgeLoopAuditError.artifactInvalid('events.ndjson', 'Symbolic links are not allowed');
     const validatedPath = this.pathBoundary.validatePath(eventPath);
     const fd = openSync(validatedPath, 'r');
     const size = fstatSync(fd).size;
@@ -435,12 +435,12 @@ export class ProjectReader {
       return null;
     }
 
-    if (lstatSync(snapshotPath).isSymbolicLink()) throw ForgeLoopStudioError.artifactInvalid('policy-snapshot.json', 'Symbolic links are not allowed');
+    if (lstatSync(snapshotPath).isSymbolicLink()) throw ForgeLoopAuditError.artifactInvalid('policy-snapshot.json', 'Symbolic links are not allowed');
     const validatedPath = this.pathBoundary.validatePath(snapshotPath);
     assertJsonFileSize('policy-snapshot.json', lstatSync(snapshotPath).size);
     const parsed = parseJsonSafely(readFileSync(validatedPath, 'utf8'));
     const validated = this.validateArtifact('policy-snapshot.json', parsed);
-    if (validated.error) throw ForgeLoopStudioError.artifactInvalid('policy-snapshot.json', validated.error);
+    if (validated.error) throw ForgeLoopAuditError.artifactInvalid('policy-snapshot.json', validated.error);
     return validated.value as Record<string, unknown>;
   }
 
@@ -456,10 +456,10 @@ export class ProjectReader {
       try {
         stat = lstatSync(candidate);
       } catch {
-        throw ForgeLoopStudioError.artifactUnreadable(relativePath, 'Artifact not found');
+        throw ForgeLoopAuditError.artifactUnreadable(relativePath, 'Artifact not found');
       }
       if (!stat.isFile() || stat.isSymbolicLink()) {
-        throw ForgeLoopStudioError.artifactInvalid(relativePath, 'Symbolic links and non-file artifacts are not allowed');
+        throw ForgeLoopAuditError.artifactInvalid(relativePath, 'Symbolic links and non-file artifacts are not allowed');
       }
       assertJsonFileSize(relativePath, stat.size);
       const validatedPath = this.pathBoundary.validatePath(candidate);
@@ -468,7 +468,7 @@ export class ProjectReader {
       if (definition.schema) {
         const validation = this.validator.validate(definition.schema, parsed);
         if (!validation.valid) {
-          throw ForgeLoopStudioError.artifactInvalid(relativePath, validation.errors?.join('; ') || 'Collection artifact schema validation failed');
+          throw ForgeLoopAuditError.artifactInvalid(relativePath, validation.errors?.join('; ') || 'Collection artifact schema validation failed');
         }
       }
       return content;
@@ -496,10 +496,10 @@ export class ProjectReader {
         idPattern = /^handoff-[A-Za-z0-9_-]+$/;
         break;
       default:
-        throw ForgeLoopStudioError.pathBoundaryViolation(String(request.kind), 'unsupported collection artifact kind');
+        throw ForgeLoopAuditError.pathBoundaryViolation(String(request.kind), 'unsupported collection artifact kind');
     }
     if (!idPattern.test(id) || id.includes('/') || id.includes('\\') || id.includes('..')) {
-      throw ForgeLoopStudioError.pathBoundaryViolation(id, `invalid ${request.kind} artifact identifier`);
+      throw ForgeLoopAuditError.pathBoundaryViolation(id, `invalid ${request.kind} artifact identifier`);
     }
 
     const relativePath = join(TASK_STATE_DIR, taskKey, definition.directory, `${id}.json`);
@@ -508,10 +508,10 @@ export class ProjectReader {
     try {
       stat = lstatSync(candidate);
     } catch {
-      throw ForgeLoopStudioError.artifactUnreadable(relativePath, 'Artifact not found');
+      throw ForgeLoopAuditError.artifactUnreadable(relativePath, 'Artifact not found');
     }
     if (!stat.isFile() || stat.isSymbolicLink()) {
-      throw ForgeLoopStudioError.artifactInvalid(relativePath, 'Symbolic links and non-file artifacts are not allowed');
+      throw ForgeLoopAuditError.artifactInvalid(relativePath, 'Symbolic links and non-file artifacts are not allowed');
     }
     assertJsonFileSize(relativePath, stat.size);
     const validatedPath = this.pathBoundary.validatePath(candidate);
@@ -519,7 +519,7 @@ export class ProjectReader {
     const parsed = parseJsonSafely(content);
     const validation = this.validator.validate(definition.schema, parsed);
     if (!validation.valid) {
-      throw ForgeLoopStudioError.artifactInvalid(relativePath, validation.errors?.join('; ') || 'Collection artifact schema validation failed');
+      throw ForgeLoopAuditError.artifactInvalid(relativePath, validation.errors?.join('; ') || 'Collection artifact schema validation failed');
     }
     return content;
   }
@@ -531,10 +531,10 @@ export class ProjectReader {
     try {
       stat = lstatSync(candidate);
     } catch {
-      throw ForgeLoopStudioError.artifactUnreadable(relativePath, 'Artifact not found');
+      throw ForgeLoopAuditError.artifactUnreadable(relativePath, 'Artifact not found');
     }
     if (!stat.isFile() || stat.isSymbolicLink()) {
-      throw ForgeLoopStudioError.artifactInvalid(relativePath, 'Symbolic links and non-file artifacts are not allowed');
+      throw ForgeLoopAuditError.artifactInvalid(relativePath, 'Symbolic links and non-file artifacts are not allowed');
     }
     assertJsonFileSize(relativePath, stat.size);
     const validatedPath = this.pathBoundary.validatePath(candidate);
@@ -542,7 +542,7 @@ export class ProjectReader {
     const parsed = parseJsonSafely(content);
     const validation = this.validator.validate('capability-policy.schema.json', parsed);
     if (!validation.valid) {
-      throw ForgeLoopStudioError.artifactInvalid(relativePath, validation.errors?.join('; ') || 'Capability policy schema validation failed');
+      throw ForgeLoopAuditError.artifactInvalid(relativePath, validation.errors?.join('; ') || 'Capability policy schema validation failed');
     }
     return content;
   }

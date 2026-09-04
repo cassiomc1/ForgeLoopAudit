@@ -5,10 +5,10 @@ export default async function afterPack(context) {
     return;
   }
   const packagedExecutable = context.electronPlatformName === 'darwin'
-    ? `${context.appOutDir}/ForgeLoop Studio.app/Contents/MacOS/ForgeLoop Studio`
+    ? `${context.appOutDir}/ForgeLoopAudit.app/Contents/MacOS/ForgeLoopAudit`
     : context.electronPlatformName === 'win32'
-      ? `${context.appOutDir}/ForgeLoop Studio.exe`
-      : `${context.appOutDir}/forgeloop-studio`;
+      ? `${context.appOutDir}/ForgeLoopAudit.exe`
+      : `${context.appOutDir}/forgeloop-audit`;
   await flipFuses(packagedExecutable, {
     version: FuseVersion.V1,
     strictlyRequireAllFuses: false,

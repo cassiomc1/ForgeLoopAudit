@@ -658,7 +658,7 @@ function buildCatalogTask() {
   artifacts['contract.json'] = contract(taskId, {
     objective: 'Implement the premium product catalog with filtering and a responsive grid view.',
     deliverables: ['Product data model with typed catalog entries', 'Category and price filtering', 'Responsive product grid component'],
-    constraints: ['No new runtime dependencies', 'Must render read-only in Studio demo scope'],
+    constraints: ['No new runtime dependencies', 'Must render read-only in ForgeLoopAudit demo scope'],
     risks: ['Large catalogs could slow initial render'],
     verification: ['Catalog unit tests pass (14 cases)', 'Filtering logic covered by table-driven tests'],
     successCriteria: ['Products render in a responsive grid', 'Filters combine category and price range'],

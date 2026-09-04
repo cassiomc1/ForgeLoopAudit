@@ -10,7 +10,7 @@
   ],
   "constraints": [
     "No new runtime dependencies",
-    "Must render read-only in Studio demo scope"
+    "Must render read-only in ForgeLoopAudit demo scope"
   ],
   "risks": [
     "Large catalogs could slow initial render"

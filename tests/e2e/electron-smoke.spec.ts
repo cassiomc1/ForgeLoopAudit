@@ -8,11 +8,11 @@ import { join } from 'node:path';
 const DEMO_PROJECT = join(process.cwd(), 'demo');
 
 test('built Electron app launches and exposes the preload bridge', async () => {
-  const app = await electron.launch({ args: ['.'], env: { ...process.env, NODE_ENV: 'production', FORGELOOP_STUDIO_SMOKE: '1' } });
+  const app = await electron.launch({ args: ['.'], env: { ...process.env, NODE_ENV: 'production', FORGELOOP_AUDIT_SMOKE: '1' } });
   try {
     const window = await app.firstWindow();
-    await expect(window).toHaveTitle('ForgeLoop Studio');
-    expect(await window.evaluate(() => typeof window.forgeLoopStudio)).toBe('object');
+    await expect(window).toHaveTitle('ForgeLoopAudit');
+    expect(await window.evaluate(() => typeof window.forgeLoopAudit)).toBe('object');
   } finally {
     await app.close();
   }
@@ -27,7 +27,7 @@ function canonicalize(value: unknown): unknown {
 }
 
 function createFixtureProject(): string {
-  const root = mkdtempSync(join(tmpdir(), 'forgeloop-studio-e2e-'));
+  const root = mkdtempSync(join(tmpdir(), 'forgeloop-audit-e2e-'));
   // Canonical ForgeLoop layout: directory name must be sha256(taskId).
   const fixtureKey = createHash('sha256').update('fixture-task').digest('hex');
   const taskDir = join(root, '.forgeloop', 'task-state', fixtureKey);
@@ -107,35 +107,58 @@ function addLiveExecution(projectRoot: string, taskId: string): void {
     ...source,
     executionId: 'exec-live-audit',
     checkId: 'live-audit',
-    requirement: 'Live execution updates appear in Studio',
+    requirement: 'Live execution updates appear in ForgeLoopAudit',
     argv: ['npm', 'run', 'live-audit'],
     startedAt: new Date().toISOString(),
     finishedAt: new Date().toISOString(),
   }));
 }
 
-test('fixture project flows through the functional v0.1 renderer surfaces', async () => {
+test('fixture project flows through auditor-first surfaces and task-detail drill-downs', async () => {
   const fixture = createFixtureProject();
-  const app = await electron.launch({ args: ['.'], env: { ...process.env, NODE_ENV: 'production', FORGELOOP_STUDIO_SMOKE: '1', FORGELOOP_STUDIO_FIXTURE_PROJECT: fixture } });
+  const app = await electron.launch({ args: ['.'], env: { ...process.env, NODE_ENV: 'production', FORGELOOP_AUDIT_SMOKE: '1', FORGELOOP_AUDIT_FIXTURE_PROJECT: fixture } });
   try {
     const window = await app.firstWindow();
-    await expect(window.getByRole('heading', { name: 'Project Overview' })).toBeVisible();
-    await expect(window.getByText('fixture-task').first()).toBeVisible();
+    await expect(window.getByRole('heading', { name: 'Audit Summary' })).toBeVisible();
+    const auditButton = window.getByRole('button', { name: /Run audit|Retry audit/, exact: true });
+    if (await auditButton.count() > 0) {
+      await auditButton.click();
+      await expect(window.getByText(/Audit coverage|Score unavailable/)).toBeVisible({ timeout: 10_000 });
+    }
     for (const page of [
       ['Tasks', 'Tasks'],
-      ['Flow', 'Lifecycle Flow'],
-      ['Contract', 'Contract Inspector'],
+      ['Findings', 'Findings'],
       ['Evidence', 'Evidence Matrix'],
-      ['Events', 'Event Ledger'],
-      ['Continuity', 'Continuity'],
-      ['Policy', 'Policy'],
+      ['Quality', 'Engineering Quality'],
+      ['Policy & Trust', 'Policy & Trust'],
+      ['Audit History', 'Audit History'],
+      ['Reports', 'Reports'],
       ['Diagnostics', 'Diagnostics'],
-      ['Actions', 'Actions'],
+      ['Settings', 'Settings'],
     ]) {
       await window.getByLabel('Main navigation').getByRole('button', { name: page[0], exact: true }).click();
       await expect(window.locator('h1').filter({ hasText: page[1] })).toBeVisible({ timeout: 5000 });
     }
-    await window.getByLabel('Main navigation').getByRole('button', { name: 'Events', exact: true }).click();
+    await window.getByLabel('Main navigation').getByRole('button', { name: 'Tasks', exact: true }).click();
+    await expect(window.getByText('fixture-task').first()).toBeVisible();
+    await window.getByText('fixture-task').first().click();
+    await expect(window.locator('h1').filter({ hasText: 'Task Audit' })).toBeVisible({ timeout: 5000 });
+    const detailNavigation = window.getByLabel('Task detail navigation');
+    for (const page of [
+      ['Contract', 'Contract Inspector'],
+      ['Evidence', 'Evidence Matrix'],
+      ['Lifecycle', 'Lifecycle Flow'],
+      ['Events', 'Event Ledger'],
+      ['Continuity', 'Continuity'],
+      ['Executions', 'Executions'],
+      ['Actions', 'Actions'],
+      ['Boundaries', 'Project Overview'],
+      ['Audit', 'Task Audit'],
+    ]) {
+      await detailNavigation.getByRole('button', { name: page[0], exact: true }).click();
+      await expect(window.locator('h1').filter({ hasText: page[1] })).toBeVisible({ timeout: 5000 });
+    }
+    await detailNavigation.getByRole('button', { name: 'Events', exact: true }).click();
     await expect(window.locator('h1').filter({ hasText: 'Event Ledger' })).toBeVisible({ timeout: 5000 });
     await window.getByRole('button', { name: 'Validate ledger', exact: true }).click();
     await expect(window.locator('body')).toContainText('Page schema: VALID');
@@ -148,17 +171,19 @@ test('fixture project flows through the functional v0.1 renderer surfaces', asyn
 test('demo exposes the 1.6.4 boundary surfaces without mutation controls', async () => {
   const app = await electron.launch({
     args: ['.'],
-    env: { ...process.env, NODE_ENV: 'production', FORGELOOP_STUDIO_SMOKE: '1', FORGELOOP_STUDIO_FIXTURE_PROJECT: DEMO_PROJECT },
+    env: { ...process.env, NODE_ENV: 'production', FORGELOOP_AUDIT_SMOKE: '1', FORGELOOP_AUDIT_FIXTURE_PROJECT: DEMO_PROJECT },
   });
   try {
     const window = await app.firstWindow();
-    await expect(window.getByRole('heading', { name: 'Project Overview' })).toBeVisible();
-    await expect(window.getByRole('heading', { name: 'Task Boundaries' })).toBeVisible();
+    await expect(window.getByRole('heading', { name: 'Audit Summary' })).toBeVisible();
+    const auditButton = window.getByRole('button', { name: /Run audit|Retry audit/, exact: true });
+    if (await auditButton.count() > 0) await auditButton.click();
 
     await window.getByLabel('Main navigation').getByRole('button', { name: 'Tasks', exact: true }).click();
     await window.getByText('TASK-003').click();
-    await expect(window.locator('h1').filter({ hasText: 'Lifecycle Flow' })).toBeVisible();
-    await window.getByLabel('Main navigation').getByRole('button', { name: 'Overview', exact: true }).click();
+    await expect(window.locator('h1').filter({ hasText: 'Task Audit' })).toBeVisible();
+    const detailNavigation = window.getByLabel('Task detail navigation');
+    await detailNavigation.getByRole('button', { name: 'Boundaries', exact: true }).click();
     await expect(window.getByRole('heading', { name: 'Workspace Binding' })).toBeVisible();
     await expect(window.getByText('MISMATCH', { exact: true })).toBeVisible();
     await expect(window.getByRole('heading', { name: 'Responsibility' })).toBeVisible();
@@ -166,7 +191,7 @@ test('demo exposes the 1.6.4 boundary surfaces without mutation controls', async
 
     await window.getByLabel('Main navigation').getByRole('button', { name: 'Tasks', exact: true }).click();
     await window.getByText('TASK-004').click();
-    await window.getByLabel('Main navigation').getByRole('button', { name: 'Continuity', exact: true }).click();
+    await window.getByLabel('Task detail navigation').getByRole('button', { name: 'Continuity', exact: true }).click();
     await expect(window.getByRole('heading', { name: 'Canonical Handoffs' })).toBeVisible();
     await expect(window.getByText('handoff-harness-a-to-b')).toBeVisible();
     await expect(window.getByText(/Immutable protocol snapshot — not review, completion, delegation, or authority evidence/)).toBeVisible();
@@ -187,33 +212,35 @@ test('demo exposes the 1.6.4 boundary surfaces without mutation controls', async
 });
 
 test('live watcher updates event and execution surfaces after monitored changes', async () => {
-  const fixture = mkdtempSync(join(tmpdir(), 'forgeloop-studio-live-e2e-'));
+  const fixture = mkdtempSync(join(tmpdir(), 'forgeloop-audit-live-e2e-'));
   cpSync(DEMO_PROJECT, fixture, { recursive: true });
   const app = await electron.launch({
     args: ['.'],
-    env: { ...process.env, NODE_ENV: 'production', FORGELOOP_STUDIO_SMOKE: '1', FORGELOOP_STUDIO_FIXTURE_PROJECT: fixture },
+    env: { ...process.env, NODE_ENV: 'production', FORGELOOP_AUDIT_SMOKE: '1', FORGELOOP_AUDIT_FIXTURE_PROJECT: fixture },
   });
   try {
     const window = await app.firstWindow();
-    await expect(window.getByRole('heading', { name: 'Project Overview' })).toBeVisible();
+    await expect(window.getByRole('heading', { name: 'Audit Summary' })).toBeVisible();
 
-    await window.getByLabel('Main navigation').getByRole('button', { name: 'Events', exact: true }).click();
+    await window.getByLabel('Main navigation').getByRole('button', { name: 'Tasks', exact: true }).click();
+    await window.getByText('TASK-004').click();
+    await window.getByLabel('Task detail navigation').getByRole('button', { name: 'Events', exact: true }).click();
     await expect(window.getByRole('heading', { name: 'Event Ledger' })).toBeVisible();
     await window.getByRole('combobox').selectOption('TASK-004');
     await expect(window.getByText('TASK_BLOCKED', { exact: true })).toBeVisible();
     appendLiveEvent(fixture, 'TASK-004', 'LIVE_AUDIT_EVENT');
     await expect(window.getByText('LIVE_AUDIT_EVENT', { exact: true })).toBeVisible({ timeout: 5000 });
-    await window.getByLabel('Main navigation').getByRole('button', { name: 'Overview', exact: true }).click();
+    await window.getByLabel('Task detail navigation').getByRole('button', { name: 'Boundaries', exact: true }).click();
     const projectInformation = window.getByRole('region', { name: 'Project Information', exact: true });
     await expect(projectInformation).toContainText('event-appended');
     await expect(projectInformation).toContainText('TASK-004');
 
-    await window.getByLabel('Main navigation').getByRole('button', { name: 'Executions', exact: true }).click();
+    await window.getByLabel('Task detail navigation').getByRole('button', { name: 'Executions', exact: true }).click();
     await expect(window.getByRole('heading', { name: 'Executions' })).toBeVisible();
     await window.getByRole('combobox').selectOption('TASK-003');
     addLiveExecution(fixture, 'TASK-003');
     await expect(window.getByRole('button', { name: /exec-live-audit/ })).toBeVisible({ timeout: 5000 });
-    await window.getByLabel('Main navigation').getByRole('button', { name: 'Overview', exact: true }).click();
+    await window.getByLabel('Task detail navigation').getByRole('button', { name: 'Boundaries', exact: true }).click();
     await expect(window.getByRole('region', { name: 'Project Information', exact: true })).toContainText('execution-changed');
     await expect(window.getByRole('region', { name: 'Project Information', exact: true })).toContainText('TASK-003');
   } finally {

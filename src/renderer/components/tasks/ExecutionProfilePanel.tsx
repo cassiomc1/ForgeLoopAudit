@@ -161,7 +161,7 @@ export function ExecutionProfilePanel({ context, metrics, observedAt }: Executio
       <div className="mt-3">
         <Provenance
           source={context.source === 'FORGELOOP_INTEGRATION' ? 'ForgeLoop task/context' : 'Compatibility projection'}
-          authority={context.source === 'FORGELOOP_INTEGRATION' ? 'FORGELOOP' : 'STUDIO_OBSERVATION'}
+          authority={context.source === 'FORGELOOP_INTEGRATION' ? 'FORGELOOP' : 'AUDIT_OBSERVATION'}
           observedAt={observedAt}
         />
       </div>

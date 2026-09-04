@@ -1,7 +1,8 @@
 import { app, ipcMain, dialog, BrowserWindow } from 'electron';
 import { PathBoundary } from '@main/security/path-boundary';
-import { ForgeLoopStudioError } from '@shared/errors';
-import type { ProjectDetectionResult, ProjectKind, RecentProject, StudioError, ForgeLoopCompatibilityMode } from '@shared/domain';
+import { ForgeLoopAuditError } from '@shared/errors';
+import type { ProjectDetectionResult, ProjectKind, RecentProject, AuditAppError, ForgeLoopCompatibilityMode } from '@shared/domain';
+import type { AuditDiff, AuditExportOptions, AuditExportResult, AuditFinding, AuditFindingFilter, AuditSnapshotMetadata, ProjectAuditSnapshot, StructuralQualityAuditView, TaskAuditSnapshot } from '@shared/audit';
 import { resolveRecentProjectKind } from './project-kind';
 import { IPC_CHANNELS } from '@shared/ipc';
 import { createProjectSnapshotBuilder, normalizePolicyStatus, type ProjectSnapshotBuilder, type ProjectCompatibilityContext } from '@main/core/project/project-snapshot';
@@ -13,7 +14,7 @@ import { createTaskIndexer, createTaskSnapshotBuilder, createGateReader, type Ta
 import { createEventLedgerReader, type EventLedgerReader } from '@main/core/events/ledger-reader';
 import { createForgeLoopIntegration, type ForgeLoopIntegrationAdapter } from '@main/core/integration/forgeloop-integration';
 import { normalizeCanonicalProtocolInfo, negotiateCompatibilityMode } from '@main/core/protocol/protocol-capabilities';
-import { runStudioReadCommand } from '@main/core/integration/studio-read-commands';
+import { runAuditReadCommand } from '@main/core/integration/audit-read-commands';
 import { createCanonicalObservabilityService, type CanonicalObservabilityService } from '@main/core/integration/canonical-observability';
 import { createCanonicalActionsService, type CanonicalActionsService } from '@main/core/integration/canonical-actions';
 import { createCanonicalTrajectoryService, type CanonicalTrajectoryService } from '@main/core/integration/canonical-trajectory';
@@ -23,16 +24,25 @@ import { createCanonicalContinuityLintService, type CanonicalContinuityLintServi
 import { createCanonicalTaskReadService, type CanonicalTaskReadService } from '@main/core/tasks/canonical-task-read-service';
 import Store from 'electron-store';
 import { z } from 'zod';
-import { basename } from 'path';
+import { basename, dirname } from 'path';
+import { mkdir, writeFile } from 'fs/promises';
+import { createHash } from 'crypto';
 import { resolveTrustedSchemaDirectory, SchemaValidator } from '@main/core/protocol/validator';
 import { isFixtureProjectMode as resolveFixtureProjectMode } from './fixture-mode';
 import { resolveBundledDemoPath } from '@main/demo/demo-path';
-import { buildStudioDiagnostics } from '@main/core/diagnostics/diagnostics';
+import { buildAuditRuntimeDiagnostics } from '@main/core/diagnostics/diagnostics';
 import { assertTrustedSender as assertSenderUrl } from '@main/security/sender-policy';
 import { resolveForgeLoopProjectRoot } from '@main/core/project/project-discovery';
+import { createProjectAuditService, type ProjectAuditService } from '@main/core/audit/project-audit-service';
+import { createStructuralQualityAuditService, type StructuralQualityAuditService } from '@main/core/audit/structural-quality-service';
+import { AuditSnapshotStore } from '@main/core/audit/audit-snapshot-store';
+import { diffAuditSnapshots } from '@main/core/audit/audit-diff';
+import { buildAuditReport } from '@main/core/audit/audit-report';
+import { createProjectFingerprint } from '@main/core/audit/audit-fingerprint';
+import { validateAuditExportPath } from '@main/core/audit/audit-export-path';
 
 const store = new Store<{ recentProjects: RecentProject[] }>({
-  name: 'forgeloop-studio-settings',
+  name: 'forgeloop-audit-settings',
   defaults: { recentProjects: [] },
 });
 
@@ -54,6 +64,10 @@ let currentTaskBoundaries: CanonicalTaskBoundariesService | null = null;
 let currentContinuityLint: CanonicalContinuityLintService | null = null;
 let currentWatcher: ReturnType<typeof createProjectWatcher> | null = null;
 let currentSnapshotBuilder: ProjectSnapshotBuilder | null = null;
+let currentProjectAuditService: ProjectAuditService | null = null;
+let currentStructuralQualityService: StructuralQualityAuditService | null = null;
+let currentAuditHistoryStore: AuditSnapshotStore | null = null;
+let currentAuditSnapshot: ProjectAuditSnapshot | null = null;
 let currentMainWindow: BrowserWindow | null = null;
 let snapshotRefreshScheduled = false;
 let snapshotRefreshTimer: ReturnType<typeof setTimeout> | null = null;
@@ -74,9 +88,24 @@ const RawCollectionArtifactSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('capability-policy') }),
 ]);
 const ExecutionQuerySchema = z.object({ taskId: TaskIdSchema, limit: z.number().int().min(1).max(100).optional() });
+const AuditFindingFilterSchema = z.object({
+  taskId: TaskIdSchema.nullable().optional(),
+  severity: z.union([z.enum(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO', 'UNKNOWN']), z.array(z.enum(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO', 'UNKNOWN']))]).optional(),
+  domain: z.union([z.string().min(1).max(80), z.array(z.string().min(1).max(80))]).optional(),
+  source: z.union([z.string().min(1).max(80), z.array(z.string().min(1).max(80))]).optional(),
+  canonical: z.boolean().optional(),
+  limit: z.number().int().min(1).max(1000).optional(),
+});
+const AuditExportSchema = z.object({
+  format: z.enum(['JSON', 'MARKDOWN', 'SARIF']),
+  destinationPath: z.string().min(1).max(4096),
+  includeDiff: z.boolean().optional(),
+  baseAuditId: z.string().max(300).optional(),
+  allowProjectProtocolPath: z.boolean().optional(),
+});
 
 function assertTrustedSender(event: Electron.IpcMainInvokeEvent): void {
-  if (!currentMainWindow || event.sender.id !== currentMainWindow.webContents.id) throw ForgeLoopStudioError.unknown('Untrusted IPC sender');
+  if (!currentMainWindow || event.sender.id !== currentMainWindow.webContents.id) throw ForgeLoopAuditError.unknown('Untrusted IPC sender');
   const url = event.senderFrame?.url || '';
   assertSenderUrl(url, app.isPackaged, currentMainWindow.webContents.getURL());
 }
@@ -109,7 +138,7 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
   ipcMain.handle(IPC_CHANNELS.OPEN_DEMO_PROJECT, async (event): Promise<ProjectDetectionResult> => {
     assertTrustedSender(event);
     const demoRoot = resolveBundledDemoPath({ isPackaged: app.isPackaged, appPath: app.getAppPath(), resourcesPath: process.resourcesPath });
-    if (!demoRoot) throw ForgeLoopStudioError.projectNotForgeLoop('bundled demo');
+    if (!demoRoot) throw ForgeLoopAuditError.projectNotForgeLoop('bundled demo');
     return openProject(demoRoot, 'DEMO');
   });
 
@@ -118,10 +147,89 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
     await closeProject();
   });
 
+  ipcMain.handle(IPC_CHANNELS.GET_PROJECT_AUDIT, async (event): Promise<ProjectAuditSnapshot> => {
+    assertTrustedSender(event);
+    if (!currentProjectAuditService) throw ForgeLoopAuditError.unknown('No project open');
+    const audit = await currentProjectAuditService.auditProject();
+    currentAuditSnapshot = audit;
+    return audit;
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GET_TASK_AUDIT, async (event, taskId: string): Promise<TaskAuditSnapshot> => {
+    assertTrustedSender(event);
+    const safeTaskId = TaskIdSchema.parse(taskId);
+    if (!currentProjectAuditService) throw ForgeLoopAuditError.unknown('No project open');
+    return currentProjectAuditService.auditTask(safeTaskId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GET_AUDIT_FINDINGS, async (event, filter?: AuditFindingFilter): Promise<AuditFinding[]> => {
+    assertTrustedSender(event);
+    if (!currentProjectAuditService) throw ForgeLoopAuditError.unknown('No project open');
+    const safeFilter = AuditFindingFilterSchema.parse(filter ?? {}) as AuditFindingFilter;
+    const audit = currentAuditSnapshot ?? await currentProjectAuditService.auditProject();
+    currentAuditSnapshot = audit;
+    return audit.findings.filter((finding) => matchesAuditFindingFilter(finding, safeFilter)).slice(0, safeFilter.limit ?? 1000);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GET_TASK_STRUCTURAL_QUALITY, async (event, taskId: string): Promise<StructuralQualityAuditView> => {
+    assertTrustedSender(event);
+    const safeTaskId = TaskIdSchema.parse(taskId);
+    if (!currentStructuralQualityService) throw ForgeLoopAuditError.unknown('No project open');
+    return currentStructuralQualityService.readTask(safeTaskId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.SAVE_AUDIT_BASELINE, async (event): Promise<AuditSnapshotMetadata> => {
+    assertTrustedSender(event);
+    if (!currentProjectAuditService || !currentAuditHistoryStore) throw ForgeLoopAuditError.unknown('No project open');
+    const audit = await currentProjectAuditService.auditProject();
+    const metadata = await currentAuditHistoryStore.save(audit);
+    currentAuditSnapshot = { ...audit, auditId: metadata.auditId };
+    return metadata;
+  });
+
+  ipcMain.handle(IPC_CHANNELS.LIST_AUDIT_HISTORY, async (event): Promise<AuditSnapshotMetadata[]> => {
+    assertTrustedSender(event);
+    if (!currentAuditHistoryStore) throw ForgeLoopAuditError.unknown('No project open');
+    return currentAuditHistoryStore.list();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.COMPARE_AUDITS, async (event, baseAuditId: string, currentAuditId?: string): Promise<AuditDiff> => {
+    assertTrustedSender(event);
+    const safeBaseId = z.string().min(1).max(300).parse(baseAuditId);
+    const safeCurrentId = currentAuditId === undefined ? undefined : z.string().min(1).max(300).parse(currentAuditId);
+    if (!currentAuditHistoryStore || !currentProjectAuditService) throw ForgeLoopAuditError.unknown('No project open');
+    const base = await currentAuditHistoryStore.read(safeBaseId);
+    const current = safeCurrentId
+      ? await currentAuditHistoryStore.read(safeCurrentId)
+      : currentAuditSnapshot ?? await currentProjectAuditService.auditProject();
+    currentAuditSnapshot = current;
+    return diffAuditSnapshots(base, current);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.EXPORT_AUDIT_REPORT, async (event, options: AuditExportOptions): Promise<AuditExportResult> => {
+    assertTrustedSender(event);
+    const safeOptions = AuditExportSchema.parse(options) as AuditExportOptions;
+    if (!currentProjectAuditService) throw ForgeLoopAuditError.unknown('No project open');
+    const audit = currentAuditSnapshot ?? await currentProjectAuditService.auditProject();
+    currentAuditSnapshot = audit;
+    const destinationPath = validateAuditExportPath(safeOptions.destinationPath, getCurrentProjectRoot(), safeOptions.allowProjectProtocolPath === true);
+    const content = buildAuditReport(audit, safeOptions.format);
+    await mkdir(dirname(destinationPath), { recursive: true });
+    await writeFile(destinationPath, content, { encoding: 'utf8', flag: 'wx' });
+    return {
+      format: safeOptions.format,
+      destinationPath,
+      auditId: audit.auditId ?? audit.fingerprint,
+      fingerprint: audit.fingerprint,
+      bytes: Buffer.byteLength(content, 'utf8'),
+      sha256: createHash('sha256').update(content).digest('hex'),
+    };
+  });
+
   ipcMain.handle(IPC_CHANNELS.GET_PROJECT_SNAPSHOT, async (event): Promise<any> => {
     assertTrustedSender(event);
     if (!currentSnapshotBuilder) {
-      throw ForgeLoopStudioError.unknown('No project open');
+      throw ForgeLoopAuditError.unknown('No project open');
     }
     return currentSnapshotBuilder.build();
   });
@@ -129,13 +237,13 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
   ipcMain.handle(IPC_CHANNELS.GET_TASK, async (event, taskId: string): Promise<any> => {
     assertTrustedSender(event); TaskIdSchema.parse(taskId);
     if (!currentTaskSnapshotBuilder || !currentTaskIndexer || !currentEventReader) {
-      throw ForgeLoopStudioError.unknown('No project open');
+      throw ForgeLoopAuditError.unknown('No project open');
     }
 
     const tasks = currentTaskIndexer.listTasks();
     const task = tasks.find((t) => t.taskId === taskId || t.taskKey === taskId);
     if (!task) {
-      throw ForgeLoopStudioError.artifactUnreadable(taskId, 'Task not found');
+      throw ForgeLoopAuditError.artifactUnreadable(taskId, 'Task not found');
     }
 
     const artifacts = currentProjectReader!.readTaskSummaryArtifacts(task.taskKey);
@@ -169,11 +277,11 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
   ipcMain.handle(IPC_CHANNELS.GET_POLICY_STATUS, async (event, taskId?: string): Promise<any> => {
     assertTrustedSender(event);
     const safeTaskId = taskId === undefined ? undefined : TaskIdSchema.parse(taskId);
-    if (!currentForgeCli || !currentProjectReader) throw ForgeLoopStudioError.unknown('No project open');
+    if (!currentForgeCli || !currentProjectReader) throw ForgeLoopAuditError.unknown('No project open');
     if (isFixtureProjectMode()) return null;
     let policyResult: { success: boolean; data?: Record<string, unknown> };
     if (currentIntegration && currentCompatibilityMode === 'INTEGRATION_V1' && getCurrentProjectRoot()) {
-      const outcome = await runStudioReadCommand<Record<string, unknown>>(
+      const outcome = await runAuditReadCommand<Record<string, unknown>>(
         currentIntegration,
         getCurrentProjectRoot()!,
         'policy-status',
@@ -192,13 +300,13 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
   ipcMain.handle(IPC_CHANNELS.GET_TASK_EVENTS, async (event, taskId: string, cursor?: string, limit?: number): Promise<any> => {
     assertTrustedSender(event); const query = EventQuerySchema.parse({ taskId, cursor, limit });
     if (!currentTaskIndexer || !currentEventReader) {
-      throw ForgeLoopStudioError.unknown('No project open');
+      throw ForgeLoopAuditError.unknown('No project open');
     }
 
     const tasks = currentTaskIndexer.listTasks();
     const task = tasks.find((t) => t.taskId === query.taskId || t.taskKey === query.taskId);
     if (!task) {
-      throw ForgeLoopStudioError.artifactUnreadable(taskId, 'Task not found');
+      throw ForgeLoopAuditError.artifactUnreadable(taskId, 'Task not found');
     }
 
     return currentEventReader.readEventsPaginated(task.taskKey, query.cursor, query.limit);
@@ -206,9 +314,9 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
 
   ipcMain.handle(IPC_CHANNELS.VALIDATE_EVENT_LEDGER, async (event, taskId: string): Promise<any> => {
     assertTrustedSender(event); const safeTaskId = TaskIdSchema.parse(taskId);
-    if (!currentTaskIndexer || !currentEventReader) throw ForgeLoopStudioError.unknown('No project open');
+    if (!currentTaskIndexer || !currentEventReader) throw ForgeLoopAuditError.unknown('No project open');
     const task = currentTaskIndexer.listTasks().find((entry) => entry.taskId === safeTaskId || entry.taskKey === safeTaskId);
-    if (!task) throw ForgeLoopStudioError.artifactUnreadable(safeTaskId, 'Task not found');
+    if (!task) throw ForgeLoopAuditError.artifactUnreadable(safeTaskId, 'Task not found');
     const result = currentEventReader.validateIntegrity(task.taskKey);
     return { ...result, scope: 'LEDGER' };
   });
@@ -216,20 +324,20 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
   ipcMain.handle(IPC_CHANNELS.GET_RAW_ARTIFACT, async (event, request: { taskId: string; artifact: string }): Promise<string> => {
     assertTrustedSender(event); const safeRequest = RawArtifactSchema.parse(request);
     if (!currentTaskIndexer || !currentProjectReader) {
-      throw ForgeLoopStudioError.unknown('No project open');
+      throw ForgeLoopAuditError.unknown('No project open');
     }
 
     const tasks = currentTaskIndexer.listTasks();
     const task = tasks.find((t) => t.taskId === safeRequest.taskId || t.taskKey === safeRequest.taskId);
     if (!task) {
-      throw ForgeLoopStudioError.artifactUnreadable(request.taskId, 'Task not found');
+      throw ForgeLoopAuditError.artifactUnreadable(request.taskId, 'Task not found');
     }
 
     if (safeRequest.artifact === 'events.ndjson') return currentProjectReader.readEventPreview(task.taskKey);
     const artifacts = currentProjectReader.readTaskSummaryArtifacts(task.taskKey);
     const content = artifacts[safeRequest.artifact as keyof typeof artifacts];
     if (content === undefined) {
-      throw ForgeLoopStudioError.artifactUnreadable(safeRequest.artifact, 'Artifact not found');
+      throw ForgeLoopAuditError.artifactUnreadable(safeRequest.artifact, 'Artifact not found');
     }
 
     return typeof content === 'string' ? content : JSON.stringify(content, null, 2);
@@ -238,45 +346,45 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
   ipcMain.handle(IPC_CHANNELS.GET_RAW_COLLECTION_ARTIFACT, async (event, request: unknown): Promise<string> => {
     assertTrustedSender(event);
     const safeRequest = RawCollectionArtifactSchema.parse(request);
-    if (!currentProjectReader || !currentTaskIndexer) throw ForgeLoopStudioError.unknown('No project open');
+    if (!currentProjectReader || !currentTaskIndexer) throw ForgeLoopAuditError.unknown('No project open');
     if (safeRequest.kind === 'capability-policy') return currentProjectReader.readRawCapabilityPolicy();
     const task = currentTaskIndexer.listTasks().find((entry) => entry.taskId === safeRequest.taskId || entry.taskKey === safeRequest.taskId);
-    if (!task) throw ForgeLoopStudioError.artifactUnreadable(safeRequest.taskId, 'Task not found');
+    if (!task) throw ForgeLoopAuditError.artifactUnreadable(safeRequest.taskId, 'Task not found');
     return currentProjectReader.readRawCollectionArtifact(task.taskKey, safeRequest);
   });
 
   ipcMain.handle(IPC_CHANNELS.GET_TASK_HISTORY, async (event, taskId: string) => {
     assertTrustedSender(event);
     const safeTaskId = TaskIdSchema.parse(taskId);
-    if (!currentObservability || !getCurrentProjectRoot()) throw ForgeLoopStudioError.unknown('No project open');
+    if (!currentObservability || !getCurrentProjectRoot()) throw ForgeLoopAuditError.unknown('No project open');
     return currentObservability.getHistory(getCurrentProjectRoot()!, safeTaskId);
   });
 
   ipcMain.handle(IPC_CHANNELS.GET_TASK_TRACE, async (event, taskId: string) => {
     assertTrustedSender(event);
     const safeTaskId = TaskIdSchema.parse(taskId);
-    if (!currentObservability || !getCurrentProjectRoot()) throw ForgeLoopStudioError.unknown('No project open');
+    if (!currentObservability || !getCurrentProjectRoot()) throw ForgeLoopAuditError.unknown('No project open');
     return currentObservability.getTrace(getCurrentProjectRoot()!, safeTaskId);
   });
 
   ipcMain.handle(IPC_CHANNELS.GET_TASK_REFLECTION, async (event, taskId: string) => {
     assertTrustedSender(event);
     const safeTaskId = TaskIdSchema.parse(taskId);
-    if (!currentObservability || !getCurrentProjectRoot()) throw ForgeLoopStudioError.unknown('No project open');
+    if (!currentObservability || !getCurrentProjectRoot()) throw ForgeLoopAuditError.unknown('No project open');
     return currentObservability.getReflection(getCurrentProjectRoot()!, safeTaskId);
   });
 
   ipcMain.handle(IPC_CHANNELS.GET_TASK_INSPECTION, async (event, taskId: string) => {
     assertTrustedSender(event);
     const safeTaskId = TaskIdSchema.parse(taskId);
-    if (!currentObservability || !getCurrentProjectRoot()) throw ForgeLoopStudioError.unknown('No project open');
+    if (!currentObservability || !getCurrentProjectRoot()) throw ForgeLoopAuditError.unknown('No project open');
     return currentObservability.getInspection(getCurrentProjectRoot()!, safeTaskId);
   });
 
   ipcMain.handle(IPC_CHANNELS.GET_TASK_ACTIONS, async (event, taskId: string) => {
     assertTrustedSender(event);
     const safeTaskId = TaskIdSchema.parse(taskId);
-    if (!currentActions || !getCurrentProjectRoot()) throw ForgeLoopStudioError.unknown('No project open');
+    if (!currentActions || !getCurrentProjectRoot()) throw ForgeLoopAuditError.unknown('No project open');
     return currentActions.getActions(getCurrentProjectRoot()!, safeTaskId);
   });
 
@@ -284,83 +392,83 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
     assertTrustedSender(event);
     const safeTaskId = TaskIdSchema.parse(taskId);
     const safeActionId = z.string().regex(/^action-[A-Za-z0-9_-]+$/).parse(actionId);
-    if (!currentActions || !getCurrentProjectRoot()) throw ForgeLoopStudioError.unknown('No project open');
+    if (!currentActions || !getCurrentProjectRoot()) throw ForgeLoopAuditError.unknown('No project open');
     return currentActions.getAction(getCurrentProjectRoot()!, safeTaskId, safeActionId);
   });
 
   ipcMain.handle(IPC_CHANNELS.GET_TASK_APPROVALS, async (event, taskId: string) => {
     assertTrustedSender(event);
     const safeTaskId = TaskIdSchema.parse(taskId);
-    if (!currentActions || !getCurrentProjectRoot()) throw ForgeLoopStudioError.unknown('No project open');
+    if (!currentActions || !getCurrentProjectRoot()) throw ForgeLoopAuditError.unknown('No project open');
     return currentActions.getApprovals(getCurrentProjectRoot()!, safeTaskId);
   });
 
   ipcMain.handle(IPC_CHANNELS.GET_TASK_METRICS, async (event, taskId: string) => {
     assertTrustedSender(event);
     const safeTaskId = TaskIdSchema.parse(taskId);
-    if (!currentTrajectory || !getCurrentProjectRoot()) throw ForgeLoopStudioError.unknown('No project open');
+    if (!currentTrajectory || !getCurrentProjectRoot()) throw ForgeLoopAuditError.unknown('No project open');
     return currentTrajectory.getMetrics(getCurrentProjectRoot()!, safeTaskId);
   });
 
   ipcMain.handle(IPC_CHANNELS.GET_TASK_EVALUATIONS, async (event, taskId: string) => {
     assertTrustedSender(event);
     const safeTaskId = TaskIdSchema.parse(taskId);
-    if (!currentTrajectory || !getCurrentProjectRoot()) throw ForgeLoopStudioError.unknown('No project open');
+    if (!currentTrajectory || !getCurrentProjectRoot()) throw ForgeLoopAuditError.unknown('No project open');
     return currentTrajectory.getEvaluations(getCurrentProjectRoot()!, safeTaskId);
   });
 
   ipcMain.handle(IPC_CHANNELS.GET_CAPABILITY_POLICY, async (event) => {
     assertTrustedSender(event);
-    if (!currentActions || !getCurrentProjectRoot()) throw ForgeLoopStudioError.unknown('No project open');
+    if (!currentActions || !getCurrentProjectRoot()) throw ForgeLoopAuditError.unknown('No project open');
     return currentActions.getCapabilityPolicy(getCurrentProjectRoot()!);
   });
 
   ipcMain.handle(IPC_CHANNELS.GET_TASK_WORKSPACE_BINDING, async (event, taskId: string) => {
     assertTrustedSender(event);
     const safeTaskId = TaskIdSchema.parse(taskId);
-    if (!currentTaskBoundaries || !getCurrentProjectRoot()) throw ForgeLoopStudioError.unknown('No project open');
+    if (!currentTaskBoundaries || !getCurrentProjectRoot()) throw ForgeLoopAuditError.unknown('No project open');
     return currentTaskBoundaries.getWorkspaceBinding(getCurrentProjectRoot()!, safeTaskId);
   });
 
   ipcMain.handle(IPC_CHANNELS.GET_TASK_HANDOFFS, async (event, taskId: string) => {
     assertTrustedSender(event);
     const safeTaskId = TaskIdSchema.parse(taskId);
-    if (!currentTaskBoundaries || !getCurrentProjectRoot()) throw ForgeLoopStudioError.unknown('No project open');
+    if (!currentTaskBoundaries || !getCurrentProjectRoot()) throw ForgeLoopAuditError.unknown('No project open');
     return currentTaskBoundaries.getHandoffs(getCurrentProjectRoot()!, safeTaskId);
   });
 
   ipcMain.handle(IPC_CHANNELS.GET_TASK_CONTINUITY_LINT, async (event, taskId: string) => {
     assertTrustedSender(event);
     const safeTaskId = TaskIdSchema.parse(taskId);
-    if (!currentContinuityLint || !getCurrentProjectRoot()) throw ForgeLoopStudioError.unknown('No project open');
+    if (!currentContinuityLint || !getCurrentProjectRoot()) throw ForgeLoopAuditError.unknown('No project open');
     return currentContinuityLint.getLint(getCurrentProjectRoot()!, safeTaskId);
   });
 
   ipcMain.handle(IPC_CHANNELS.GET_TASK_RESPONSIBILITY, async (event, taskId: string) => {
     assertTrustedSender(event);
     const safeTaskId = TaskIdSchema.parse(taskId);
-    if (!currentTaskBoundaries || !getCurrentProjectRoot()) throw ForgeLoopStudioError.unknown('No project open');
+    if (!currentTaskBoundaries || !getCurrentProjectRoot()) throw ForgeLoopAuditError.unknown('No project open');
     return currentTaskBoundaries.getResponsibility(getCurrentProjectRoot()!, safeTaskId);
   });
 
   ipcMain.handle(IPC_CHANNELS.GET_TASK_VERIFICATION_SCOPE, async (event, taskId: string) => {
     assertTrustedSender(event);
     const safeTaskId = TaskIdSchema.parse(taskId);
-    if (!currentTaskBoundaries || !getCurrentProjectRoot()) throw ForgeLoopStudioError.unknown('No project open');
+    if (!currentTaskBoundaries || !getCurrentProjectRoot()) throw ForgeLoopAuditError.unknown('No project open');
     return currentTaskBoundaries.getVerificationScope(getCurrentProjectRoot()!, safeTaskId);
   });
 
   ipcMain.handle(IPC_CHANNELS.GET_TASK_ATTESTATION, async (event, taskId: string) => {
     assertTrustedSender(event);
     const safeTaskId = TaskIdSchema.parse(taskId);
-    if (!currentTaskBoundaries || !getCurrentProjectRoot()) throw ForgeLoopStudioError.unknown('No project open');
+    if (!currentTaskBoundaries || !getCurrentProjectRoot()) throw ForgeLoopAuditError.unknown('No project open');
     return currentTaskBoundaries.getAttestation(getCurrentProjectRoot()!, safeTaskId);
   });
 
   ipcMain.handle(IPC_CHANNELS.GET_TASK_EXECUTION_PROFILE_CONTEXT, async (event, taskId: string) => {
     assertTrustedSender(event);
     const safeTaskId = TaskIdSchema.parse(taskId);
-    if (!currentExecutionProfileContext || !getCurrentProjectRoot()) throw ForgeLoopStudioError.unknown('No project open');
+    if (!currentExecutionProfileContext || !getCurrentProjectRoot()) throw ForgeLoopAuditError.unknown('No project open');
     return currentExecutionProfileContext.getContext(getCurrentProjectRoot()!, safeTaskId);
   });
 
@@ -368,11 +476,11 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
     assertTrustedSender(event);
     const query = ExecutionQuerySchema.parse({ taskId, limit });
     if (!currentTaskIndexer || !currentExecutionReader) {
-      throw ForgeLoopStudioError.unknown('No project open');
+      throw ForgeLoopAuditError.unknown('No project open');
     }
     const task = currentTaskIndexer.listTasks().find((t) => t.taskId === query.taskId || t.taskKey === query.taskId);
     if (!task) {
-      throw ForgeLoopStudioError.artifactUnreadable(query.taskId, 'Task not found');
+      throw ForgeLoopAuditError.artifactUnreadable(query.taskId, 'Task not found');
     }
     return currentExecutionReader.readExecutions(task.taskKey, { limit: query.limit });
   });
@@ -398,8 +506,8 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
 
   ipcMain.handle(IPC_CHANNELS.RENDERER_READY, async (event): Promise<void> => {
     assertTrustedSender(event);
-    if (!app.isPackaged && process.env.FORGELOOP_STUDIO_SMOKE === '1' && process.env.FORGELOOP_STUDIO_FIXTURE_PROJECT) {
-      await openProject(process.env.FORGELOOP_STUDIO_FIXTURE_PROJECT);
+    if (!app.isPackaged && process.env.FORGELOOP_AUDIT_SMOKE === '1' && process.env.FORGELOOP_AUDIT_FIXTURE_PROJECT) {
+      await openProject(process.env.FORGELOOP_AUDIT_FIXTURE_PROJECT);
     }
   });
 
@@ -410,7 +518,7 @@ export function registerProjectIpc(mainWindow: BrowserWindow): void {
 
   ipcMain.handle(IPC_CHANNELS.GET_DIAGNOSTICS, async (event) => {
     assertTrustedSender(event);
-    return buildStudioDiagnostics({ studioVersion: app.getVersion(), forgeLoopCompatibilityMode: (currentCompatibilityMode as ForgeLoopCompatibilityMode) ?? 'ARTIFACT_ONLY' });
+    return buildAuditRuntimeDiagnostics({ auditVersion: app.getVersion(), forgeLoopCompatibilityMode: (currentCompatibilityMode as ForgeLoopCompatibilityMode) ?? 'ARTIFACT_ONLY' });
   });
 
 }
@@ -437,7 +545,7 @@ async function openProject(projectRoot: string, projectKind: ProjectKind = 'PROJ
   const detectionResult = detector.detect();
 
   if (!detectionResult.compatible) {
-    throw ForgeLoopStudioError.protocolUnsupported(detectionResult.protocolVersion, projectRoot);
+    throw ForgeLoopAuditError.protocolUnsupported(detectionResult.protocolVersion, projectRoot);
   }
 
   currentProjectBoundary = pathBoundary;
@@ -455,7 +563,7 @@ async function openProject(projectRoot: string, projectKind: ProjectKind = 'PROJ
   const capabilities = integration.getCapabilities();
   const negotiation = negotiateCompatibilityMode({ protocolInfo: canonicalProtocolInfo, capabilities });
   if (negotiation.mode === 'INCOMPATIBLE') {
-    throw ForgeLoopStudioError.protocolUnsupported(
+    throw ForgeLoopAuditError.protocolUnsupported(
       canonicalProtocolInfo?.protocolVersion ?? detectionResult.protocolVersion,
       projectRoot,
     );
@@ -513,6 +621,25 @@ async function openProject(projectRoot: string, projectKind: ProjectKind = 'PROJ
     !fixtureCliDisabled,
     integration
   );
+  currentStructuralQualityService = createStructuralQualityAuditService({
+    projectRoot,
+    integration,
+    featureSupport: negotiation.featureSupport,
+  });
+  currentProjectAuditService = createProjectAuditService({
+    projectRoot,
+    snapshotBuilder: currentSnapshotBuilder,
+    integration: negotiation.mode === 'INTEGRATION_V1' ? integration : null,
+    observability: negotiation.mode === 'INTEGRATION_V1' ? currentObservability : null,
+    compatibilityMode: negotiation.mode,
+    featureSupport: negotiation.featureSupport,
+    forgeLoopPackageVersion: canonicalProtocolInfo?.packageVersion ?? integration.getPackageVersion(),
+  });
+  currentAuditHistoryStore = new AuditSnapshotStore({
+    userDataPath: app.getPath('userData'),
+    projectFingerprint: createProjectFingerprint(projectRoot),
+  });
+  currentAuditSnapshot = null;
 
   currentWatcher = createProjectWatcher(
     pathBoundary,
@@ -554,7 +681,7 @@ function isFixtureProjectMode(): boolean {
 
 async function readNextAction(taskId: string): Promise<{ success: boolean; data?: Record<string, unknown> }> {
   if (currentIntegration && currentCompatibilityMode === 'INTEGRATION_V1' && getCurrentProjectRoot()) {
-    const outcome = await runStudioReadCommand<Record<string, unknown>>(currentIntegration, getCurrentProjectRoot()!, 'next', { taskId });
+    const outcome = await runAuditReadCommand<Record<string, unknown>>(currentIntegration, getCurrentProjectRoot()!, 'next', { taskId });
     if (outcome.kind === 'DOMAIN_OUTCOME') return { success: true, data: outcome.data ?? undefined };
     return { success: false };
   }
@@ -596,6 +723,10 @@ async function closeProject(): Promise<void> {
   currentTaskBoundaries = null;
   currentContinuityLint = null;
   currentSnapshotBuilder = null;
+  currentProjectAuditService = null;
+  currentStructuralQualityService = null;
+  currentAuditHistoryStore = null;
+  currentAuditSnapshot = null;
   snapshotGeneration = 0;
 }
 
@@ -611,6 +742,15 @@ function watcherTaskId(event: WatcherEvent): string | undefined {
 
 function handleWatcherEvent(event: WatcherEvent): void {
   const timestamp = new Date().toISOString();
+  currentAuditSnapshot = null;
+  const taskId = watcherTaskId(event);
+  notifyUpdate({
+    type: 'audit-invalidated',
+    taskId,
+    data: { reason: 'ForgeLoop project state changed', event },
+    generation: ++snapshotGeneration,
+    timestamp,
+  });
   const targetedType: 'action-changed' | 'approval-changed' | 'evaluation-changed' | 'capability-policy-changed' | 'workspace-binding-changed' | 'handoff-changed' | 'responsibility-changed' | 'verification-scope-changed' | 'attestation-changed' | 'task-updated' =
     event.type === 'action-changed' || event.type === 'approval-changed' || event.type === 'evaluation-changed' || event.type === 'capability-policy-changed'
       || event.type === 'workspace-binding-changed' || event.type === 'handoff-changed' || event.type === 'responsibility-changed'
@@ -619,14 +759,14 @@ function handleWatcherEvent(event: WatcherEvent): void {
       : 'task-updated';
   notifyUpdate({
     type: targetedType,
-    taskId: watcherTaskId(event),
+    taskId,
     data: event,
     generation: ++snapshotGeneration,
     timestamp,
   });
   notifyUpdate({
     type: 'watcher-status',
-    data: { active: true, lastEventAt: timestamp, lastEventType: event.type, lastTaskId: watcherTaskId(event) },
+    data: { active: true, lastEventAt: timestamp, lastEventType: event.type, lastTaskId: taskId },
     timestamp,
   });
 
@@ -658,14 +798,14 @@ function handleWatcherEvent(event: WatcherEvent): void {
 
 function handleWatcherError(error: Error): void {
   const timestamp = new Date().toISOString();
-  const studioError: StudioError = {
+  const auditError: AuditAppError = {
     code: 'WATCHER_FAILED',
     message: error.message,
     recoverable: true,
     details: error.stack,
   };
   notifyUpdate({ type: 'watcher-status', data: { active: false, error: error.message }, timestamp });
-  notifyUpdate({ type: 'error', data: studioError, timestamp });
+  notifyUpdate({ type: 'error', data: auditError, timestamp });
 }
 
 function handleWatcherStatusChange(active: boolean): void {
@@ -677,6 +817,18 @@ function handleWatcherStatusChange(active: boolean): void {
     data: { active },
     timestamp,
   });
+}
+
+function matchesAuditFindingFilter(finding: AuditFinding, filter: AuditFindingFilter): boolean {
+  const matches = <T extends string>(actual: T, expected: T | T[] | undefined): boolean => {
+    if (expected === undefined) return true;
+    return Array.isArray(expected) ? expected.includes(actual) : expected === actual;
+  };
+  return (filter.taskId === undefined || filter.taskId === finding.taskId)
+    && matches(finding.severity, filter.severity)
+    && matches(finding.domain, filter.domain)
+    && matches(finding.source, filter.source)
+    && (filter.canonical === undefined || filter.canonical === finding.canonical);
 }
 
 function notifyUpdate(update: any): void {

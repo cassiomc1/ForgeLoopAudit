@@ -61,9 +61,9 @@ export function Overview({ snapshot, detection, watcherStatus = { active: false 
     let cancelled = false;
     const featureSupport = snapshot.protocol.featureSupport;
     Promise.all([
-      featureSupport?.trajectoryMetrics === true ? window.forgeLoopStudio.getTaskMetrics(activeTask.taskId) : Promise.resolve(null),
-      featureSupport?.durableActions === true ? window.forgeLoopStudio.getTaskActions(activeTask.taskId) : Promise.resolve(null),
-      window.forgeLoopStudio.getTaskExecutionProfileContext(activeTask.taskId),
+      featureSupport?.trajectoryMetrics === true ? window.forgeLoopAudit.getTaskMetrics(activeTask.taskId) : Promise.resolve(null),
+      featureSupport?.durableActions === true ? window.forgeLoopAudit.getTaskActions(activeTask.taskId) : Promise.resolve(null),
+      window.forgeLoopAudit.getTaskExecutionProfileContext(activeTask.taskId),
     ]).then(([metrics, actions, context]) => {
       if (!cancelled) {
         setCanonicalMetrics(metrics);
@@ -127,7 +127,7 @@ export function Overview({ snapshot, detection, watcherStatus = { active: false 
           color="success"
         />
         <MetricCard
-          label="Studio Coverage Score"
+          label="ForgeLoopAudit Coverage Score"
           value={`${avgCoverage}%`}
           icon={<Shield className="w-4 h-4" />}
           color="info"

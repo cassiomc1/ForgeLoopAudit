@@ -1,6 +1,6 @@
 import { ForgeCli, type CliResult } from '@main/core/cli/forge-cli';
 import { isAllowedCommand } from '@main/core/cli/allowed-commands';
-import { ForgeLoopStudioError } from '@shared/errors';
+import { ForgeLoopAuditError } from '@shared/errors';
 
 /**
  * Legacy read-only compatibility adapter over the external ForgeLoop CLI.
@@ -50,7 +50,7 @@ export class LegacyCliReadAdapter {
 
   private assertAllowed(command: string): void {
     if (!isAllowedCommand(command)) {
-      throw ForgeLoopStudioError.cliFailed(command, -1, `Command not in legacy CLI allowlist: ${command}`);
+      throw ForgeLoopAuditError.cliFailed(command, -1, `Command not in legacy CLI allowlist: ${command}`);
     }
   }
 }

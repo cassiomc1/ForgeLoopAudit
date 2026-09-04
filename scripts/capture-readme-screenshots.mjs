@@ -58,7 +58,7 @@ const app = await electron.launch({
   env: {
     ...process.env,
     NODE_ENV: 'production',
-    FORGELOOP_STUDIO_SMOKE: '1',
+    FORGELOOP_AUDIT_SMOKE: '1',
   },
 });
 
@@ -72,75 +72,69 @@ try {
 
   // Use the same named demo-project action exposed to users so the screenshot
   // shell identifies ForgeShop as a demo rather than a generic folder.
-  await page.evaluate(() => window.forgeLoopStudio.openDemoProject());
-  await expect(page.getByRole('heading', { name: 'Project Overview', exact: true })).toBeVisible({ timeout: 15_000 });
+  await page.evaluate(() => window.forgeLoopAudit.openDemoProject());
+  await expect(page.getByRole('heading', { name: 'Audit Summary', exact: true })).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole('region', { name: 'Demo project information' })).toContainText('ForgeShop');
   await expect(page.getByRole('region', { name: 'Demo project information' })).toContainText('errors are still real');
-  const projectInformation = page.getByRole('region', { name: 'Project Information', exact: true });
-  await expect(projectInformation).toContainText('Project Information');
-  await expect(projectInformation).toContainText('Stale');
-  await expect(projectInformation).toContainText('REVALIDATION_REQUIRED');
+  await page.getByRole('button', { name: 'Run audit', exact: true }).click();
+  await expect(page.getByText(/Audit score|Score unavailable/)).toBeVisible({ timeout: 15_000 });
 
-  // Select the documented boundary task through the real Tasks surface so the
-  // Overview and Task Boundaries captures cannot depend on a hidden default.
-  await openSurface(page, 'Tasks', 'Tasks');
-  await page.getByRole('button', { name: /TASK-003/ }).click();
-  await stabilize(page, 'Lifecycle Flow');
-  await navigation(page, 'Overview').click();
-  await stabilize(page, 'Project Overview');
+  await capture(page, 'audit-summary.png', 'Audit Summary', async () => {
+    await expect(page.getByText('Integrity', { exact: true })).toBeVisible();
+    await expect(page.getByText('Completion readiness', { exact: true })).toBeVisible();
+    await expect(page.getByText('Audit coverage', { exact: true })).toBeVisible();
+    await expect(page.getByText(/Audit score|Score unavailable/)).toBeVisible();
+  });
 
-  await capture(page, 'overview.png', 'Project Overview', async () => {
-    await expect(page.getByRole('heading', { name: 'Task Boundaries', exact: true })).toBeVisible();
-    await expect(page.getByText('TASK-003', { exact: true }).first()).toBeVisible();
-    await expect(page.getByRole('region', { name: 'Task Boundaries' }).locator('text=/^(MISMATCH|UNAVAILABLE)$/')).toHaveCount(1);
-    await expect(page.getByText('INVALID', { exact: true })).toBeVisible();
+  await openSurface(page, 'Findings', 'Findings');
+  await capture(page, 'findings.png', 'Findings', async () => {
+    await expect(page.getByText('Canonical ForgeLoop results and explicitly labelled auditor observations.', { exact: true })).toBeVisible();
+    await expect(page.getByRole('combobox').first()).toBeVisible();
   });
 
   await openSurface(page, 'Tasks', 'Tasks');
-  await capture(page, 'tasks.png', 'Tasks', async () => {
+  await capture(page, 'task-audit.png', 'Tasks', async () => {
     for (const taskId of ['TASK-001', 'TASK-002', 'TASK-003', 'TASK-004', 'TASK-005', 'TASK-006']) {
       await expect(page.getByText(taskId, { exact: true })).toBeVisible();
     }
     await expect(page.getByText('Demo scenario', { exact: true })).toHaveCount(6);
-  });
-
-  await openSurface(page, 'Flow', 'Lifecycle Flow', 'TASK-004');
-  await capture(page, 'lifecycle-flow.png', 'Lifecycle Flow', async () => {
-    await expect(page.getByRole('combobox').first()).toHaveValue('TASK-004');
-    await expect(page.getByText('BLOCKED', { exact: true })).toBeVisible();
-    await expect(page.getByText('Optional Workspace Binding', { exact: true })).toBeVisible();
-  });
-
-  await openSurface(page, 'Contract', 'Contract Inspector', 'TASK-006');
-  await capture(page, 'contract-inspector.png', 'Contract Inspector', async () => {
-    await expect(page.getByText('Review the checkout flow for security weaknesses before integration ships.', { exact: true })).toBeVisible();
-    await expect(page.getByText('Verification Requirements', { exact: true })).toBeVisible();
-    await expect(page.getByText('Security scan reports no critical findings', { exact: true })).toBeVisible();
-    await expect(page.getByText('Stop Conditions', { exact: true })).toBeVisible();
+    await expect(page.getByText(/Audit (VALID|INCOMPLETE|STALE|INVALID|UNKNOWN)/).first()).toBeVisible();
   });
 
   await openSurface(page, 'Evidence', 'Evidence Matrix', 'TASK-002');
-  await capture(page, 'evidence-matrix.png', 'Evidence Matrix', async () => {
+  await capture(page, 'evidence.png', 'Evidence Matrix', async () => {
     await expect(page.getByRole('heading', { name: 'Verification Scope', exact: true })).toBeVisible();
     await expect(page.getByText('AUTO', { exact: true })).toBeVisible();
     await expect(page.getByText('CHANGED', { exact: true })).toBeVisible();
     await expect(page.getByText('not revision-range attestation coverage.', { exact: false })).toBeVisible();
   });
 
-  await openSurface(page, 'Events', 'Event Ledger', 'TASK-004');
-  await capture(page, 'event-ledger.png', 'Event Ledger', async () => {
-    await expect(page.getByRole('status')).toContainText('Live updates enabled');
-    await expect(page.getByText('HANDOFF_CREATED', { exact: true })).toBeVisible();
-    await expect(page.getByText('TASK_BLOCKED', { exact: true })).toBeVisible();
+  await openSurface(page, 'Quality', 'Engineering Quality', 'TASK-001');
+  await capture(page, 'quality.png', 'Engineering Quality', async () => {
+    await expect(page.getByText('Canonical Structural Quality projection; ForgeLoopAudit never runs a provider.', { exact: true })).toBeVisible();
+    await expect(page.getByText(/Structural quality unavailable|Current status/)).toBeVisible();
   });
 
-  await openSurface(page, 'Continuity', 'Continuity', 'TASK-004');
-  await capture(page, 'continuity.png', 'Continuity', async () => {
-    await expect(page.getByText('handoff-harness-a-to-b', { exact: true })).toBeVisible();
-    await expect(page.getByText('Accepted — operational receipt only', { exact: true })).toBeVisible();
-    await expect(page.getByText('consumer-forgeshop-harness-b', { exact: true })).toBeVisible();
-    await expect(page.getByText('Immutable protocol snapshot — not review, completion, delegation, or authority evidence.', { exact: true })).toBeVisible();
-  }, page.getByRole('heading', { name: 'Canonical Handoffs', exact: true }));
+  await openSurface(page, 'Policy & Trust', 'Policy & Trust', 'TASK-006');
+  await capture(page, 'policy-trust.png', 'Policy & Trust', async () => {
+    await expect(page.getByText('Canonical policy, ownership boundaries and evidence trust signals for the selected task.', { exact: true })).toBeVisible();
+    await expect(page.getByText('Trust boundary projections', { exact: true })).toBeVisible();
+    await expect(page.getByText('Operational receipts only; never evidence.', { exact: true })).toBeVisible();
+  });
+
+  await openSurface(page, 'Audit History', 'Audit History');
+  await page.getByRole('button', { name: 'Save baseline', exact: true }).click();
+  await expect(page.getByText('Baseline saved.', { exact: true })).toBeVisible({ timeout: 15_000 });
+  await capture(page, 'history-diff.png', 'Audit History', async () => {
+    await expect(page.getByText('Manual snapshots are stored in application data, outside the audited project.', { exact: true })).toBeVisible();
+    await expect(page.getByText('Save baseline', { exact: true })).toBeVisible();
+  });
+
+  await openSurface(page, 'Reports', 'Reports');
+  await capture(page, 'report.png', 'Reports', async () => {
+    await expect(page.getByText('Deterministic reports generated from already-read audit data.', { exact: true })).toBeVisible();
+    await expect(page.getByText('Reports include ForgeLoop provenance, audit rules, timestamp, HEAD, fingerprint and [C]/[D]/[A] trust labels. The audited .forgeloop directory is protected by default.', { exact: true })).toBeVisible();
+  });
 
   await openSurface(page, 'Diagnostics', 'Diagnostics', 'TASK-004');
   await capture(page, 'diagnostics.png', 'Diagnostics', async () => {
@@ -149,24 +143,9 @@ try {
     await expect(page.getByText('Canonical trajectory metrics', { exact: true })).toBeVisible();
   });
 
-  await openSurface(page, 'Actions', 'Actions', 'TASK-002');
-  await capture(page, 'actions.png', 'Actions', async () => {
-    await expect(page.getByText('action-cart-inspect', { exact: true }).first()).toBeVisible();
-    await expect(page.getByText('action-cart-repair', { exact: true }).first()).toBeVisible();
-    await expect(page.getByText('COMMIT_UNKNOWN', { exact: true })).toBeVisible();
-    await expect(page.getByText('approval-cart-repair', { exact: true })).toBeVisible();
-  });
-
-  await openSurface(page, 'Policy', 'Policy', 'TASK-006');
-  await capture(page, 'policy.png', 'Policy', async () => {
-    await expect(page.getByText('Project capability policy', { exact: true })).toBeVisible();
-    await expect(page.getByRole('combobox').first()).toHaveValue('TASK-006');
-    await expect(page.getByText('REQUIRE_APPROVAL', { exact: true })).toBeVisible();
-  });
-
   await openSurface(page, 'Settings', 'Settings');
   await capture(page, 'settings.png', 'Settings', async () => {
-    await expect(page.getByText(`ForgeLoop Studio v${packageVersion}`, { exact: true })).toBeVisible();
+    await expect(page.getByText(`ForgeLoopAudit v${packageVersion}`, { exact: true })).toBeVisible();
     const protocolPanel = page.getByRole('heading', { name: 'ForgeLoop protocol', exact: true }).locator('..');
     await expect(protocolPanel).toContainText('1.10.0');
     await expect(protocolPanel).toContainText('Advisory context providers');
@@ -174,19 +153,8 @@ try {
     await expect(protocolPanel).toContainText('INTEGRATION_V1');
   }, page.getByRole('heading', { name: 'ForgeLoop protocol', exact: true }));
 
-  await openSurface(page, 'Tasks', 'Tasks');
-  await page.getByRole('button', { name: /TASK-003/ }).click();
-  await stabilize(page, 'Lifecycle Flow');
-  await navigation(page, 'Overview').click();
-  await stabilize(page, 'Project Overview');
-  await capture(page, 'task-boundaries.png', 'Project Overview', async () => {
-    const boundaries = page.getByRole('region', { name: 'Task Boundaries' });
-    await expect(boundaries.getByRole('heading', { name: 'Task Boundaries', exact: true })).toBeVisible();
-    await expect(boundaries.getByText('MISMATCH', { exact: true }).or(boundaries.getByText('UNAVAILABLE', { exact: true }))).toBeVisible();
-    await expect(boundaries.getByText('INVALID', { exact: true })).toBeVisible();
-  }, page.getByRole('heading', { name: 'Task Boundaries', exact: true }));
 } finally {
   await app.close();
 }
 
-console.log(`Captured ${manifest.screenshots.length} ForgeLoop Studio README screenshots at ${width}x${height}.`);
+console.log(`Captured ${manifest.screenshots.length} ForgeLoopAudit README screenshots at ${width}x${height}.`);

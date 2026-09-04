@@ -26,8 +26,8 @@ after(() => {
 });
 
 test('rewrites the SBOM application name to the package name', () => {
-  const path = sandbox({ bomFormat: 'CycloneDX', specVersion: '1.5', metadata: { component: { type: 'application', name: 'ForgeLoopStudio', version: pkg.version } }, components: [{ name: 'dep' }] });
-  assert.match(run(path), new RegExp(`"ForgeLoopStudio".*->.*"${pkg.name}"`));
+  const path = sandbox({ bomFormat: 'CycloneDX', specVersion: '1.5', metadata: { component: { type: 'application', name: 'ForgeLoopAudit', version: pkg.version } }, components: [{ name: 'dep' }] });
+  assert.match(run(path), new RegExp(`"ForgeLoopAudit".*->.*"${pkg.name}"`));
   const normalized = JSON.parse(readFileSync(path, 'utf8'));
   assert.equal(normalized.metadata.component.name, pkg.name);
   assert.equal(normalized.metadata.component.version, pkg.version);

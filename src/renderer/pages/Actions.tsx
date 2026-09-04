@@ -35,7 +35,7 @@ export function Actions({ snapshot, selectedTaskId, actionsRefreshToken = 0, onS
     let cancelled = false;
     setLoading(true);
     setError(null);
-    window.forgeLoopStudio.getTaskActions(selectedTask.taskId)
+    window.forgeLoopAudit.getTaskActions(selectedTask.taskId)
       .then((result) => {
         if (!cancelled) {
           setView(result);
@@ -67,7 +67,7 @@ export function Actions({ snapshot, selectedTaskId, actionsRefreshToken = 0, onS
         <div className="bg-forge-primary-surface border border-forge-warning/30 rounded-10 p-8 text-center">
           <Shield className="w-8 h-8 mx-auto mb-3 text-forge-warning" />
           <p className="text-sm font-medium text-forge-text-primary">Durable actions are not available</p>
-          <p className="mt-2 text-xs text-forge-text-muted">Not available with the bundled ForgeLoop capability set. Studio will not infer action state from raw files.</p>
+          <p className="mt-2 text-xs text-forge-text-muted">Not available with the bundled ForgeLoop capability set. ForgeLoopAudit will not infer action state from raw files.</p>
         </div>
       ) : (
         <>
@@ -87,7 +87,7 @@ export function Actions({ snapshot, selectedTaskId, actionsRefreshToken = 0, onS
                   ))}
                 </div>
               )}
-              {view.actions.some((action) => action.state === 'COMMIT_UNKNOWN') && <div className="border border-forge-danger/40 bg-forge-danger/10 rounded-10 p-4 text-sm text-forge-danger flex items-start gap-3"><AlertTriangle className="w-5 h-5 shrink-0" /><div><strong>COMMIT_UNKNOWN requires external reconciliation.</strong><p className="mt-1 text-xs">This Studio only displays the canonical state. No retry, reconcile, approval, or authority action is exposed here.</p></div></div>}
+              {view.actions.some((action) => action.state === 'COMMIT_UNKNOWN') && <div className="border border-forge-danger/40 bg-forge-danger/10 rounded-10 p-4 text-sm text-forge-danger flex items-start gap-3"><AlertTriangle className="w-5 h-5 shrink-0" /><div><strong>COMMIT_UNKNOWN requires external reconciliation.</strong><p className="mt-1 text-xs">This ForgeLoopAudit only displays the canonical state. No retry, reconcile, approval, or authority action is exposed here.</p></div></div>}
               <div className="grid grid-cols-1 xl:grid-cols-[1.3fr_1fr] gap-6">
                 <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-10 overflow-hidden">
                   <div className="px-4 py-3 border-b border-forge-border-subtle"><h2 className="text-sm font-semibold text-forge-text-primary">Durable actions</h2></div>

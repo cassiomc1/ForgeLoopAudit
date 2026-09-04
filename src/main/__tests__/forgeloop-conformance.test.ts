@@ -14,7 +14,7 @@ const legacyRoot = 'tests/fixtures/legacy/forgeloop-1.3';
 interface FixtureMetadata {
   forgeloopVersion: string;
   expectedPhase: string;
-  expectedStudioHealth: string;
+  expectedAuditHealth: string;
   expectedClaimState: string | null;
   expectedArtifactErrors: boolean;
   taskKeyMatchesDirectory: boolean;
@@ -32,7 +32,7 @@ async function canonicalClaimState(fixtureRoot: string): Promise<string | null> 
 }
 
 describe('ForgeLoop 1.5 conformance fixtures', () => {
-  it('loads every generated valid protocol fixture through Studio readers', async () => {
+  it('loads every generated valid protocol fixture through ForgeLoopAudit readers', async () => {
     for (const name of readdirSync(validRoot)) {
       const fixtureRoot = join(validRoot, name);
       const metadata = JSON.parse(readFileSync(join(fixtureRoot, 'fixture.json'), 'utf8')) as FixtureMetadata;
@@ -113,7 +113,7 @@ describe('legacy ForgeLoop 1.3 conformance fixtures', () => {
     }
   });
 
-  it('still opens legacy valid fixtures through Studio readers without upgrade', () => {
+  it('still opens legacy valid fixtures through ForgeLoopAudit readers without upgrade', () => {
     for (const name of readdirSync(join(legacyRoot, 'protocol-valid'))) {
       const fixtureRoot = join(legacyRoot, 'protocol-valid', name);
       const reader = new ProjectReader(new PathBoundary(fixtureRoot), new SchemaValidator('schemas'));

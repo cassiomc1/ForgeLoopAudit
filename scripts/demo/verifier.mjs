@@ -218,7 +218,7 @@ export function verifyDemoProject(root) {
       pathReferences.push({ taskId: descriptor.taskId, path: ref });
     }
 
-    // Event ledger integrity (same canonical hash chain as the Studio reader).
+    // Event ledger integrity (same canonical hash chain as the ForgeLoopAudit reader).
     const ledgerPath = join(taskDir, 'events.ndjson');
     if (!existsSync(ledgerPath)) {
       warn(`task ${descriptor.taskId} has no events.ndjson`);
@@ -318,7 +318,7 @@ const EXPECTED_OWNERSHIP = {
 /**
  * Assert the demo's canonical ownership semantics through the bundled
  * ForgeLoop Integration API. Raw artifacts alone are never authority; this
- * check mirrors exactly what the Studio shows at runtime.
+ * check mirrors exactly what the ForgeLoopAudit shows at runtime.
  */
 export async function verifyCanonicalDemoSemantics(root) {
   const errors = [];

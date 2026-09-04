@@ -93,7 +93,7 @@ export function UnsupportedProtocolState({ protocolVersion }: { protocolVersion:
   return (
     <EmptyState
       title="Unsupported protocol version"
-      description={`This project uses ForgeLoop protocol version ${protocolVersion}, which is not supported by this version of ForgeLoop Studio.`}
+      description={`This project uses ForgeLoop protocol version ${protocolVersion}, which is not supported by this version of ForgeLoopAudit.`}
       icon={
         <AlertCircle className="w-12 h-12 text-forge-danger" />
       }

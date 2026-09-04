@@ -8,7 +8,7 @@ export interface BundledDemoContext {
 }
 
 /**
- * Resolves the bundled ForgeShop demo project that ships with Studio.
+ * Resolves the bundled ForgeShop demo project that ships with ForgeLoopAudit.
  *
  * Development builds read the repository-local `demo/` directory; packaged
  * builds read the copy emitted by electron-builder's `extraResources` into the

@@ -2,7 +2,7 @@ import Ajv2020 from 'ajv/dist/2020';
 import addFormats from 'ajv-formats';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
-import { ForgeLoopStudioError } from '@shared/errors';
+import { ForgeLoopAuditError } from '@shared/errors';
 import { parseJsonSafely } from '@main/security/resource-limits';
 import { getMissingArtifactSchemas } from './artifact-registry';
 
@@ -41,7 +41,7 @@ export class SchemaValidator {
       this.schemaCache.set(schemaName, schema);
       return schema;
     } catch (error) {
-      throw ForgeLoopStudioError.artifactUnreadable(schemaName, `Failed to load schema: ${error instanceof Error ? error.message : String(error)}`);
+      throw ForgeLoopAuditError.artifactUnreadable(schemaName, `Failed to load schema: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -61,7 +61,7 @@ export class SchemaValidator {
 
       return { valid: true };
     } catch (error) {
-      if (error instanceof ForgeLoopStudioError) {
+      if (error instanceof ForgeLoopAuditError) {
         throw error;
       }
       return {
@@ -74,7 +74,7 @@ export class SchemaValidator {
   validateOrThrow<T = unknown>(schemaName: string, data: unknown): T {
     const result = this.validate(schemaName, data);
     if (!result.valid) {
-      throw ForgeLoopStudioError.artifactInvalid(schemaName, result.errors?.join('; ') || 'Unknown validation error');
+      throw ForgeLoopAuditError.artifactInvalid(schemaName, result.errors?.join('; ') || 'Unknown validation error');
     }
     return data as T;
   }
@@ -101,12 +101,12 @@ export function resolveTrustedSchemaDirectory(options: {
 
   const schemaDir = candidates.find((candidate) => existsSync(candidate));
   if (!schemaDir) {
-    throw ForgeLoopStudioError.artifactUnreadable('schemas', 'Trusted ForgeLoop protocol schemas are not installed');
+    throw ForgeLoopAuditError.artifactUnreadable('schemas', 'Trusted ForgeLoop protocol schemas are not installed');
   }
 
   const missing = getMissingArtifactSchemas(schemaDir);
   if (missing.length > 0) {
-    throw ForgeLoopStudioError.artifactUnreadable('schemas', `Missing trusted schemas: ${missing.join(', ')}`);
+    throw ForgeLoopAuditError.artifactUnreadable('schemas', `Missing trusted schemas: ${missing.join(', ')}`);
   }
 
   return schemaDir;

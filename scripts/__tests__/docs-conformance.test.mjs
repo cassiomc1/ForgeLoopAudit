@@ -9,7 +9,7 @@ import { runScreenshotCheck } from '../check-readme-screenshots.mjs';
 const repositoryRoot = process.cwd();
 
 function copyRepository() {
-  const parent = mkdtempSync(join(tmpdir(), 'forgeloop-studio-docs-'));
+  const parent = mkdtempSync(join(tmpdir(), 'forgeloop-audit-docs-'));
   const root = join(parent, 'repo');
   const excludedDirectories = ['.git', 'node_modules', 'dist', 'dist-electron', '.worktrees', 'coverage', 'test-results', 'playwright-report'];
   cpSync(repositoryRoot, root, {
@@ -99,7 +99,7 @@ test('runs the ForgeLoop lineage gate when requested', () => {
 
 test('rejects a missing canonical screenshot', () => {
   withRepository((root) => {
-    rmSync(join(root, 'screen', 'overview.png'));
-    assert.throws(() => runScreenshotCheck(root), /overview\.png is missing|orphan or missing PNG/);
+    rmSync(join(root, 'screen', 'audit-summary.png'));
+    assert.throws(() => runScreenshotCheck(root), /audit-summary\.png is missing|orphan or missing PNG/);
   });
 });

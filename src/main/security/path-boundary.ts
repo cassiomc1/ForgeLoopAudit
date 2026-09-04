@@ -1,6 +1,6 @@
 import { resolve, normalize, relative, isAbsolute, sep } from 'path';
 import { realpathSync, existsSync } from 'fs';
-import { ForgeLoopStudioError } from '@shared/errors';
+import { ForgeLoopAuditError } from '@shared/errors';
 
 export class PathBoundary {
   private readonly projectRoot: string;
@@ -9,7 +9,7 @@ export class PathBoundary {
   constructor(projectRoot: string) {
     this.projectRoot = normalize(resolve(projectRoot));
     if (!existsSync(this.projectRoot)) {
-      throw ForgeLoopStudioError.projectNotForgeLoop(projectRoot);
+      throw ForgeLoopAuditError.projectNotForgeLoop(projectRoot);
     }
     this.realProjectRoot = realpathSync(this.projectRoot);
   }
@@ -30,14 +30,14 @@ export class PathBoundary {
     const normalizedRequested = normalize(absoluteRequested);
 
     if (!existsSync(normalizedRequested)) {
-      throw ForgeLoopStudioError.unknown(`Path does not exist: ${normalizedRequested}`);
+      throw ForgeLoopAuditError.unknown(`Path does not exist: ${normalizedRequested}`);
     }
 
     const realRequested = realpathSync(normalizedRequested);
     const relativePath = relative(this.realProjectRoot, realRequested);
 
     if (relativePath.startsWith('..') || relativePath.includes(`${sep}..${sep}`) || relativePath === '..') {
-      throw ForgeLoopStudioError.pathBoundaryViolation(requestedPath, this.projectRoot);
+      throw ForgeLoopAuditError.pathBoundaryViolation(requestedPath, this.projectRoot);
     }
 
     if (realRequested === this.realProjectRoot) {
@@ -55,7 +55,7 @@ export class PathBoundary {
     const isAllowed = relativePath === '.forgeloop' || allowedPrefixes.some((prefix) => relativePath.startsWith(prefix));
 
     if (!isAllowed) {
-      throw ForgeLoopStudioError.pathBoundaryViolation(requestedPath, this.projectRoot);
+      throw ForgeLoopAuditError.pathBoundaryViolation(requestedPath, this.projectRoot);
     }
 
     return realRequested;
@@ -65,10 +65,10 @@ export class PathBoundary {
     const normalizedRequested = normalize(isAbsolute(requestedPath) ? requestedPath : resolve(this.projectRoot, requestedPath));
     const relativePath = relative(this.projectRoot, normalizedRequested);
     if (relativePath.startsWith('..') || relativePath === '..' || relativePath.includes(`${sep}..${sep}`)) {
-      throw ForgeLoopStudioError.pathBoundaryViolation(requestedPath, this.projectRoot);
+      throw ForgeLoopAuditError.pathBoundaryViolation(requestedPath, this.projectRoot);
     }
     if (!relativePath.startsWith(`.forgeloop${sep}`) && relativePath !== '.forgeloop') {
-      throw ForgeLoopStudioError.pathBoundaryViolation(requestedPath, this.projectRoot);
+      throw ForgeLoopAuditError.pathBoundaryViolation(requestedPath, this.projectRoot);
     }
     return normalizedRequested;
   }

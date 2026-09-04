@@ -65,6 +65,10 @@ export function reduceProjectionRefresh(current: ProjectionRefreshEpochs, update
       return createProjectionRefreshEpochs();
     case 'snapshot-refreshed':
       return { ...current, genericTask: current.genericTask + 1 };
+    case 'audit-invalidated':
+    case 'audit-refreshed':
+    case 'finding-changed':
+      return current;
     case 'task-updated': {
       const watcherEvent = update.data && typeof update.data === 'object'
         ? (update.data as { type?: string }).type

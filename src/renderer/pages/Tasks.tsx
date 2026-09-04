@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import type { ProjectSnapshot } from '@shared/domain';
+import type { ProjectAuditSnapshot } from '@shared/audit';
 import { TaskRow } from '../components/tasks/TaskRow';
 import { NoTasksState } from '../components/ui/EmptyState';
 import { cn } from '../lib/utils';
@@ -7,13 +8,14 @@ import { Search, X } from 'lucide-react';
 
 interface TasksProps {
   snapshot: ProjectSnapshot;
+  audit?: ProjectAuditSnapshot | null;
   isDemoProject?: boolean;
   onTaskSelect?: (taskId: string) => void;
 }
 
 type FilterType = 'all' | 'active' | 'blocked' | 'complete';
 
-export function Tasks({ snapshot, isDemoProject, onTaskSelect }: TasksProps) {
+export function Tasks({ snapshot, audit, isDemoProject, onTaskSelect }: TasksProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
 
@@ -127,6 +129,7 @@ export function Tasks({ snapshot, isDemoProject, onTaskSelect }: TasksProps) {
               <TaskRow
                 key={task.taskId}
                 task={task}
+                auditSummary={audit?.taskAudits.find((summary) => summary.taskId === task.taskId)}
                 isActive={task.taskId === snapshot.activeTaskId}
                 isDemoProject={isDemoProject}
                 onClick={() => onTaskSelect?.(task.taskId)}

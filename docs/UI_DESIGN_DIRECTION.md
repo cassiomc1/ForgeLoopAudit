@@ -1,4 +1,4 @@
-# ForgeLoop Studio — UI Design Direction
+# ForgeLoopAudit — UI Design Direction
 
 ## Goal
 
@@ -61,32 +61,32 @@ Use restrained font weights. Prefer whitespace and alignment over oversized head
 
 ```text
 ┌──────────────────────────────────────────────────────────────────────┐
-│ ForgeLoop Studio      project-name      protocol v1       ● Live   │
+│ ForgeLoopAudit      project-name      protocol v1       ● Live   │
 ├──────────────┬───────────────────────────────────────────────────────┤
-│ Overview     │                                                       │
-│ Tasks        │                                                       │
-│ Flow         │                    Main View                          │
-│ Contract     │                                                       │
+│ Audit Summary│                                                       │
+│ Findings     │                                                       │
+│ Tasks        │                    Main View                          │
 │ Evidence     │                                                       │
-│ Events       │                                                       │
-│ Continuity   │                                                       │
-│ Policy       │                                                       │
-│              │                                                       │
+│ Quality      │                                                       │
+│ Policy & Trust│                                                     │
+│ Audit History│                                                       │
+│ Reports      │                                                       │
+│ Diagnostics  │                                                       │
 │ Settings     │                                                       │
 └──────────────┴───────────────────────────────────────────────────────┘
 ```
 
 ## Current navigation and trust surfaces
 
-The current release is Studio `0.1.0-rc.7` with ForgeLoop `1.10.0` at
+The current release is ForgeLoopAudit `0.2.0-rc.1` with ForgeLoop `1.10.0` at
 `3bf721bac6a09c6291bfcbc507a66a2833ebddf4` (protocol v1, schema v1, Integration
-API v1). The current shell exposes these surfaces in order: Overview, Tasks, Flow,
-Contract, Evidence, Events, Executions, Continuity, Diagnostics, Actions,
-Policy and Settings. Task Boundaries is presented on the selected-task Overview
-surface rather than as a separate navigation item. Verification Scope and Code
-Attestation are presented in Evidence, while Workspace Binding, Responsibility
-Constraints and Canonical Handoffs are presented through the Task Boundaries and
-Continuity surfaces.
+API v1). The auditor-first shell exposes these surfaces in order: Audit Summary,
+Findings, Tasks, Evidence, Quality, Policy & Trust, Audit History, Reports,
+Diagnostics and Settings. The former protocol-object surfaces remain available
+as read-only drill-down views from the auditor and selected-task surfaces.
+Verification Scope and Code Attestation are presented in Evidence, while
+Workspace Binding, Responsibility Constraints and Canonical Handoffs are
+presented through Policy & Trust, Task Boundaries and task-boundary detail.
 
 Trust states must remain explicit and must never rely on color alone:
 
@@ -106,7 +106,7 @@ verification-scope values. `canonicalHandoffs v2` acceptance is rendered as
 **Accepted — operational receipt only**. Handoffs, acceptance receipts and
 Continuity are context surfaces, not completion or review evidence. The
 `advisoryContextProviders v1` row reports a host-provided capability as
-**Not loaded by Studio**; it never exposes memory or retrieved results.
+**Not loaded by ForgeLoopAudit**; it never exposes memory or retrieved results.
 Optional capability failure should degrade only the affected surface and leave
 the core protocol mode visible.
 

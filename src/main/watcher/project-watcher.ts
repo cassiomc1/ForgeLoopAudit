@@ -3,7 +3,7 @@ import chokidar, { FSWatcher } from 'chokidar';
 import { PathBoundary } from '@main/security/path-boundary';
 import { TASK_STATE_DIR, SESSIONS_DIR, POLICY_DIR } from '@shared/constants';
 import { ChangeCoalescer, type CoalescedChange } from './change-coalescer';
-import { ForgeLoopStudioError } from '@shared/errors';
+import { ForgeLoopAuditError } from '@shared/errors';
 import { WATCHER_RETRY_MS, WATCHER_MAX_RETRIES } from '@shared/constants';
 
 const PATH_VALIDATION_RETRY_MS = 50;
@@ -79,7 +79,7 @@ export class ProjectWatcher {
         .on('unlink', (path) => this.handleFileChange(path, 'unlink'))
         .on('addDir', (path) => this.handleDirChange(path, 'add'))
         .on('unlinkDir', (path) => this.handleDirChange(path, 'unlink'))
-        .on('error', (error) => this.handleError(error))
+        .on('error', (error) => this.handleError(error instanceof Error ? error : new Error(String(error))))
         .on('ready', () => {
           this.initializeKnownTaskKeys();
           this.isActive = true;
@@ -410,7 +410,7 @@ export class ProjectWatcher {
       }, WATCHER_RETRY_MS * this.retryCount);
     } else {
       this.onStatusChange(false);
-      this.onError(ForgeLoopStudioError.watcherFailed(`Max retries exceeded: ${error.message}`));
+      this.onError(ForgeLoopAuditError.watcherFailed(`Max retries exceeded: ${error.message}`));
     }
   }
 

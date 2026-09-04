@@ -301,9 +301,9 @@ function capabilitiesAreComplete(capabilities: ForgeLoopCapabilitiesSummary): bo
 }
 
 /**
- * Select the Studio compatibility mode from canonical protocol info and
+ * Select the ForgeLoopAudit compatibility mode from canonical protocol info and
  * Integration API capabilities. Fails closed: any drift between what the
- * project declares and what this Studio build supports yields INCOMPATIBLE,
+ * project declares and what this ForgeLoopAudit build supports yields INCOMPATIBLE,
  * never a silent downgrade of semantic guarantees.
  */
 export function negotiateCompatibilityMode(input: CapabilityNegotiationInput): CapabilityNegotiationResult {

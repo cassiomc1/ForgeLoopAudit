@@ -111,7 +111,7 @@ describe('attestation automatic-read policy', () => {
     expect(readTaskAttestation).not.toHaveBeenCalled();
     expect(result.available).toBe(false);
     expect(result.readPolicy).toMatchObject({ reason: 'EXTERNAL_SIGNING_PROVIDER' });
-    expect(result.errors[0]).toMatchObject({ code: 'STUDIO_ATTESTATION_EXTERNAL_VERIFICATION_REQUIRED' });
+    expect(result.errors[0]).toMatchObject({ code: 'AUDIT_ATTESTATION_EXTERNAL_VERIFICATION_REQUIRED' });
   });
 
   it('does not invoke the canonical read when config is missing or attestation is disabled', async () => {

@@ -1,8 +1,8 @@
-import type { StudioDiagnostics } from '@shared/diagnostics';
+import type { AuditRuntimeDiagnostics } from '@shared/diagnostics';
 
-export function buildStudioDiagnostics(input: Partial<StudioDiagnostics> = {}): StudioDiagnostics {
+export function buildAuditRuntimeDiagnostics(input: Partial<AuditRuntimeDiagnostics> = {}): AuditRuntimeDiagnostics {
   return {
-    studioVersion: input.studioVersion || 'unknown',
+    auditVersion: input.auditVersion || 'unknown',
     electronVersion: input.electronVersion || process.versions.electron || 'unknown',
     nodeVersion: input.nodeVersion || process.versions.node || 'unknown',
     platform: input.platform || process.platform,

@@ -1,7 +1,7 @@
 import { PathBoundary } from '@main/security/path-boundary';
 import { basename, join, resolve, sep } from 'path';
 import { lstatSync, readFileSync, realpathSync } from 'fs';
-import { ForgeLoopStudioError } from '@shared/errors';
+import { ForgeLoopAuditError } from '@shared/errors';
 import type {
   ProjectSnapshot,
   ProjectSummary,
@@ -17,7 +17,7 @@ import type {
 import { ProjectReader } from './project-reader';
 import { ForgeCli, type CliResult } from '@main/core/cli/forge-cli';
 import { LegacyCliReadAdapter } from '@main/core/integration/legacy-cli-read-adapter';
-import { runStudioReadCommand } from '@main/core/integration/studio-read-commands';
+import { runAuditReadCommand } from '@main/core/integration/audit-read-commands';
 import { buildTaskSummary } from '@main/core/tasks/task-reader';
 import { createCanonicalTaskReadService, type CanonicalTaskReadService } from '@main/core/tasks/canonical-task-read-service';
 import { selectActiveTaskId } from '@main/core/tasks/operational-state';
@@ -67,7 +67,7 @@ export class ProjectSnapshotBuilder {
     let workItems: Array<{ taskId: string | null; taskKey: string }>;
     if (integrationMode) {
       if (!canonicalDiscovery || canonicalDiscovery.source !== 'FORGELOOP_INTEGRATION') {
-        throw ForgeLoopStudioError.unknown(
+        throw ForgeLoopAuditError.unknown(
           'Canonical task discovery unavailable; refusing filesystem fallback in INTEGRATION_V1',
           'project/tasks could not be read for this project',
         );
@@ -278,7 +278,7 @@ export class ProjectSnapshotBuilder {
     if (this.integration && this.compatibilityContext?.compatibilityMode === 'INTEGRATION_V1') {
       // Canonical path: policy status comes from the bundled Integration API,
       // never from the external CLI.
-      const outcome = await runStudioReadCommand<Record<string, unknown>>(
+      const outcome = await runAuditReadCommand<Record<string, unknown>>(
         this.integration,
         this.pathBoundary.getProjectRoot(),
         'policy-status',
@@ -363,7 +363,7 @@ function extractHealthStatus(value: unknown): string | undefined {
   if (typeof candidate !== 'string') return undefined;
   const normalized = candidate.toUpperCase();
   // ForgeLoop's task/status resource reports freshness as FRESH or
-  // REVALIDATION_REQUIRED, while Studio's project-health contract exposes
+  // REVALIDATION_REQUIRED, while ForgeLoopAudit's project-health contract exposes
   // the corresponding user-facing states as VALID and STALE. Keep this
   // translation explicit; do not infer health from lifecycle phase.
   if (normalized === 'FRESH') return 'VALID';

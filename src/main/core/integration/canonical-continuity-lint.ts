@@ -1,4 +1,4 @@
-import { runStudioReadCommand } from './studio-read-commands';
+import { runAuditReadCommand } from './audit-read-commands';
 import type { ForgeLoopIntegrationAdapter } from './forgeloop-integration';
 import type { CanonicalProjectionError, ContinuityLintFindingView, ContinuityLintView } from '@shared/domain';
 
@@ -90,7 +90,7 @@ export function createCanonicalContinuityLintService(options: {
   return {
     async getLint(projectRoot, taskId): Promise<ContinuityLintView> {
       try {
-        const outcome = await runStudioReadCommand<Record<string, unknown>>(
+        const outcome = await runAuditReadCommand<Record<string, unknown>>(
           integration,
           projectRoot,
           'reconcile-continuity',

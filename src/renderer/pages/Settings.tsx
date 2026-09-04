@@ -32,7 +32,7 @@ interface SettingsProps {
 }
 
 export function Settings({ snapshot, detection, watcherStatus }: SettingsProps) {
-  const api = (window as any).forgeLoopStudio;
+  const api = (window as any).forgeLoopAudit;
   const [settings, setSettings] = useState({
     theme: 'dark',
     uiDensity: 'comfortable',
@@ -239,9 +239,9 @@ export function Settings({ snapshot, detection, watcherStatus }: SettingsProps) 
         <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-10 p-4">
           <h3 className="text-sm font-semibold text-forge-text-primary mb-4">About</h3>
           <div className="space-y-2 text-sm text-forge-text-secondary">
-            <p>ForgeLoop Studio {appVersion ? `v${appVersion}` : ''}</p>
+            <p>ForgeLoopAudit {appVersion ? `v${appVersion}` : ''}</p>
             <p className="text-xs text-forge-text-muted">
-              A real-time visual interface for the ForgeLoop engineering protocol.
+              A read-only engineering auditor for ForgeLoop projects.
             </p>
             <p className="text-xs text-forge-text-muted">
               Read-only observer mode. ForgeLoop remains the source of truth.
@@ -257,12 +257,12 @@ export function Settings({ snapshot, detection, watcherStatus }: SettingsProps) 
             <div><p className="text-forge-text-muted">Schema</p><p className="mt-1 font-mono text-forge-text-primary">v{snapshot?.protocol.schemaVersion ?? detection?.schemaVersion ?? 'Unknown'}</p></div>
             <div><p className="text-forge-text-muted">Compatibility</p><p className="mt-1 font-mono text-forge-text-primary">{snapshot?.protocol.compatibilityMode || (snapshot?.protocol.compatible ? 'COMPATIBLE' : 'UNKNOWN')}</p></div>
           </div>
-          <p className="mt-4 text-xs text-forge-text-muted">ForgeLoop remains the source of truth. Protocol settings are read-only here; Studio does not execute or edit project checkers, bindings, responsibilities, or attestation policy.</p>
+          <p className="mt-4 text-xs text-forge-text-muted">ForgeLoop remains the source of truth. Protocol settings are read-only here; ForgeLoopAudit does not execute or edit project checkers, bindings, responsibilities, or attestation policy.</p>
           {snapshot?.protocol.featureSupport && <div className="mt-4 grid grid-cols-1 gap-2 md:grid-cols-2">{FEATURE_LABELS.map(([key, label]) => {
             const supported = snapshot.protocol.featureSupport?.[key] === true;
             const value = key === 'advisoryContextProviders'
               ? supported
-                ? 'Status: Supported by ForgeLoop / Host-provided / Not loaded by Studio'
+                ? 'Status: Supported by ForgeLoop / Host-provided / Not loaded by ForgeLoopAudit'
                 : 'Not advertised'
               : supported ? 'Supported' : 'Unavailable';
             return <div key={key} className="flex items-center justify-between gap-3 rounded-8 bg-forge-secondary-surface px-3 py-2 text-xs"><span className="text-forge-text-secondary">{label}</span><span className={supported ? 'text-forge-success' : 'text-forge-text-muted'}>{value}</span></div>;

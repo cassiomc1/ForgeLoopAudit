@@ -1,7 +1,7 @@
 forceCodeSigning: false
 afterPack: scripts/after-pack-fuses.mjs
-appId: com.forgeloop.studio
-productName: ForgeLoop Studio
+appId: com.forgeloop.audit
+productName: ForgeLoopAudit
 directories:
   output: dist-electron
 files:

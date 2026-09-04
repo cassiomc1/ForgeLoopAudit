@@ -105,14 +105,14 @@ export function NextSafeAction({ task }: NextSafeActionProps) {
         {resumeRequired && (
           <p className="text-xs text-forge-warning flex items-start gap-1.5">
             <ShieldAlert className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-            This task was recovered and mutations stay blocked until the canonical ForgeLoop resume is performed by an authorized harness. The Studio only displays this requirement.
+            This task was recovered and mutations stay blocked until the canonical ForgeLoop resume is performed by an authorized harness. The ForgeLoopAudit only displays this requirement.
           </p>
         )}
 
         {task.nextAction.commandSynopses && task.nextAction.commandSynopses.length > 0 && (
           <div className="space-y-1.5 pt-1">
             <p className="text-[11px] text-forge-text-muted">
-              Canonical next commands (copy only — the Studio never executes ForgeLoop mutations):
+              Canonical next commands (copy only — the ForgeLoopAudit never executes ForgeLoop mutations):
             </p>
             {task.nextAction.commandSynopses.map((synopsis) => (
               <CommandSynopsis key={synopsis} synopsis={synopsis} />

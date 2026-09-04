@@ -26,7 +26,7 @@ export function ActionDetail({ action }: { action: DurableActionView | null }) {
       </div>
       {action.state === 'COMMIT_UNKNOWN' && (
         <div className="rounded-8 border border-forge-danger/30 bg-forge-danger/10 p-3 text-xs text-forge-danger">
-          Commit outcome is unknown. Studio does not retry, reconcile, authorize, or infer whether the external effect happened.
+          Commit outcome is unknown. ForgeLoopAudit does not retry, reconcile, authorize, or infer whether the external effect happened.
         </div>
       )}
       <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">

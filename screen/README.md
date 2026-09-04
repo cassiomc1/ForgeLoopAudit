@@ -1,6 +1,6 @@
-# ForgeLoop Studio screenshot documentation
+# ForgeLoopAudit screenshot documentation
 
-These images are documentation captures of the real ForgeShop demo fixture,
+These images are documentation captures of the real ForgeShop audit scenario,
 the production renderer build and the default dark theme. They are not
 illustrations or edited mockups. The capture metadata and page/task mapping are
 in [`manifest.json`](manifest.json).
@@ -8,7 +8,7 @@ in [`manifest.json`](manifest.json).
 ## Source and freshness
 
 The source project is [`../demo/`](../demo/) and the capture uses
-`FORGELOOP_STUDIO_FIXTURE_PROJECT=demo` with a 1440 × 900 renderer viewport,
+`FORGELOOP_AUDIT_FIXTURE_PROJECT=demo` with a 1440 × 900 renderer viewport,
 100% zoom, an expanded sidebar and reduced motion. The capture contains the
 Electron content area only; it excludes operating-system chrome, local paths,
 credentials and transient loading state.
@@ -30,22 +30,20 @@ orphaned screenshot files.
 
 | File | Surface | Selected task | Scenario |
 |---|---|---|---|
-| `overview.png` | Overview | `TASK-003` | Project identity, canonical freshness, monitored state and selected-task boundaries |
-| `tasks.png` | Tasks | — | Six mixed lifecycle states |
-| `lifecycle-flow.png` | Flow | `TASK-004` | Blocked lifecycle and recovery |
-| `contract-inspector.png` | Contract | `TASK-006` | Security-review contract |
-| `evidence-matrix.png` | Evidence | `TASK-002` | `AUTO` → `CHANGED` verification scope |
-| `event-ledger.png` | Events | `TASK-004` | Live-updating recovery event ledger |
-| `continuity.png` | Continuity | `TASK-004` | Continuity and accepted canonical handoff operational receipt |
+| `audit-summary.png` | Audit Summary | — | Separate integrity, completion, quality, trust and coverage verdicts |
+| `findings.png` | Findings | — | Canonical and derived findings with provenance |
+| `task-audit.png` | Tasks | — | Six tasks with canonical audit state and finding counts |
+| `evidence.png` | Evidence | `TASK-002` | Evidence coverage, `AUTO` → `CHANGED` verification scope and attestation boundary |
+| `quality.png` | Quality | `TASK-001` | Canonical Structural Quality projection without provider execution |
+| `policy-trust.png` | Policy & Trust | `TASK-006` | Policy, workspace, responsibility, handoff and attestation boundaries |
+| `history-diff.png` | Audit History | — | Manual snapshots stored outside the audited project |
+| `report.png` | Reports | — | Deterministic report formats and provenance |
 | `diagnostics.png` | Diagnostics | `TASK-004` | Canonical diagnostic signals |
-| `actions.png` | Actions | `TASK-002` | Durable actions and approvals |
-| `policy.png` | Policy | `TASK-006` | Capability and task policy |
-| `settings.png` | Settings | — | Project context, Studio preferences, ForgeLoop 1.10.0 and advisory capability metadata |
-| `task-boundaries.png` | Overview | `TASK-003` | Workspace mismatch and invalid responsibility |
+| `settings.png` | Settings | — | Project context, ForgeLoopAudit preferences, ForgeLoop 1.10.0 and advisory capability metadata |
 
 ## Review checklist
 
-- all images show the ForgeShop demo and current navigation;
+- all images show the ForgeShop audit scenario and current navigation;
 - no loading spinner, personal path, credential or OS chrome is visible;
 - status labels and warnings remain canonical and readable;
 - optional capabilities remain clearly optional;

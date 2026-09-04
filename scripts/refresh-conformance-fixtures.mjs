@@ -205,7 +205,7 @@ function buildScenario(scenario) {
     forgeloopVersion: '1.5.0',
     protocolVersion: 1,
     schemaVersion: 1,
-    expectedStudioHealth: 'VALID',
+    expectedAuditHealth: 'VALID',
     expectedPhase: scenario.phase,
     expectedClaimState: scenario.expectedClaimState ?? null,
     expectedArtifactErrors: Boolean(scenario.expectArtifactErrors),

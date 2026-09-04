@@ -19,7 +19,7 @@ export function ProjectPicker({ onOpenProject, onOpenDemoProject, onOpenRecentPr
   const [appVersion, setAppVersion] = useState<string | null>(null);
 
   useEffect(() => {
-    const api = (window as any).forgeLoopStudio;
+    const api = (window as any).forgeLoopAudit;
     api?.getAppVersion?.().then(setAppVersion).catch(() => setAppVersion(null));
   }, []);
 
@@ -40,7 +40,7 @@ export function ProjectPicker({ onOpenProject, onOpenDemoProject, onOpenRecentPr
     <div className="flex h-screen w-full flex-col forge-background">
       <div
         className="app-drag-region h-12 shrink-0 border-b forge-border-subtle forge-primary-surface"
-        onDoubleClick={() => void window.forgeLoopStudio?.toggleMaximizeWindow?.().catch(() => undefined)}
+        onDoubleClick={() => void window.forgeLoopAudit?.toggleMaximizeWindow?.().catch(() => undefined)}
       />
       <div className="flex-1 flex flex-col items-center justify-center px-8">
         <div className="w-full max-w-2xl animate-fade-in">
@@ -50,7 +50,7 @@ export function ProjectPicker({ onOpenProject, onOpenDemoProject, onOpenRecentPr
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
               </svg>
             </div>
-            <h1 className="text-3xl font-semibold text-forge-text-primary tracking-tight mb-3">ForgeLoop Studio</h1>
+            <h1 className="text-3xl font-semibold text-forge-text-primary tracking-tight mb-3">ForgeLoopAudit</h1>
             <p className="text-lg text-forge-text-secondary max-w-md mx-auto">
               Visualize your engineering loop in real time. Open a ForgeLoop-enabled project to explore tasks, lifecycle phases, contracts, evidence, and more.
             </p>
@@ -86,7 +86,7 @@ export function ProjectPicker({ onOpenProject, onOpenDemoProject, onOpenRecentPr
               Use it to explore verification, recovery, continuity, evidence, and policy behavior.
             </p>
             <p className="text-center text-xs text-forge-text-muted mt-3">
-              Select a project directory or a parent folder; Studio searches subfolders for a <code className="font-mono text-forge-text-secondary">.forgeloop</code> project
+              Select a project directory or a parent folder; ForgeLoopAudit searches subfolders for a <code className="font-mono text-forge-text-secondary">.forgeloop</code> project
             </p>
           </div>
 
@@ -138,7 +138,7 @@ export function ProjectPicker({ onOpenProject, onOpenDemoProject, onOpenRecentPr
           )}
 
           <div className="mt-8 text-center text-xs text-forge-text-muted">
-            <p>ForgeLoop Studio {appVersion ? `v${appVersion}` : ''} — Read-only observer for the ForgeLoop engineering protocol</p>
+            <p>ForgeLoopAudit {appVersion ? `v${appVersion}` : ''} — Read-only observer for the ForgeLoop engineering protocol</p>
           </div>
         </div>
       </div>

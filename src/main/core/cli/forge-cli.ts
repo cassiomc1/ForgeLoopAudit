@@ -1,7 +1,7 @@
 import { spawn, SpawnOptions } from 'child_process';
 import { existsSync, realpathSync, readFileSync } from 'fs';
 import { delimiter, dirname, isAbsolute, join, sep } from 'path';
-import { ForgeLoopStudioError } from '@shared/errors';
+import { ForgeLoopAuditError } from '@shared/errors';
 import { ALLOWED_CLI_COMMANDS, CLI_TIMEOUT_MS, CLI_MAX_STDOUT_BYTES } from '@shared/constants';
 import { parseJsonSafely } from '@main/security/resource-limits';
 
@@ -36,7 +36,7 @@ export class ForgeCli {
     const commandName = args[0];
 
     if (!ALLOWED_CLI_COMMANDS.includes(commandName as typeof ALLOWED_CLI_COMMANDS[number])) {
-      throw ForgeLoopStudioError.cliFailed(commandName, -1, `Command not in allowlist: ${commandName}`);
+      throw ForgeLoopAuditError.cliFailed(commandName, -1, `Command not in allowlist: ${commandName}`);
     }
 
     const options: SpawnOptions = {

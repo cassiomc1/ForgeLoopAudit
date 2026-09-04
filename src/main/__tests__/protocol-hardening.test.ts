@@ -12,7 +12,7 @@ const schemasDir = resolve(process.cwd(), 'schemas');
 const sha = 'a'.repeat(64);
 
 function makeProject(): string {
-  const root = mkdtempSync(join(tmpdir(), 'forgeloop-studio-hardening-'));
+  const root = mkdtempSync(join(tmpdir(), 'forgeloop-audit-hardening-'));
   mkdirSync(join(root, '.forgeloop', 'task-state', 'task-1', 'gates'), { recursive: true });
   mkdirSync(join(root, '.forgeloop', 'sessions'), { recursive: true });
   return root;

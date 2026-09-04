@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, readFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { createForgeLoopIntegration, FORGELOOP_PACKAGE_VERSION, FORGELOOP_UPSTREAM_COMMIT, hasRequiredResources } from '@main/core/integration/forgeloop-integration';
-import { ForgeLoopStudioError } from '@shared/errors';
+import { ForgeLoopAuditError } from '@shared/errors';
 
 describe('core/integration/forgeloop-integration', () => {
   let adapter: Awaited<ReturnType<typeof createForgeLoopIntegration>>;
@@ -46,7 +46,7 @@ describe('core/integration/forgeloop-integration', () => {
       expect(capabilities.executorParity).toBe(true);
     });
 
-    it('declares durable recovery features required by the Studio', () => {
+    it('declares durable recovery features required by the ForgeLoopAudit', () => {
       const recovery = adapter.getCapabilities().features.taskClaimRecovery;
       expect(recovery.version).toBe(1);
       expect(recovery.durableRecoveryState).toBe(true);
@@ -54,7 +54,7 @@ describe('core/integration/forgeloop-integration', () => {
       expect(recovery.validatedClaimProjection).toBe(true);
     });
 
-    it('exposes every canonical resource the Studio consumes', () => {
+    it('exposes every canonical resource the ForgeLoopAudit consumes', () => {
       const resources = adapter.getCapabilities().resources;
       for (const required of [
         'protocol/info',
@@ -186,8 +186,8 @@ describe('core/integration/forgeloop-integration', () => {
         () => null,
         (error: unknown) => error,
       );
-      expect(outcome).toBeInstanceOf(ForgeLoopStudioError);
-      expect((outcome as ForgeLoopStudioError).details).toMatch(/refuses non-read-only ForgeLoop invocation/);
+      expect(outcome).toBeInstanceOf(ForgeLoopAuditError);
+      expect((outcome as ForgeLoopAuditError).details).toMatch(/refuses non-read-only ForgeLoop invocation/);
     }
 
     it('rejects claim reacquisition via task-resume', async () => {
@@ -206,7 +206,7 @@ describe('core/integration/forgeloop-integration', () => {
       await expectRefusal(adapter.executeReadOnly(scratchDir, 'advance'));
     });
 
-    it.each(['run-action', 'action-authorize', 'approval-resolve', 'action-reconcile', 'doctor'])('%s remains unavailable to Studio', async (command) => {
+    it.each(['run-action', 'action-authorize', 'approval-resolve', 'action-reconcile', 'doctor'])('%s remains unavailable to ForgeLoopAudit', async (command) => {
       await expectRefusal(adapter.executeReadOnly(scratchDir, command));
     });
 
@@ -216,7 +216,7 @@ describe('core/integration/forgeloop-integration', () => {
 
     it('rejects unknown commands instead of forwarding them', async () => {
       await expect(adapter.executeReadOnly(scratchDir, 'totally-made-up-command')).rejects.toThrow(
-        ForgeLoopStudioError,
+        ForgeLoopAuditError,
       );
     });
 

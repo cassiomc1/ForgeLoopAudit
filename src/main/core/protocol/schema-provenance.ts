@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { ForgeLoopStudioError } from '@shared/errors';
+import { ForgeLoopAuditError } from '@shared/errors';
 
 export interface SchemaProvenanceEntry {
   sha256: string;
@@ -37,6 +37,6 @@ export function loadSchemaProvenance(schemasDir: string): SchemaProvenance {
 
     return manifest;
   } catch (error) {
-    throw ForgeLoopStudioError.artifactUnreadable('schema-provenance', error instanceof Error ? error.message : String(error));
+    throw ForgeLoopAuditError.artifactUnreadable('schema-provenance', error instanceof Error ? error.message : String(error));
   }
 }
