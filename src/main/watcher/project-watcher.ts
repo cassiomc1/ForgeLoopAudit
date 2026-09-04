@@ -79,7 +79,7 @@ export class ProjectWatcher {
         .on('unlink', (path) => this.handleFileChange(path, 'unlink'))
         .on('addDir', (path) => this.handleDirChange(path, 'add'))
         .on('unlinkDir', (path) => this.handleDirChange(path, 'unlink'))
-        .on('error', (error) => this.handleError(error))
+        .on('error', (error) => this.handleError(error instanceof Error ? error : new Error(String(error))))
         .on('ready', () => {
           this.initializeKnownTaskKeys();
           this.isActive = true;
