@@ -7,7 +7,7 @@
 **Target ForgeLoop protocol:** v1
 **Default product mode:** Local, read-only observer
 
-The current release line is `0.2.0-rc.1`, aligned to ForgeLoop `1.10.0` at
+The current release line is `0.2.0-rc.2`, aligned to ForgeLoop `1.10.0` at
 source commit `3bf721bac6a09c6291bfcbc507a66a2833ebddf4` with protocol v1,
 schema v1 and Integration API v1. This document describes the implemented
 observer boundary and identifies genuine future work explicitly.

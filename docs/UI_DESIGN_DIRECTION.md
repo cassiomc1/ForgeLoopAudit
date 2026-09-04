@@ -78,7 +78,7 @@ Use restrained font weights. Prefer whitespace and alignment over oversized head
 
 ## Current navigation and trust surfaces
 
-The current release is ForgeLoopAudit `0.2.0-rc.1` with ForgeLoop `1.10.0` at
+The current release is ForgeLoopAudit `0.2.0-rc.2` with ForgeLoop `1.10.0` at
 `3bf721bac6a09c6291bfcbc507a66a2833ebddf4` (protocol v1, schema v1, Integration
 API v1). The auditor-first shell exposes these surfaces in order: Audit Summary,
 Findings, Tasks, Evidence, Quality, Policy & Trust, Audit History, Reports,

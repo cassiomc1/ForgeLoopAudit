@@ -64,8 +64,10 @@ try {
   await openDemo.click();
   console.log('Clicked Open Demo Project');
 
-  await waitForText(page, 'Project Overview', 'Project Overview heading');
-  await waitForText(page, '3 of 6', 'Overview task completion summary');
+  await waitForHeading(page, 'Audit Summary', 'Audit Summary heading');
+  const runAudit = page.getByRole('button', { name: /Run audit|Retry audit/ });
+  if ((await runAudit.count()) > 0) await runAudit.first().click();
+  await waitForTextMatch(page, 'Audit coverage|Score unavailable', 'audit result summary');
 
   await page.getByRole('button', { name: 'Tasks', exact: true }).click();
   for (const taskId of ['TASK-001', 'TASK-004']) {
@@ -75,8 +77,8 @@ try {
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
   await waitForText(page, `ForgeLoopAudit v${packageVersion}`, 'runtime version in Settings About');
 
-  await page.getByRole('button', { name: 'Policy', exact: true }).click();
-  await waitForHeading(page, 'Policy', 'Policy page');
+  await page.getByRole('button', { name: 'Policy & Trust', exact: true }).click();
+  await waitForHeading(page, 'Policy & Trust', 'Policy & Trust page');
 
   console.log(`Packaged Open Demo smoke passed (opened bundled demo, runtime version v${packageVersion})`);
 } catch (error) {
@@ -139,6 +141,18 @@ async function waitForText(page, text, label, timeoutMs = 30_000) {
     );
   } catch (error) {
     throw new Error(`Expected ${label} ("${text}") in the packaged app UI: ${error.message}`);
+  }
+}
+
+async function waitForTextMatch(page, pattern, label, timeoutMs = 30_000) {
+  try {
+    await page.waitForFunction(
+      (source) => new RegExp(source).test(document.body?.innerText ?? ''),
+      pattern,
+      { timeout: timeoutMs },
+    );
+  } catch (error) {
+    throw new Error(`Expected ${label} (/${pattern}/) in the packaged app UI: ${error.message}`);
   }
 }
 
