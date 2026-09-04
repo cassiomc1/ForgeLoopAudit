@@ -1,6 +1,6 @@
-# ForgeLoop Studio Post-1.6.1 Corrections Implementation Plan
+# ForgeLoopAudit Post-1.6.1 Corrections Implementation Plan
 
-> Historical record. This document describes the repository state and implementation target at the time it was written. It is not the current ForgeLoop Studio specification. See the [current documentation index](../../README.md).
+> Historical record. This document describes the repository state and implementation target at the time it was written. It is not the current ForgeLoopAudit specification. See the [current documentation index](../../README.md).
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans (or equivalent inline execution) to implement this plan task-by-task. Steps use checkbox syntax for tracking.
 
@@ -10,14 +10,14 @@
 
 **Tech Stack:** TypeScript, React, Vitest, Playwright, Node.js, Markdown, npm scripts.
 
-**Spec:** `/Users/cassio/Downloads/FORGELOOP_STUDIO_POST_1_6_1_CORRECTIONS.md`
+**Spec:** `/Users/cassio/Downloads/FORGELOOP_AUDIT_POST_1_6_1_CORRECTIONS.md`
 
 ## Global Constraints
 
 - Keep ForgeLoop 1.6.1, commit `f331100cff175a4ce990fa843b397fcf720b40f5`, and the vendored archive unchanged.
 - Keep optional execution provenance fields optional and the execution schema strict.
 - Missing or incomplete isolation capability stays `INTEGRATION_V1` with isolation presentation disabled.
-- Studio remains read-only and never creates, verifies, or attests execution isolation.
+- Audit remains read-only and never creates, verifies, or attests execution isolation.
 - Preserve the existing `screen/.DS_Store` in the primary checkout and do not rewrite historical RC references.
 
 ---
@@ -106,7 +106,7 @@ Run: `git add README.md && git commit -m "docs: remove stale current release-can
 - Create: `docs/verification/2026-08-28-forgeloop-alignment-corrections.md`
 
 **Interfaces:**
-- Consumes: final Studio commit, ForgeLoop upstream identity, vendored archive digest, schema provenance identity, exact local command results, and environment details.
+- Consumes: final Audit commit, ForgeLoop upstream identity, vendored archive digest, schema provenance identity, exact local command results, and environment details.
 - Produces: one compact auditable record with explicit exit status for every requested command and explicit skipped-gate reasons.
 
 - [x] **Step 1: Gather immutable identities and runtime details**

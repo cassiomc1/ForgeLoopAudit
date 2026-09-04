@@ -1,21 +1,21 @@
-# ForgeLoop Studio 10/10 Implementation Plan
+# ForgeLoopAudit 10/10 Implementation Plan
 
-> Historical record. This document describes the repository state and implementation target at the time it was written. It is not the current ForgeLoop Studio specification. See the [current documentation index](../../README.md).
+> Historical record. This document describes the repository state and implementation target at the time it was written. It is not the current ForgeLoopAudit specification. See the [current documentation index](../../README.md).
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Execute this plan inline with verification checkpoints; do not dispatch subagents. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Implement the required unsigned-preview 10/10 engineering gates for ForgeLoop Studio and publish an evidence-backed immutable RC3.
+**Goal:** Implement the required unsigned-preview 10/10 engineering gates for ForgeLoopAudit and publish an evidence-backed immutable RC3.
 
-**Architecture:** Preserve ForgeLoop as the sole protocol authority and keep Studio read-only. Add machine-verifiable contracts around provenance, security, reconciliation, quality, documentation, supply chain, and release evidence while exposing only typed application-owned renderer APIs.
+**Architecture:** Preserve ForgeLoop as the sole protocol authority and keep Audit read-only. Add machine-verifiable contracts around provenance, security, reconciliation, quality, documentation, supply chain, and release evidence while exposing only typed application-owned renderer APIs.
 
 **Tech Stack:** Electron 43, Node 22, TypeScript, React, Vite, Vitest, Playwright, Chokidar, Ajv/Zod, electron-builder, GitHub Actions.
 
-**Spec:** `docs/superpowers/specs/2026-08-21-forgeloop-studio-10-10-design.md` plus the attached `FORGELOOP_STUDIO_10_OUT_OF_10_IMPLEMENTATION_PLAN_V2.md`.
+**Spec:** `docs/superpowers/specs/2026-08-21-forgeloop-audit-10-10-design.md` plus the attached `FORGELOOP_AUDIT_10_OUT_OF_10_IMPLEMENTATION_PLAN_V2.md`.
 
 ## Global Constraints
 
 - ForgeLoop remains the canonical source of truth.
-- Studio remains read-only for `.forgeloop/` state.
+- Audit remains read-only for `.forgeloop/` state.
 - Renderer cannot execute arbitrary commands or access the filesystem.
 - Project-controlled schemas never become validation authority.
 - macOS arm64/x64, Windows, and Linux remain release targets.

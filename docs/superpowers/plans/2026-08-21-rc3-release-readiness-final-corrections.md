@@ -1,6 +1,6 @@
-# ForgeLoop Studio RC3 Release Readiness Final Corrections Implementation Plan
+# ForgeLoopAudit RC3 Release Readiness Final Corrections Implementation Plan
 
-> Historical record. This document describes the repository state and implementation target at the time it was written. It is not the current ForgeLoop Studio specification. See the [current documentation index](../../README.md).
+> Historical record. This document describes the repository state and implementation target at the time it was written. It is not the current ForgeLoopAudit specification. See the [current documentation index](../../README.md).
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:executing-plans` to implement this plan task-by-task. The user explicitly requires inline execution without subagents.
 
@@ -10,7 +10,7 @@
 
 **Tech Stack:** Node.js ESM scripts, TypeScript/Vitest, Electron/Playwright, electron-builder, GitHub Actions, GitHub CLI/API.
 
-**Spec:** `/Users/cassio/Downloads/FORGELOOP_STUDIO_RC3_RELEASE_READINESS_AND_FINAL_CORRECTIONS.md`
+**Spec:** `/Users/cassio/Downloads/FORGELOOP_AUDIT_RC3_RELEASE_READINESS_AND_FINAL_CORRECTIONS.md`
 
 ## Global Constraints
 
