@@ -4,7 +4,7 @@ This index separates current product guidance from historical records and
 points each topic to its canonical owner. ForgeLoopAudit is a local-first,
 read-only engineering auditor; ForgeLoop remains the protocol authority.
 
-The current release baseline is ForgeLoopAudit `0.2.0-rc.1` with vendored ForgeLoop
+The current release baseline is ForgeLoopAudit `0.2.0-rc.2` with vendored ForgeLoop
 `1.10.0` at immutable commit
 `3bf721bac6a09c6291bfcbc507a66a2833ebddf4`, using protocol v1, schema v1 and
 Integration API v1. The current capability additions are

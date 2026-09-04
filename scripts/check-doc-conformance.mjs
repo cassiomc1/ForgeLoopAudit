@@ -145,7 +145,7 @@ function validateCurrentFacts(root, packageJson, provenance, archiveName, archiv
   const current = Object.fromEntries(CURRENT_DOCS.map((file) => [file, readText(root, file)]));
   const currentText = Object.values(current).join('\n');
 
-  assertCondition(packageJson.version === '0.2.0-rc.1', `package.json version must remain 0.2.0-rc.1, got ${packageJson.version}`);
+  assertCondition(packageJson.version === '0.2.0-rc.2', `package.json version must remain 0.2.0-rc.2, got ${packageJson.version}`);
   assertCondition(version === '1.10.0', `schema provenance must pin ForgeLoop 1.10.0, got ${version}`);
   assertCondition(typeof commit === 'string' && /^[a-f0-9]{40}$/u.test(commit), 'schema provenance must contain a 40-character ForgeLoop commit');
   assertCondition(provenance.protocolVersion === 1, 'schema provenance must pin protocol v1');
