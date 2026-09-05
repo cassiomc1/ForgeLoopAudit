@@ -2,8 +2,8 @@
 
 ForgeLoopAudit supports protocol v1, schema v1 and Integration API v1 from
 the pinned ForgeLoop source revision recorded in `schemas/provenance.json`
-(ForgeLoop **1.10.0**, commit
-`3bf721bac6a09c6291bfcbc507a66a2833ebddf4`). The runtime artifact registry
+(ForgeLoop **1.10.1**, commit
+`b6802b8b5d0cb7e8edbf811350d9a94f4cb1942d`). The runtime artifact registry
 and `SUPPORTED_PROTOCOL.requiredSchemas` are contract-tested to remain
 identical. See the [trusted schema boundary](../schemas/README.md) and
 [vendored runtime lineage](../vendor/README.md) for their verification
@@ -13,7 +13,7 @@ procedures.
 
 | Project / Build | Integration API | Result |
 |---|---|---|
-| Pinned ForgeLoop build (`1.10.0 @ 3bf721b...`) | Integration API v1 valid (`INTEGRATION_V1`) | Full tested ForgeLoopAudit capability set, including canonical handoffs v2 with exactly-once ledger-backed acceptance and advisory context providers v1; protocol/schema/API remain v1 |
+| Pinned ForgeLoop build (`1.10.1 @ b6802b8...`) | Integration API v1 valid (`INTEGRATION_V1`) | Full tested ForgeLoopAudit capability set, including canonical handoffs v2 with exactly-once ledger-backed acceptance and advisory context providers v1; protocol/schema/API remain v1 |
 | Other protocol-v1 / Integration API v1 build | Required core capabilities present; optional capability absent | Core support remains `INTEGRATION_V1`; optional panels and verification-execution provenance are enabled only when their individual capability contracts are advertised; the affected feature is unavailable |
 | Any protocol-v1 build | Missing CORE required resources or capability drift | Rejected with `INCOMPATIBLE` (fails closed; missing core resources, unsupported recovery contract, or broken executor parity) |
 | Protocol-v1 project | Integration API unavailable | Degraded mode (`ARTIFACT_ONLY`): visual reading + schema validation; canonical ownership and optional canonical projections are unavailable |
@@ -118,8 +118,8 @@ Refresh the trusted schema set only from a controlled ForgeLoop checkout:
 ```bash
 node scripts/generate-schema-provenance.mjs \
   --source ../forgeloop \
-  --commit 3bf721bac6a09c6291bfcbc507a66a2833ebddf4 \
-  --package-version 1.10.0
+  --commit b6802b8b5d0cb7e8edbf811350d9a94f4cb1942d \
+  --package-version 1.10.1
 npm run protocol:schemas:verify
 ```
 

@@ -146,7 +146,7 @@ function validateCurrentFacts(root, packageJson, provenance, archiveName, archiv
   const currentText = Object.values(current).join('\n');
 
   assertCondition(packageJson.version === '0.2.0-rc.3', `package.json version must remain 0.2.0-rc.3, got ${packageJson.version}`);
-  assertCondition(version === '1.10.0', `schema provenance must pin ForgeLoop 1.10.0, got ${version}`);
+  assertCondition(version === '1.10.1', `schema provenance must pin ForgeLoop 1.10.1, got ${version}`);
   assertCondition(typeof commit === 'string' && /^[a-f0-9]{40}$/u.test(commit), 'schema provenance must contain a 40-character ForgeLoop commit');
   assertCondition(provenance.protocolVersion === 1, 'schema provenance must pin protocol v1');
   assertCondition(!STALE_ACTIVE_RELEASE.test(currentText), 'current documentation contains a stale active RC number');
