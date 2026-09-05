@@ -33,6 +33,12 @@ export interface CanonicalFindingOptions {
   structuralQualityMode?: 'off' | 'observe' | 'gate' | 'unknown';
   firstSeenAt?: string;
   lastSeenAt?: string;
+  /**
+   * Which canonical channel supplied the entry. ForgeLoop warnings are advisory
+   * by contract, so an unclassified warning must not block a positive verdict,
+   * while an unclassified error must.
+   */
+  channel?: 'ERROR' | 'WARNING';
 }
 
 export function canonicalErrorToFinding(error: CanonicalAuditError, options: CanonicalFindingOptions): AuditFinding {
@@ -46,6 +52,7 @@ export function canonicalErrorToFinding(error: CanonicalAuditError, options: Can
     artifactRefs,
   });
   const reasonCodes = uniqueStrings(error.reasonCodes ?? []);
+  const unclassifiedCanonicalError = !mapping.classified && (options.channel ?? 'ERROR') === 'ERROR';
   return {
     id: findingId(fingerprint),
     fingerprint,
@@ -61,6 +68,7 @@ export function canonicalErrorToFinding(error: CanonicalAuditError, options: Can
     canonical: true,
     affectsIntegrity: mapping.affectsIntegrity,
     affectsCompletion: mapping.affectsCompletion,
+    ...(unclassifiedCanonicalError ? { unclassifiedCanonicalError: true } : {}),
     evidence: canonicalEvidence(artifactRefs, 'FORGELOOP_CANONICAL_AUDIT'),
     artifactRefs,
     reasonCodes,

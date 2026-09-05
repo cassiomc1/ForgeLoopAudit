@@ -82,9 +82,25 @@ function unwrapResult(value: UnknownRecord): UnknownRecord {
 
 const AUDIT_STATUSES = new Set<CanonicalTaskAudit['status']>(['VALID', 'INCOMPLETE', 'STALE', 'INVALID', 'UNKNOWN']);
 
+/**
+ * ForgeLoop task transaction statuses, translated into the audit taxonomy.
+ * See forgeloop v1.10.1 `src/core/transaction.js`: ABORTED means staging failed
+ * before anything was published, ROLLED_BACK means published writes were undone,
+ * and ABANDONED means the rollback itself failed and the project may still hold
+ * partial writes. None of them is a completion, and ABANDONED is not terminal
+ * for ForgeLoop, so it is the only one that implies a broken project state.
+ */
+const TRANSACTION_STATUS_TRANSLATIONS: Readonly<Record<string, CanonicalTaskAudit['status']>> = Object.freeze({
+  ABORTED: 'INCOMPLETE',
+  ROLLED_BACK: 'INCOMPLETE',
+  ABANDONED: 'INVALID',
+});
+
 function normalizeAuditStatus(value: unknown): CanonicalTaskAudit['status'] {
   const normalized = typeof value === 'string' ? value.toUpperCase() : '';
   if (normalized === 'COMPLETE' || normalized === 'COMPLETED' || normalized === 'PASS') return 'VALID';
+  const translated = TRANSACTION_STATUS_TRANSLATIONS[normalized];
+  if (translated) return translated;
   return AUDIT_STATUSES.has(normalized as CanonicalTaskAudit['status'])
     ? normalized as CanonicalTaskAudit['status']
     : 'UNKNOWN';
