@@ -80,7 +80,7 @@ canonical task audit and structural-quality projections, findings, coverage,
 history/diff, report export, trusted protocol validation, functional fixture E2E
 and multi-platform release staging are implemented. This release line is aligned
 to the vendored ForgeLoop
-`1.10.0` Integration API v1 (canonical ownership, durable recovery,
+`1.10.1` Integration API v1 (canonical ownership, durable recovery,
 observability, durable actions, approvals, capability policy, trajectory
 metrics, evaluations, verification-execution provenance, workspace binding,
 canonical handoffs, responsibility constraints, differential verification scope
@@ -103,7 +103,7 @@ For the current release-candidate policy, Linux, macOS and Windows builds are un
 - Ajv
 - Vitest
 - Playwright
-- `@cassiomc1/forgeloop` 1.10.0 (vendored from the trusted source commit in `schemas/provenance.json`, read-only)
+- `@cassiomc1/forgeloop` 1.10.1 (vendored from the trusted source commit in `schemas/provenance.json`, read-only)
 
 ## Product direction
 
@@ -111,7 +111,7 @@ ForgeLoopAudit is designed as a **read-only observer by default**. ForgeLoop rem
 
 ## Current ForgeLoop compatibility
 
-The current vendored ForgeLoop baseline is ForgeLoop `1.10.0` at immutable source commit `3bf721bac6a09c6291bfcbc507a66a2833ebddf4` (protocol v1, schema v1, Integration API v1).
+The current vendored ForgeLoop baseline is ForgeLoop `1.10.1` at immutable source commit `b6802b8b5d0cb7e8edbf811350d9a94f4cb1942d` (protocol v1, schema v1, Integration API v1).
 
 ForgeLoopAudit consumes the bundled `@cassiomc1/forgeloop/integration` public subpath as its semantic boundary: canonical task discovery, canonical claim ownership (`claimState`, `mutationAllowed`, `ownershipValid`, historical vs effective write claims), durable recovery state, execution provenance, observability projections, durable actions, approvals, capability policy, trajectory metrics, trajectory evaluations, workspace binding, canonical handoffs, responsibility constraints, differential verification scope and code attestation. Direct `.forgeloop/` artifact reading remains available for bounded detail views and diagnostics only — it never determines current ownership, action readiness or authority. The ForgeLoopAudit never executes mutable ForgeLoop commands; recovery/resume and action decisions are displayed as copy-only/read-only information.
 

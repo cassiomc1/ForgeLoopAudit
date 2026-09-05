@@ -39,7 +39,7 @@ orphaned screenshot files.
 | `history-diff.png` | Audit History | — | Manual snapshots stored outside the audited project |
 | `report.png` | Reports | — | Deterministic report formats and provenance |
 | `diagnostics.png` | Diagnostics | `TASK-004` | Canonical diagnostic signals |
-| `settings.png` | Settings | — | Project context, ForgeLoopAudit preferences, ForgeLoop 1.10.0 and advisory capability metadata |
+| `settings.png` | Settings | — | Project context, ForgeLoopAudit preferences, ForgeLoop 1.10.1 and advisory capability metadata |
 
 ## Review checklist
 
