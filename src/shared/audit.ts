@@ -73,6 +73,13 @@ export interface AuditFinding {
   canonical: boolean;
   affectsIntegrity: boolean;
   affectsCompletion: boolean;
+  /**
+   * Present and true only when ForgeLoop reported a canonical error whose code
+   * this Audit build cannot classify. The integrity and completion impact is
+   * then unknown rather than absent, so the finding blocks a positive integrity
+   * or trust verdict instead of being read as harmless.
+   */
+  unclassifiedCanonicalError?: boolean;
   evidence: AuditEvidenceRef[];
   artifactRefs: string[];
   reasonCodes: string[];

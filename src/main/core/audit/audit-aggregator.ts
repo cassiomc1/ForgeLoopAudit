@@ -44,6 +44,16 @@ export function countAuditFindings(findings: AuditFinding[]): AuditFindingCounts
   }, { critical: 0, high: 0, medium: 0, low: 0, info: 0, unknown: 0 });
 }
 
+/**
+ * A canonical error this Audit build cannot classify carries an unknown
+ * integrity impact. Treating it as no impact would let a future ForgeLoop
+ * safety error pass through as a clean verdict, so it downgrades the verdict to
+ * UNKNOWN instead of being ignored.
+ */
+function hasUnclassifiedCanonicalError(findings: AuditFinding[]): boolean {
+  return findings.some((finding) => finding.unclassifiedCanonicalError === true);
+}
+
 function integrityVerdict(input: AggregateProjectAuditInput, findings: AuditFinding[]): ProjectAuditVerdict['integrity'] {
   if (input.compatibilityMode !== 'INTEGRATION_V1') return 'UNKNOWN';
   if (!input.protocol.compatible) return 'INVALID';
@@ -51,6 +61,7 @@ function integrityVerdict(input: AggregateProjectAuditInput, findings: AuditFind
   const integrityFindings = findings.filter((finding) => finding.affectsIntegrity);
   if (integrityFindings.some((finding) => /INCONSIST|CONFLICT|DRIFT/u.test(finding.code))) return 'INCONSISTENT';
   if (integrityFindings.length > 0) return 'INVALID';
+  if (hasUnclassifiedCanonicalError(findings)) return 'UNKNOWN';
   return 'VALID';
 }
 
@@ -74,6 +85,7 @@ function trustVerdict(input: AggregateProjectAuditInput, findings: AuditFinding[
   if (input.taskAudits.some((audit) => !audit.available)) return 'UNKNOWN';
   if (findings.some((finding) => finding.domain === 'ATTESTATION' && finding.affectsIntegrity)) return 'INVALID';
   if (findings.some((finding) => ['OWNERSHIP', 'POLICY', 'HANDOFF', 'RESPONSIBILITY', 'WORKSPACE'].includes(finding.domain) && finding.affectsIntegrity)) return 'DEGRADED';
+  if (hasUnclassifiedCanonicalError(findings)) return 'UNKNOWN';
   return 'VALID';
 }
 

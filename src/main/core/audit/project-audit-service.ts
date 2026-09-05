@@ -82,11 +82,20 @@ export function createProjectAuditService(options: ProjectAuditServiceOptions): 
         ? options.observability.getReflection(options.projectRoot, task.taskId)
         : Promise.resolve<TaskReflectionView | null>(null),
     ]);
-    const errors = [...audit.errors, ...audit.warnings];
-    const findings = errors.map((error) => canonicalErrorToFinding(error, {
-      taskId: task.taskId,
-      structuralQualityMode: quality?.mode,
-    }));
+    // Errors and warnings keep their canonical channel so that an unclassified
+    // error blocks a positive verdict while an advisory warning does not.
+    const findings = [
+      ...audit.errors.map((error) => canonicalErrorToFinding(error, {
+        taskId: task.taskId,
+        structuralQualityMode: quality?.mode,
+        channel: 'ERROR',
+      })),
+      ...audit.warnings.map((warning) => canonicalErrorToFinding(warning, {
+        taskId: task.taskId,
+        structuralQualityMode: quality?.mode,
+        channel: 'WARNING',
+      })),
+    ];
     const qualityFinding = quality ? structuralQualityToFinding(quality) : null;
     const derivedFindings = deriveAuditFindings({
       taskId: task.taskId,

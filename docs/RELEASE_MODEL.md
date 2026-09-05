@@ -1,6 +1,6 @@
 # Release model
 
-ForgeLoopAudit `0.2.0-rc.2` currently produces unsigned preview artifacts.
+ForgeLoopAudit `0.2.0-rc.3` currently produces unsigned preview artifacts.
 This release is aligned to ForgeLoop `1.10.0` at immutable commit
 `3bf721bac6a09c6291bfcbc507a66a2833ebddf`, with protocol v1, schema v1 and
 Integration API v1. The release contract is defined by stable invariants rather than by a particular release

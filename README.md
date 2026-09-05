@@ -75,7 +75,7 @@ common dependency/build folders are not followed during discovery.
 
 ## Current status
 
-The current release line is `v0.2.0-rc.2`. The read-only ForgeLoopAudit runtime,
+The current release line is `v0.2.0-rc.3`. The read-only ForgeLoopAudit runtime,
 canonical task audit and structural-quality projections, findings, coverage,
 history/diff, report export, trusted protocol validation, functional fixture E2E
 and multi-platform release staging are implemented. This release line is aligned

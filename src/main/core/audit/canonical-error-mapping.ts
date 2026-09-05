@@ -6,17 +6,31 @@ export interface CanonicalErrorMapping {
   title: string;
   affectsIntegrity: boolean;
   affectsCompletion: boolean;
+  /**
+   * False when no rule recognised the canonical code. An unclassified canonical
+   * error has an unknown integrity impact, which is not the same as no impact,
+   * so callers must not read `affectsIntegrity: false` as a clean result.
+   */
+  classified: boolean;
 }
 
 interface MappingRule {
   test: (code: string, message: string) => boolean;
-  mapping: Omit<CanonicalErrorMapping, 'title'> & { title: string };
+  mapping: Omit<CanonicalErrorMapping, 'title' | 'classified'> & { title: string };
 }
 
 const rules: MappingRule[] = [
   {
     test: (code) => /OWNERSHIP|CLAIM.*INCONSIST|WRITE.*CLAIM|OWNER/u.test(code),
     mapping: { severity: 'CRITICAL', domain: 'OWNERSHIP', title: 'Ownership is inconsistent', affectsIntegrity: true, affectsCompletion: true },
+  },
+  {
+    // ForgeLoop 1.10.1 raises E_TASK_CONTEXT_MISMATCH when an active task
+    // transaction is reused against a different physical project. Writes could
+    // otherwise be attributed across a project boundary, so this is an
+    // integrity failure and not a workflow hint.
+    test: (code) => /TASK.*CONTEXT.*MISMATCH/u.test(code),
+    mapping: { severity: 'CRITICAL', domain: 'WORKSPACE', title: 'A task transaction was bound to a different project', affectsIntegrity: true, affectsCompletion: true },
   },
   {
     test: (code) => /PROTOCOL|SCHEMA|CONTRACT.*INVALID|INVALID.*CONTRACT/u.test(code),
@@ -86,6 +100,7 @@ const unknownMapping: CanonicalErrorMapping = {
   title: '',
   affectsIntegrity: false,
   affectsCompletion: false,
+  classified: false,
 };
 
 export function mapCanonicalError(
@@ -96,7 +111,7 @@ export function mapCanonicalError(
   const message = error.message.toUpperCase();
   const match = rules.find((rule) => rule.test(code, message));
   if (!match) return { ...unknownMapping, title: error.code };
-  const mapping = { ...match.mapping };
+  const mapping: CanonicalErrorMapping = { ...match.mapping, classified: true };
   if (mapping.domain === 'STRUCTURAL_QUALITY' && options.structuralQualityMode === 'gate') {
     mapping.severity = 'HIGH';
     mapping.affectsCompletion = true;
