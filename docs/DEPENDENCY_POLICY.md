@@ -1,6 +1,6 @@
 # Dependency policy
 
-The current dependency baseline is ForgeLoopAudit `0.2.0-rc.2` with ForgeLoop `1.10.0`
+The current dependency baseline is ForgeLoopAudit `0.2.0-rc.3` with ForgeLoop `1.10.0`
 from `3bf721bac6a09c6291bfcbc507a66a2833ebddf4` (protocol v1, schema v1,
 Integration API v1). Production high/critical vulnerabilities block release. Full audit output is
 retained as a CI artifact; development findings require an owner and an
