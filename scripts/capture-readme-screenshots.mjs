@@ -70,9 +70,12 @@ try {
     content: '*,:before,:after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }',
   });
 
-  // Use the same named demo-project action exposed to users so the screenshot
-  // shell identifies ForgeShop as a demo rather than a generic folder.
-  await page.evaluate(() => window.forgeLoopAudit.openDemoProject());
+  // Click the same named demo-project action exposed to users so the screenshot
+  // shell identifies ForgeShop as a demo rather than a generic folder, and so the
+  // renderer performs its own post-open audit load. Calling the preload API
+  // directly leaves the UI on the `project-opened` reset, which sets audit state
+  // to null and renders "Canonical audit unavailable" with a "Retry audit" button.
+  await page.getByRole('button', { name: 'Open Demo Project', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Audit Summary', exact: true })).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole('region', { name: 'Demo project information' })).toContainText('ForgeShop');
   await expect(page.getByRole('region', { name: 'Demo project information' })).toContainText('errors are still real');
