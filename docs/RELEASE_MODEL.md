@@ -1,8 +1,8 @@
 # Release model
 
 ForgeLoopAudit `0.2.0-rc.3` currently produces unsigned preview artifacts.
-This release is aligned to ForgeLoop `1.10.1` at immutable commit
-`b6802b8b5d0cb7e8edbf811350d9a94f4cb1942d`, with protocol v1, schema v1 and
+This release is aligned to ForgeLoop `1.10.2` at immutable commit
+`d286e1983177a0dfb1f0ceef6c2f6e30c406303a`, with protocol v1, schema v1 and
 Integration API v1. The release contract is defined by stable invariants rather than by a particular release
 candidate number, and [`docs/releases/release-matrix.json`](releases/release-matrix.json)
 remains the machine-readable authority for the public asset matrix.

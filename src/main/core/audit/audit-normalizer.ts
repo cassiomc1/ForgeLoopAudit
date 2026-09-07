@@ -84,7 +84,7 @@ const AUDIT_STATUSES = new Set<CanonicalTaskAudit['status']>(['VALID', 'INCOMPLE
 
 /**
  * ForgeLoop task transaction statuses, translated into the audit taxonomy.
- * See forgeloop v1.10.1 `src/core/transaction.js`: ABORTED means staging failed
+ * See forgeloop v1.10.2 `src/core/transaction.js`: ABORTED means staging failed
  * before anything was published, ROLLED_BACK means published writes were undone,
  * and ABANDONED means the rollback itself failed and the project may still hold
  * partial writes. None of them is a completion, and ABANDONED is not terminal

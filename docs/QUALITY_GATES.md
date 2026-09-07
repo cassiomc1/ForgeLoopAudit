@@ -1,7 +1,7 @@
 # Quality gates
 
 The current release baseline is ForgeLoopAudit `0.2.0-rc.3` with vendored ForgeLoop
-`1.10.1` at `b6802b8b5d0cb7e8edbf811350d9a94f4cb1942d` (protocol v1, schema v1,
+`1.10.2` at `d286e1983177a0dfb1f0ceef6c2f6e30c406303a` (protocol v1, schema v1,
 Integration API v1). `npm run verify:full` is the local fail-fast contract. Its current sequence is
 the authoritative list of shared gates:
 

@@ -78,8 +78,8 @@ Use restrained font weights. Prefer whitespace and alignment over oversized head
 
 ## Current navigation and trust surfaces
 
-The current release is ForgeLoopAudit `0.2.0-rc.3` with ForgeLoop `1.10.1` at
-`b6802b8b5d0cb7e8edbf811350d9a94f4cb1942d` (protocol v1, schema v1, Integration
+The current release is ForgeLoopAudit `0.2.0-rc.3` with ForgeLoop `1.10.2` at
+`d286e1983177a0dfb1f0ceef6c2f6e30c406303a` (protocol v1, schema v1, Integration
 API v1). The auditor-first shell exposes these surfaces in order: Audit Summary,
 Findings, Tasks, Evidence, Quality, Policy & Trust, Audit History, Reports,
 Diagnostics and Settings. The former protocol-object surfaces remain available

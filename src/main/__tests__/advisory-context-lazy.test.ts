@@ -11,4 +11,14 @@ describe('advisory context ForgeLoopAudit boundary', () => {
       expect(readFileSync(path, 'utf8'), path).not.toContain('recallAdvisoryContext');
     }
   });
+
+  it('never creates the optional host-injected Ripwire provider', () => {
+    for (const path of [
+      'src/main/core/project/project-snapshot.ts',
+      'src/main/core/integration/forgeloop-integration.ts',
+      'src/main/ipc/project.handlers.ts',
+    ]) {
+      expect(readFileSync(path, 'utf8'), path).not.toContain('createRipwireAdvisoryContextProvider');
+    }
+  });
 });
