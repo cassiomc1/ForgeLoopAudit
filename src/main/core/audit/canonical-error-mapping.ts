@@ -25,7 +25,7 @@ const rules: MappingRule[] = [
     mapping: { severity: 'CRITICAL', domain: 'OWNERSHIP', title: 'Ownership is inconsistent', affectsIntegrity: true, affectsCompletion: true },
   },
   {
-    // ForgeLoop 1.10.1 raises E_TASK_CONTEXT_MISMATCH when an active task
+    // ForgeLoop 1.10.2 raises E_TASK_CONTEXT_MISMATCH when an active task
     // transaction is reused against a different physical project. Writes could
     // otherwise be attributed across a project boundary, so this is an
     // integrity failure and not a workflow hint.

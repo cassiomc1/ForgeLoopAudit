@@ -10,7 +10,7 @@ const project: ProjectSummary = { name: 'Demo', rootPath: '/tmp/demo', head: 'ab
 const protocol: ProtocolSummary = {
   protocolVersion: 1,
   schemaVersion: 1,
-  packageVersion: '1.10.1',
+  packageVersion: '1.10.2',
   compatible: true,
   compatibilityMode: 'INTEGRATION_V1',
 };
@@ -36,7 +36,7 @@ function aggregate(findings: AuditFinding[], taskAudits: CanonicalTaskAudit[] = 
     qualityViews: [],
     findings,
     compatibilityMode: 'INTEGRATION_V1',
-    forgeLoopPackageVersion: '1.10.1',
+    forgeLoopPackageVersion: '1.10.2',
     forgeLoopCommit: 'b'.repeat(40),
     integrationApiVersion: 1,
     gitHead: 'abc123',
@@ -48,9 +48,9 @@ function normalizedStatus(status: string): CanonicalTaskAudit['status'] {
 }
 
 /**
- * The exact code and message ForgeLoop 1.10.1 raises from `getTaskTransaction`
+ * The exact code and message ForgeLoop 1.10.2 raises from `getTaskTransaction`
  * when an active task transaction is reused against a different project.
- * See forgeloop v1.10.1 src/core/transaction.js lines 19-24.
+ * See forgeloop v1.10.2 src/core/transaction.js lines 19-24.
  */
 const contextMismatch: CanonicalAuditError = {
   code: 'E_TASK_CONTEXT_MISMATCH',

@@ -5,8 +5,8 @@ points each topic to its canonical owner. ForgeLoopAudit is a local-first,
 read-only engineering auditor; ForgeLoop remains the protocol authority.
 
 The current release baseline is ForgeLoopAudit `0.2.0-rc.3` with vendored ForgeLoop
-`1.10.1` at immutable commit
-`b6802b8b5d0cb7e8edbf811350d9a94f4cb1942d`, using protocol v1, schema v1 and
+`1.10.2` at immutable commit
+`d286e1983177a0dfb1f0ceef6c2f6e30c406303a`, using protocol v1, schema v1 and
 Integration API v1. The current capability additions are
 `canonicalHandoffs v2` and `advisoryContextProviders v1`; their trust and
 read-only display rules are owned by [Protocol compatibility](PROTOCOL_COMPATIBILITY.md).

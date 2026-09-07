@@ -35,7 +35,7 @@ Settings → Diagnostics reports the negotiated `ForgeLoopCompatibilityMode` ver
 
 ## Ownership shows "OWNERSHIP UNAVAILABLE"
 
-Canonical ownership comes exclusively from the bundled ForgeLoop 1.10.1
+Canonical ownership comes exclusively from the bundled ForgeLoop 1.10.2
 Integration API (`task/ownership`). When the Integration API is unavailable,
 ForgeLoopAudit degrades to `ARTIFACT_ONLY` mode: raw artifacts stay readable for
 inspection but ownership facts are shown as unavailable instead of being

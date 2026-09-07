@@ -7,8 +7,8 @@
 **Target ForgeLoop protocol:** v1
 **Default product mode:** Local, read-only observer
 
-The current release line is `0.2.0-rc.3`, aligned to ForgeLoop `1.10.1` at
-source commit `b6802b8b5d0cb7e8edbf811350d9a94f4cb1942d` with protocol v1,
+The current release line is `0.2.0-rc.3`, aligned to ForgeLoop `1.10.2` at
+source commit `d286e1983177a0dfb1f0ceef6c2f6e30c406303a` with protocol v1,
 schema v1 and Integration API v1. This document describes the implemented
 observer boundary and identifies genuine future work explicitly.
 
@@ -102,7 +102,7 @@ The UI must represent actual ForgeLoop protocol concepts and artifacts. It must 
 
 ### 2.1a ForgeLoop 1.10.0 Integration boundary
 
-Semantic facts come exclusively from the bundled `@cassiomc1/forgeloop/integration` public subpath (ForgeLoop 1.10.1, Integration API v1, protocol v1, schema v1):
+Semantic facts come exclusively from the bundled `@cassiomc1/forgeloop/integration` public subpath (ForgeLoop 1.10.2, Integration API v1, protocol v1, schema v1):
 
 - `protocol/info` — compatibility via `compatibility.schemaVersion` (there is no top-level `schemaVersion`);
 - `project/tasks` — canonical task discovery with filesystem parity diagnostics;
@@ -136,7 +136,10 @@ accepts handoffs. Advisory context providers are advertised through
 `advisoryContextProviders v1` only when all trust fields are exact: provider
 neutral, Integration API only, lazy, opt-in, not persisted by ForgeLoop,
 non-authoritative, non-evidence and non-executable. ForgeLoopAudit does not invoke
-recall, load memory or persist advisory context. Attestation is lazy and
+recall, load memory or persist advisory context. This includes the optional
+host-injected Ripwire adapter from ForgeLoop 1.10.2
+(`createRipwireAdvisoryContextProvider`): ForgeLoopAudit never creates the
+provider, supplies an executable path or expected version, or invokes recall. Attestation is lazy and
 panel-scoped. ForgeLoopAudit never creates or signs attestations. Attestation status is
 loaded only for the selected task; ForgeLoopAudit may request ForgeLoop's canonical
 local content verification when no external signing-provider execution is
