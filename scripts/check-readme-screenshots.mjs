@@ -26,6 +26,7 @@ function assertCondition(condition, message) {
 function readPngDimensions(filePath) {
   const bytes = readFileSync(filePath);
   const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+  assertCondition(!bytes.subarray(0, 200).toString('utf8').includes('version https://git-lfs.github.com/spec/v1'), `${filePath} is a Git LFS pointer, not a PNG`);
   assertCondition(bytes.subarray(0, 8).equals(signature), `${filePath} is not a PNG`);
   assertCondition(bytes.toString('ascii', 12, 16) === 'IHDR', `${filePath} is missing a PNG IHDR`);
   return { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) };
@@ -40,9 +41,40 @@ function stringValues(value) {
 
 function extractReadmeImageReferences(readme) {
   const refs = [];
-  for (const match of readme.matchAll(/<img\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/giu)) refs.push(match[1]);
-  for (const match of readme.matchAll(/!\[[^\]]*\]\((?:<([^>]+)>|([^\s)]+))/gu)) refs.push(match[1] || match[2]);
+  for (const match of readme.matchAll(/<img\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/giu)) {
+    refs.push({ syntax: 'html', path: match[1], alt: '' });
+  }
+  for (const match of readme.matchAll(/!\[([^\]]*)\]\((?:<([^>]+)>|([^\s)]+))\)/gu)) {
+    refs.push({ syntax: 'markdown', path: match[2] || match[3], alt: match[1] });
+  }
   return refs;
+}
+
+function normalizeRepositoryRelativePath(reference) {
+  const slashPath = reference.replaceAll('\\', '/');
+  if (slashPath.startsWith('/') || /^[A-Z]:\//iu.test(slashPath)) return null;
+  const segments = [];
+  for (const segment of slashPath.split('/')) {
+    if (!segment || segment === '.') continue;
+    if (segment === '..') {
+      if (segments.length === 0) return null;
+      segments.pop();
+      continue;
+    }
+    segments.push(segment);
+  }
+  return segments.join('/');
+}
+
+function isScreenPathCandidate(reference) {
+  const slashPath = reference.replaceAll('\\', '/').replace(/^\.\/+/, '');
+  return slashPath === 'screen' || slashPath.startsWith('screen/');
+}
+
+function normalizeScreenReference(reference) {
+  const normalized = normalizeRepositoryRelativePath(reference);
+  if (!normalized?.startsWith('screen/')) return null;
+  return normalized.slice('screen/'.length);
 }
 
 export function runScreenshotCheck(root = process.cwd()) {
@@ -88,11 +120,14 @@ export function runScreenshotCheck(root = process.cwd()) {
     assertCondition(dimensions.width === manifest.viewport.width && dimensions.height === manifest.viewport.height, `${file} is ${dimensions.width}x${dimensions.height}, expected 1440x900`);
   }
 
-  const readmeRefs = extractReadmeImageReferences(readFileSync(readmePath, 'utf8'))
-    .filter((ref) => ref.startsWith('screen/'))
-    .map((ref) => ref.slice('screen/'.length));
-  assertCondition(readmeRefs.length === REQUIRED_FILES.length, 'README must reference every canonical screenshot exactly once');
+  const imageRefs = extractReadmeImageReferences(readFileSync(readmePath, 'utf8'))
+    .filter((ref) => isScreenPathCandidate(ref.path));
+  assertCondition(imageRefs.every((ref) => ref.syntax === 'markdown'), 'canonical screenshots must use native Markdown image syntax; HTML <img> references are not allowed');
+  assertCondition(imageRefs.every((ref) => ref.alt.trim().length > 0), 'canonical screenshots must have descriptive Markdown alt text');
+  const readmeRefs = imageRefs.map((ref) => normalizeScreenReference(ref.path));
+  assertCondition(readmeRefs.every((ref) => ref !== null), 'README screenshot paths must be safe repository-relative paths');
   assertCondition(new Set(readmeRefs).size === readmeRefs.length, 'README contains duplicate screenshot references');
+  assertCondition(readmeRefs.length === REQUIRED_FILES.length, 'README must reference every canonical screenshot exactly once');
   assertCondition(JSON.stringify([...readmeRefs].sort()) === JSON.stringify([...REQUIRED_FILES].sort()), 'README screenshot references are stale or incomplete');
 
   return { count: REQUIRED_FILES.length, width: manifest.viewport.width, height: manifest.viewport.height };

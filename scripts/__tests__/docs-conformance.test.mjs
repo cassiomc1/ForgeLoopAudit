@@ -103,3 +103,38 @@ test('rejects a missing canonical screenshot', () => {
     assert.throws(() => runScreenshotCheck(root), /audit-summary\.png is missing|orphan or missing PNG/);
   });
 });
+
+test('accepts normalized repository-relative Markdown screenshot paths', () => {
+  withRepository((root) => {
+    const path = join(root, 'README.md');
+    const readme = readFileSync(path, 'utf8').replaceAll('./screen/', 'screen/');
+    writeFileSync(path, readme);
+    assert.doesNotThrow(() => runScreenshotCheck(root));
+  });
+});
+
+test('rejects canonical screenshots expressed only as HTML image tags', () => {
+  withRepository((root) => {
+    const path = join(root, 'README.md');
+    const readme = readFileSync(path, 'utf8').replace(/!\[([^\]]+)\]\((\.\/screen\/[^)]+)\)/gu, '<img src="$2" alt="$1">');
+    writeFileSync(path, readme);
+    assert.throws(() => runScreenshotCheck(root), /native Markdown image syntax/);
+  });
+});
+
+test('rejects duplicate canonical screenshot references', () => {
+  withRepository((root) => {
+    const path = join(root, 'README.md');
+    writeFileSync(path, `${readFileSync(path, 'utf8')}\n![Duplicate audit summary](./screen/audit-summary.png)\n`);
+    assert.throws(() => runScreenshotCheck(root), /duplicate screenshot references/);
+  });
+});
+
+test('rejects stale canonical screenshot names', () => {
+  withRepository((root) => {
+    const path = join(root, 'README.md');
+    const readme = readFileSync(path, 'utf8').replace('./screen/settings.png', './screen/old-settings.png');
+    writeFileSync(path, readme);
+    assert.throws(() => runScreenshotCheck(root), /stale or incomplete/);
+  });
+});

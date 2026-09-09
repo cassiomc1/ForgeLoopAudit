@@ -14,13 +14,11 @@
       "@/*": ["src/*"],
       "@shared/*": ["src/shared/*"],
       "@main/*": ["src/main/*"],
-      "@preload/*": ["src/preload/*"],
       "@renderer/*": ["src/renderer/*"]
     }
   },
   "include": [
     "vite.config.ts",
-    "vitest.config.ts",
-    "electron-builder.yml"
+    "vitest.config.ts"
   ]
 }
