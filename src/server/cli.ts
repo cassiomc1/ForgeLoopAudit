@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { AuditRuntime } from './runtime/audit-runtime';
 import { AuditWebServer } from './web-server';
 import { resolveApplicationDataRoot } from './storage/app-data';
@@ -95,7 +96,7 @@ function openBrowser(url: string): void {
   child.unref();
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   runServerCli().catch((error: unknown) => {
     process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
     process.exitCode = 1;
