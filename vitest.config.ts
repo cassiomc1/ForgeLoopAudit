@@ -12,11 +12,7 @@ export default defineConfig({
       exclude: [
         'src/**/*.test.ts',
         'src/**/*.spec.ts',
-        '**/src/main/index.ts',
-        '**/src/main/app.ts',
-        '**/src/main/**/index.ts',
         '**/src/renderer/**',
-        '**/src/preload/**',
         // Process/filesystem adapters are covered by the local web security and
         // Playwright smoke gates; their entry points are intentionally excluded
         // from the global unit threshold.
@@ -44,7 +40,6 @@ export default defineConfig({
         '**/src/main/core/protocol/compatibility-contract.ts',
         '**/src/main/core/protocol/schema-provenance.ts',
         '**/src/main/core/protocol/validator.ts',
-        '**/src/main/security/external-navigation.ts',
         '**/src/main/security/path-boundary.ts',
         '**/src/main/watcher/change-coalescer.ts',
         '**/src/main/watcher/project-reconciler.ts',
@@ -64,7 +59,6 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
       '@shared': path.resolve(__dirname, './src/shared'),
       '@main': path.resolve(__dirname, './src/main'),
-      '@preload': path.resolve(__dirname, './src/preload'),
       '@renderer': path.resolve(__dirname, './src/renderer'),
     },
   },

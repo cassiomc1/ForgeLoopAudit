@@ -31,8 +31,8 @@ than being inferred.
 
 Canonical ForgeLoop results, deterministic ForgeLoopAudit-derived findings and
 local application observations are labelled separately. The optional advisory context
-capability is host-provided metadata only; advisory context is
-host-provided metadata only; the auditor does not load memory or invoke recall.
+capability is host-provided metadata only; the auditor does not load memory or invoke
+recall, and it remains non-authoritative.
 Repository Index/Search is an engineering discovery surface only, never audit
 evidence or lifecycle authority.
 
@@ -102,15 +102,17 @@ npm run demo:verify
 The images below are captured from the production renderer through the local
 web server at 1440 × 900 in the default dark theme.
 
-| Audit Summary | Findings | Tasks |
-|---|---|---|
-| <img src="screen/audit-summary.png" alt="ForgeShop audit summary" width="420"> | <img src="screen/findings.png" alt="ForgeShop findings" width="420"> | <img src="screen/task-audit.png" alt="ForgeShop tasks" width="420"> |
-| Evidence | Quality | Policy & Trust |
-| <img src="screen/evidence.png" alt="ForgeShop evidence" width="420"> | <img src="screen/quality.png" alt="ForgeShop quality" width="420"> | <img src="screen/policy-trust.png" alt="ForgeShop policy and trust" width="420"> |
-| Audit History | Reports | Diagnostics |
-| <img src="screen/history-diff.png" alt="ForgeShop audit history" width="420"> | <img src="screen/report.png" alt="ForgeShop reports" width="420"> | <img src="screen/diagnostics.png" alt="ForgeShop diagnostics" width="420"> |
-| Settings | | |
-| <img src="screen/settings.png" alt="ForgeLoopAudit settings" width="420"> | | |
+| Audit Summary | Findings |
+|---|---|
+| ![ForgeShop audit summary](./screen/audit-summary.png) | ![ForgeShop findings](./screen/findings.png) |
+| Tasks | Evidence |
+| ![ForgeShop tasks](./screen/task-audit.png) | ![ForgeShop evidence](./screen/evidence.png) |
+| Quality | Policy & Trust |
+| ![ForgeShop quality](./screen/quality.png) | ![ForgeShop policy and trust](./screen/policy-trust.png) |
+| Audit History | Reports |
+| ![ForgeShop audit history](./screen/history-diff.png) | ![ForgeShop reports](./screen/report.png) |
+| Diagnostics | Settings |
+| ![ForgeShop diagnostics](./screen/diagnostics.png) | ![ForgeLoopAudit settings](./screen/settings.png) |
 
 Regenerate and check the set with:
 
