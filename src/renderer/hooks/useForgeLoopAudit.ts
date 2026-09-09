@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { ProjectSnapshot, ProjectUpdate, WatcherStatus } from '@shared/domain';
+import { auditApi } from '../lib/audit-client';
 
 export function useForgeLoopAudit() {
   const [snapshot, setSnapshot] = useState<ProjectSnapshot | null>(null);
@@ -8,10 +9,9 @@ export function useForgeLoopAudit() {
   const [error, setError] = useState<{ message: string; code: string } | null>(null);
   const [lastGeneration, setLastGeneration] = useState(0);
 
-  const api = (window as any).forgeLoopAudit;
+  const api = auditApi;
 
   const loadSnapshot = useCallback(async () => {
-    if (!api) return;
     setIsLoading(true);
     try {
       const data = await api.getProjectSnapshot();
@@ -28,8 +28,6 @@ export function useForgeLoopAudit() {
   }, [api]);
 
   const subscribeToUpdates = useCallback(() => {
-    if (!api) return () => {};
-
     const unsubscribe = api.subscribeProjectUpdates((update: ProjectUpdate) => {
       switch (update.type) {
         case 'snapshot-refreshed':

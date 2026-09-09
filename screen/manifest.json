@@ -2,9 +2,9 @@
   "manifestVersion": 1,
   "sourceProject": "demo",
   "sourceProjectName": "ForgeShop",
-  "auditVersion": "0.2.0-rc.3",
-  "forgeLoopVersion": "1.10.2",
-  "forgeLoopCommit": "d286e1983177a0dfb1f0ceef6c2f6e30c406303a",
+  "auditVersion": "0.3.0-rc.1",
+  "forgeLoopVersion": "1.11.1",
+  "forgeLoopCommit": "674f12c006b3ace12278f109b7ae24f57012d09c",
   "protocolVersion": 1,
   "schemaVersion": 1,
   "viewport": {

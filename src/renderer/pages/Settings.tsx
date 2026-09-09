@@ -3,6 +3,8 @@ import { Settings as SettingsIcon, Monitor, Moon, Sun, Code, Palette } from 'luc
 import { cn } from '../lib/utils';
 import type { ForgeLoopFeatureSupport, ProjectDetectionResult, ProjectSnapshot, WatcherStatus } from '@shared/domain';
 import { ProjectInformation } from '../components/project/ProjectInformation';
+import { auditApi } from '../lib/audit-client';
+import { useTheme, type Theme } from '../lib/theme';
 
 const FEATURE_LABELS: Array<[keyof ForgeLoopFeatureSupport, string]> = [
   ['canonicalOwnership', 'Canonical ownership'],
@@ -23,6 +25,7 @@ const FEATURE_LABELS: Array<[keyof ForgeLoopFeatureSupport, string]> = [
   ['adaptiveExecutionProfiles', 'Adaptive execution profiles'],
   ['executionProfileContext', 'Execution profile context'],
   ['contextUsageObservability', 'Context usage observability'],
+  ['repositoryIndex', 'Repository Index/Search'],
 ];
 
 interface SettingsProps {
@@ -32,9 +35,9 @@ interface SettingsProps {
 }
 
 export function Settings({ snapshot, detection, watcherStatus }: SettingsProps) {
-  const api = (window as any).forgeLoopAudit;
+  const api = auditApi;
+  const { theme, setTheme } = useTheme();
   const [settings, setSettings] = useState({
-    theme: 'dark',
     uiDensity: 'comfortable',
     reduceMotion: 'system',
     reopenLastProject: true,
@@ -46,7 +49,7 @@ export function Settings({ snapshot, detection, watcherStatus }: SettingsProps) 
   const [appVersion, setAppVersion] = useState<string | null>(null);
 
   useEffect(() => {
-    api?.getAppVersion?.().then(setAppVersion).catch(() => setAppVersion(null));
+    api.getAppVersion().then(setAppVersion).catch(() => setAppVersion(null));
   }, [api]);
 
   async function copyDiagnostics() {
@@ -81,19 +84,19 @@ export function Settings({ snapshot, detection, watcherStatus }: SettingsProps) 
                   { value: 'dark', icon: <Moon className="w-4 h-4" />, label: 'Dark' },
                   { value: 'light', icon: <Sun className="w-4 h-4" />, label: 'Light' },
                   { value: 'system', icon: <Monitor className="w-4 h-4" />, label: 'System' },
-                ].map((theme) => (
+                ].map((themeOption) => (
                   <button
-                    key={theme.value}
+                    key={themeOption.value}
                     className={cn(
                       'flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-6 transition-colors',
-                      settings.theme === theme.value
+                      theme === themeOption.value
                         ? 'bg-forge-accent/10 text-forge-accent'
                         : 'text-forge-text-muted hover:bg-forge-hover-surface hover:text-forge-text-primary'
                     )}
-                    onClick={() => setSettings({ ...settings, theme: theme.value })}
+                    onClick={() => setTheme(themeOption.value as Theme)}
                   >
-                    {theme.icon}
-                    {theme.label}
+                    {themeOption.icon}
+                    {themeOption.label}
                   </button>
                 ))}
               </div>

@@ -1,55 +1,42 @@
 # Release model
 
-ForgeLoopAudit `0.2.0-rc.3` currently produces unsigned preview artifacts.
-This release is aligned to ForgeLoop `1.10.2` at immutable commit
-`d286e1983177a0dfb1f0ceef6c2f6e30c406303a`, with protocol v1, schema v1 and
-Integration API v1. The release contract is defined by stable invariants rather than by a particular release
-candidate number, and [`docs/releases/release-matrix.json`](releases/release-matrix.json)
-remains the machine-readable authority for the public asset matrix.
+ForgeLoopAudit `0.3.0-rc.1` is an unsigned preview npm package aligned to
+ForgeLoop `1.11.1` at immutable commit
+`674f12c006b3ace12278f109b7ae24f57012d09c`, with protocol v1, schema v1 and
+Integration API v1. The current release asset is the package produced by
+`npm pack`; native Electron packaging is no longer part of the product.
+
+The machine-readable asset authority is
+[`release-matrix.json`](releases/release-matrix.json). It describes one
+platform-neutral npm tarball plus the supported Node/browser runtime family.
 
 ## Public release contract
 
-A public release must satisfy all of the following:
+A tag-triggered workflow must:
 
-- platform-specific assets are produced for the matrix entry and staged
-  without unexpected files;
-- each staged asset is covered exactly once by the matching platform checksum
-  manifest;
-- release evidence binds the asset filename, SHA-256, platform, architecture,
-  ForgeLoopAudit version, source commit, ForgeLoop lineage and unsigned-preview policy;
-- the lockfile SBOM is generated and normalized as `SBOM-cyclonedx.json`;
-- Electron fuses are applied and read back from the packaged application;
-- the source commit resolved from the release tag is the commit named by the
-  release evidence; and
-- only the tag-triggered workflow publishes a GitHub Release.
+- check out the tagged source and verify the package version;
+- run `npm run verify:full`;
+- build the renderer/server package and run `npm pack`;
+- generate a SHA-256 checksum for the tarball;
+- generate `SBOM-cyclonedx.json`; and
+- upload the package, checksum and SBOM as workflow artifacts.
 
-Linux, macOS and Windows assets are unsigned previews for the current release
-line. Signing and notarization are intentionally outside this release
-contract. Users should expect operating-system security warnings and should
-verify the published checksums and evidence before using an artifact.
+The current artifact is an unsigned preview. Signing, notarization, registry
+publication and production deployment are separate claims and are not implied
+by a local build or a successful CI job.
 
 ## Verification boundaries
 
-These stages are intentionally separate:
-
-| Stage | What it proves | What it does not prove |
+| Stage | Proves | Does not prove |
 |---|---|---|
-| Local verification | The shared `verify:full` contract passes in the current checkout | That a public release exists or that every native runner passed |
-| Pull-request CI | The shared contract and native smoke/package checks pass on the configured matrix | Publication or tag identity |
-| Packaged verification | The unpacked/native package launches, opens the demo, and has the expected fuses | Signing, notarization or public availability |
-| Rehearsal (`workflow_dispatch`) | Platform staging, assembly, checksums, SBOM and evidence can be produced | GitHub Release publication |
-| Tag workflow | The tag-bound asset bundle is published after the same verification and assembly gates | Signing/notarization unless a future contract adds them |
+| Local verification | The shared `verify:full` contract passes in the current checkout | Public publication, deployment or tag identity |
+| Pull-request CI | The contract and browser smoke pass on Ubuntu, macOS and Windows | Publication or signed trust |
+| Workflow rehearsal | The web package, checksum and `SBOM-cyclonedx.json` can be generated | Public release availability |
+| Tag-triggered workflow | The tagged source produced the uploaded npm package and metadata | Signing, notarization or production deployment |
 
-The platform jobs run `npm run verify:full`, build the unsigned platform
-package, exercise packaged smoke and demo-open checks, verify Electron fuses,
-validate the release matrix and upload staged assets. The `assemble` job merges
-those assets, removes staging-only metadata, generates the lockfile SBOM and
-verifies the flat bundle. The `publish` job runs only for a Git tag and
-publishes the assembled files.
+Do not infer ForgeLoop lifecycle completion, npm publication or production
+deployment from release-package verification. Those are independent states.
 
-Do not infer publication, signing, notarization or production availability from
-a local build, a green pull request, or a successful workflow rehearsal.
-
-See [Quality gates](QUALITY_GATES.md) for the verification contract and the
-[release evidence schema](releases/release-evidence.schema.json) for the
-machine-validated evidence shape.
+See [Quality gates](QUALITY_GATES.md) for the shared contract and the
+[migration report](migration/WEB_IMPLEMENTATION_REPORT.md) for the completed
+web delivery boundary.

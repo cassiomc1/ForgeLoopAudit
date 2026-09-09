@@ -10,6 +10,12 @@ import type {
   ForgeLoopVerificationIsolationMode,
   ForgeLoopVerificationScopeMode,
 } from './types';
+import type {
+  RepositoryIndexProjection,
+  RepositorySearchMatch,
+  RepositorySearchRequest,
+  RepositorySearchResult,
+} from '@shared/domain';
 
 export * from './types';
 
@@ -92,6 +98,8 @@ export interface ForgeLoopIntegrationAdapter {
   readTaskMetrics?: (projectRoot: string, taskId: string) => Promise<Record<string, unknown>>;
   readTaskEvaluations?: (projectRoot: string, taskId: string) => Promise<Record<string, unknown>>;
   readCapabilityPolicy?: (projectRoot: string) => Promise<Record<string, unknown> | null>;
+  getRepositoryIndexStatus?: (projectRoot: string) => Promise<RepositoryIndexProjection>;
+  searchRepository?: (projectRoot: string, request: RepositorySearchRequest) => Promise<RepositorySearchResult>;
   executeReadOnly<T = Record<string, unknown>>(
     projectRoot: string,
     command: string,
@@ -218,6 +226,16 @@ interface ForgeLoopIntegrationModule {
         baselineImmutableAfterExecution: boolean;
         maxOutputBytes: number;
       };
+      repositoryIndex?: {
+        version: number;
+        required: boolean;
+        providerNeutral: boolean;
+        implementation: string;
+        engineVersion: string;
+        engineManagedByForgeLoop: boolean;
+        resource: string;
+        managedBinary: boolean;
+      };
     };
     commands: Array<Record<string, unknown>>;
     resources: Array<{ name: string }>;
@@ -231,6 +249,8 @@ interface ForgeLoopIntegrationModule {
     uri: string,
     options?: ForgeLoopResourceReadOptions,
   ): Promise<{ uri: string; taskId?: string | null; data: T }>;
+  repositorySearch?: (input: RepositorySearchRequest & { projectPath?: string }) => Promise<unknown>;
+  repositoryIndexStatus?: (input?: { projectPath?: string }) => Promise<unknown>;
 }
 
 function finiteNumber(value: unknown, fallback: number): number {
@@ -239,6 +259,136 @@ function finiteNumber(value: unknown, fallback: number): number {
 
 function stringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : [];
+}
+
+function recordValue(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function nullableNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function nullableBoolean(value: unknown): boolean | null {
+  return typeof value === 'boolean' ? value : null;
+}
+
+function nullableString(value: unknown): string | null {
+  return typeof value === 'string' ? value : null;
+}
+
+function normalizeRepositoryIndexStatus(value: unknown): RepositoryIndexProjection {
+  const raw = recordValue(value);
+  const index = recordValue(raw.index);
+  const policy = recordValue(raw.policy);
+  const server = recordValue(raw.server);
+  const diagnostics = Array.isArray(raw.diagnostics)
+    ? raw.diagnostics.flatMap((entry) => {
+      const diagnostic = recordValue(entry);
+      return typeof diagnostic.code === 'string' && typeof diagnostic.message === 'string'
+        ? [{ code: diagnostic.code, message: diagnostic.message }]
+        : [];
+    })
+    : [];
+  const health = typeof raw.health === 'string'
+    && ['READY', 'INDEXING', 'NOT_INITIALIZED', 'ENGINE_MISSING', 'ENGINE_INVALID', 'SERVER_DOWN', 'SERVER_UNHEALTHY', 'ERROR'].includes(raw.health)
+    ? raw.health as RepositoryIndexProjection['health']
+    : 'ERROR';
+  return {
+    schemaVersion: raw.schemaVersion === 1 ? 1 : null,
+    available: true,
+    source: 'FORGELOOP_INTEGRATION',
+    required: raw.required === true ? true : raw.required === false ? false : null,
+    engine: nullableString(raw.engine),
+    engineVersion: nullableString(raw.engineVersion),
+    managedBinary: nullableBoolean(raw.managedBinary),
+    overridden: nullableBoolean(raw.overridden),
+    index: {
+      present: nullableBoolean(index.present),
+      complete: nullableBoolean(index.complete),
+      files: nullableNumber(index.files),
+      trigrams: nullableNumber(index.trigrams),
+      createdAt: nullableNumber(index.createdAt),
+      updatedAt: nullableNumber(index.updatedAt),
+    },
+    policy: {
+      maxFileSize: typeof policy.maxFileSize === 'string' || typeof policy.maxFileSize === 'number' ? policy.maxFileSize : null,
+      maxCpuPercent: nullableNumber(policy.maxCpuPercent),
+      watcherQueueCap: nullableNumber(policy.watcherQueueCap),
+      autoSaveMutations: nullableNumber(policy.autoSaveMutations),
+    },
+    server: {
+      running: nullableBoolean(server.running),
+      owned: nullableBoolean(server.owned),
+      pid: nullableNumber(server.pid),
+      port: nullableNumber(server.port),
+      watcher: nullableString(server.watcher),
+      indexing: nullableString(server.indexing),
+      files: nullableNumber(server.files),
+    },
+    health,
+    diagnostics,
+  };
+}
+
+function normalizeRepositorySearchResult(value: unknown, request: RepositorySearchRequest): RepositorySearchResult {
+  const raw = recordValue(value);
+  const rawQuery = recordValue(raw.query);
+  const normalizeMatch = (entry: unknown): RepositorySearchMatch => {
+    const match = recordValue(entry);
+    const submatches = Array.isArray(match.submatches)
+      ? match.submatches.flatMap((submatch) => {
+        const value = recordValue(submatch);
+        return typeof value.start === 'number' && typeof value.end === 'number'
+          ? [{ start: value.start, end: value.end, match: nullableString(value.match) }]
+          : [];
+      })
+      : [];
+    return {
+      path: typeof match.path === 'string' ? match.path : '',
+      line: typeof match.line === 'number' ? match.line : 0,
+      column: nullableNumber(match.column),
+      offset: nullableNumber(match.offset),
+      text: typeof match.text === 'string' ? match.text : '',
+      submatches,
+    };
+  };
+  const rawMetrics = recordValue(raw.metrics);
+  const rawIndex = recordValue(raw.repositoryIndex);
+  return {
+    available: true,
+    source: 'FORGELOOP_INTEGRATION',
+    query: {
+      ...request,
+      ...(typeof rawQuery.pattern === 'string' ? { pattern: rawQuery.pattern } : {}),
+      globs: Array.isArray(rawQuery.globs) ? stringArray(rawQuery.globs) : request.globs ?? [],
+      types: Array.isArray(rawQuery.types) ? stringArray(rawQuery.types) : request.types ?? [],
+    },
+    repositoryIndex: typeof rawIndex.engine === 'string' ? {
+      engine: rawIndex.engine,
+      engineVersion: nullableString(rawIndex.engineVersion),
+      indexed: rawIndex.indexed === true,
+      server: rawIndex.server === true,
+    } : null,
+    matches: Array.isArray(raw.matches) ? raw.matches.map(normalizeMatch) : [],
+    contexts: Array.isArray(raw.contexts) ? raw.contexts.map(normalizeMatch) : [],
+    files: Array.isArray(raw.files) ? stringArray(raw.files) : [],
+    stats: recordValue(raw.stats) as Record<string, number>,
+    metrics: Object.keys(rawMetrics).length === 0 ? null : {
+      queryDurationMs: nullableNumber(rawMetrics.queryDurationMs),
+      nativeDurationMs: nullableNumber(rawMetrics.nativeDurationMs),
+      matchCount: typeof rawMetrics.matchCount === 'number' ? rawMetrics.matchCount : 0,
+      matchedFileCount: typeof rawMetrics.matchedFileCount === 'number' ? rawMetrics.matchedFileCount : 0,
+      engine: nullableString(rawMetrics.engine),
+      engineVersion: nullableString(rawMetrics.engineVersion),
+      serverUsed: nullableBoolean(rawMetrics.serverUsed),
+      exitCode: nullableNumber(rawMetrics.exitCode),
+      ignoredNativeEvents: nullableNumber(rawMetrics.ignoredNativeEvents),
+      ...(typeof rawMetrics.bytesSearched === 'number' ? { bytesSearched: rawMetrics.bytesSearched } : {}),
+      ...(typeof rawMetrics.matchedLines === 'number' ? { matchedLines: rawMetrics.matchedLines } : {}),
+    },
+    trust: 'DISCOVERY_ONLY',
+  };
 }
 
 const KNOWN_VERIFICATION_SCOPE_MODES: ForgeLoopVerificationScopeMode[] = ['AUTO', 'CHANGED', 'CLAIMED', 'FULL'];
@@ -292,6 +442,7 @@ function buildAdapter(fl: ForgeLoopIntegrationModule): ForgeLoopIntegrationAdapt
       const differentialVerificationScope = raw.features.differentialVerificationScope;
       const codeAttestation = raw.features.codeAttestation;
       const structuralQuality = raw.features.structuralQuality;
+      const repositoryIndex = raw.features.repositoryIndex;
       return {
         packageVersion,
         protocolVersion: raw.protocolVersion,
@@ -438,6 +589,17 @@ function buildAdapter(fl: ForgeLoopIntegrationModule): ForgeLoopIntegrationAdapt
               maxOutputBytes: finiteNumber(structuralQuality.maxOutputBytes, 0),
             } satisfies ForgeLoopStructuralQualityFeatureSummary,
           } : {}),
+          ...(repositoryIndex ? {
+            repositoryIndex: {
+              version: finiteNumber(repositoryIndex.version, 0),
+              required: repositoryIndex.required === true,
+              providerNeutral: repositoryIndex.providerNeutral === true,
+              implementation: typeof repositoryIndex.implementation === 'string' ? repositoryIndex.implementation : '',
+              engineVersion: typeof repositoryIndex.engineVersion === 'string' ? repositoryIndex.engineVersion : '',
+              managedBinary: repositoryIndex.managedBinary === true,
+              resource: typeof repositoryIndex.resource === 'string' ? repositoryIndex.resource : '',
+            },
+          } : {}),
         },
         resources: raw.resources.map((resource) => resource.name),
         commands: raw.commands.map((command) => ({
@@ -543,6 +705,49 @@ function buildAdapter(fl: ForgeLoopIntegrationModule): ForgeLoopIntegrationAdapt
     async readCapabilityPolicy(projectRoot: string): Promise<Record<string, unknown> | null> {
       assertReadProjectRoot(projectRoot);
       return readResource<Record<string, unknown> | null>(fl, 'project/capability-policy', { projectPath: projectRoot });
+    },
+
+    async getRepositoryIndexStatus(projectRoot: string): Promise<RepositoryIndexProjection> {
+      assertReadProjectRoot(projectRoot);
+      if (!fl.repositoryIndexStatus) {
+        return {
+          schemaVersion: null,
+          available: false,
+          source: 'UNAVAILABLE',
+          required: null,
+          engine: null,
+          engineVersion: null,
+          managedBinary: null,
+          overridden: null,
+          index: { present: null, complete: null, files: null, trigrams: null, createdAt: null, updatedAt: null },
+          policy: { maxFileSize: null, maxCpuPercent: null, watcherQueueCap: null, autoSaveMutations: null },
+          server: { running: null, owned: null, pid: null, port: null, watcher: null, indexing: null, files: null },
+          health: 'UNAVAILABLE',
+          diagnostics: [{ code: 'CAPABILITY_UNAVAILABLE', message: 'ForgeLoop Repository Index status is not exported by this Integration API.' }],
+          message: 'Repository Index status is unavailable for this ForgeLoop runtime.',
+        };
+      }
+      return normalizeRepositoryIndexStatus(await fl.repositoryIndexStatus({ projectPath: projectRoot }));
+    },
+
+    async searchRepository(projectRoot: string, request: RepositorySearchRequest): Promise<RepositorySearchResult> {
+      assertReadProjectRoot(projectRoot);
+      if (!fl.repositorySearch) {
+        return {
+          available: false,
+          source: 'UNAVAILABLE',
+          query: { ...request, globs: request.globs ?? [], types: request.types ?? [] },
+          repositoryIndex: null,
+          matches: [],
+          contexts: [],
+          files: [],
+          stats: {},
+          metrics: null,
+          trust: 'DISCOVERY_ONLY',
+          message: 'ForgeLoop Repository Search is unavailable for this runtime.',
+        };
+      }
+      return normalizeRepositorySearchResult(await fl.repositorySearch({ ...request, projectPath: projectRoot }), request);
     },
 
     async executeReadOnly<T>(

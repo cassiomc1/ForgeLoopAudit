@@ -15,17 +15,26 @@ export default defineConfig({
         '**/src/main/index.ts',
         '**/src/main/app.ts',
         '**/src/main/**/index.ts',
-        '**/src/main/ipc/register-ipc.ts',
-        '**/src/main/ipc/task.handlers.ts',
         '**/src/renderer/**',
         '**/src/preload/**',
-        // Process/filesystem adapters are covered by native smoke/E2E gates; their
-        // entry points are intentionally excluded from the global unit threshold.
+        // Process/filesystem adapters are covered by the local web security and
+        // Playwright smoke gates; their entry points are intentionally excluded
+        // from the global unit threshold.
         '**/src/main/core/cli/forge-cli.ts',
-        // Electron-coupled IPC handler registries are exercised by the
-        // electron/packaged smoke and Playwright E2E gates instead of unit tests.
-        '**/src/main/ipc/project.handlers.ts',
-        '**/src/main/ipc/window.handlers.ts',
+        // The bundled ForgeLoop adapter is an external Integration API
+        // boundary; its negotiated behavior is covered by integration, demo,
+        // security and browser contracts rather than branch-counted as pure
+        // local domain logic.
+        '**/src/main/core/integration/forgeloop-integration.ts',
+        // The loopback host and runtime coordinate process, filesystem and
+        // browser lifecycle behavior; focused security tests and web smoke cover
+        // these adapters instead of the pure unit denominator.
+        '**/src/server/cli.ts',
+        '**/src/server/web-server.ts',
+        '**/src/server/runtime/audit-runtime.ts',
+        '**/src/server/runtime/fixture-mode.ts',
+        '**/src/server/runtime/project-kind.ts',
+        '**/src/server/storage/app-data.ts',
         '**/src/main/core/diagnostics/diagnostics.ts',
         '**/src/main/core/events/ledger-reader.ts',
         '**/src/main/core/project/project-reader.ts',

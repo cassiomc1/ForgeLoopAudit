@@ -1,15 +1,9 @@
 {
-  "macos": [
-    { "type": "dmg", "arch": "arm64" },
-    { "type": "dmg", "arch": "x64" },
-    { "type": "zip", "arch": "arm64" },
-    { "type": "zip", "arch": "x64" }
-  ],
-  "windows": [
-    { "type": "nsis", "arch": "x64" },
-    { "type": "portable", "arch": "x64" }
-  ],
-  "linux": [
-    { "type": "AppImage", "arch": "x64" }
-  ]
+  "packageName": "forgeloop-audit",
+  "assetType": "npm-tarball",
+  "runtime": "node-local-web-server",
+  "renderer": "browser",
+  "supportedPlatforms": ["ubuntu", "macos", "windows"],
+  "requiredMetadata": ["SHA256SUMS", "SBOM-cyclonedx.json"],
+  "signing": "unsigned-preview"
 }

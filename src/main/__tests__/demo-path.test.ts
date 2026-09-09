@@ -15,7 +15,7 @@ describe('resolveBundledDemoPath', () => {
   it('resolves <appPath>/demo in development mode', () => {
     const appPath = makeAppWithDemo();
     try {
-      expect(resolveBundledDemoPath({ isPackaged: false, appPath })).toBe(join(appPath, 'demo'));
+      expect(resolveBundledDemoPath({ isBundled: false, appPath })).toBe(join(appPath, 'demo'));
     } finally {
       rmSync(appPath, { recursive: true, force: true });
     }
@@ -25,7 +25,7 @@ describe('resolveBundledDemoPath', () => {
     const resourcesPath = makeAppWithDemo();
     const appPath = makeAppWithDemo();
     try {
-      expect(resolveBundledDemoPath({ isPackaged: true, appPath, resourcesPath })).toBe(join(resourcesPath, 'demo'));
+      expect(resolveBundledDemoPath({ isBundled: true, appPath, resourcesPath })).toBe(join(resourcesPath, 'demo'));
     } finally {
       rmSync(resourcesPath, { recursive: true, force: true });
       rmSync(appPath, { recursive: true, force: true });
@@ -35,7 +35,7 @@ describe('resolveBundledDemoPath', () => {
   it('falls back to the app path in packaged mode without a resources copy', () => {
     const appPath = makeAppWithDemo();
     try {
-      expect(resolveBundledDemoPath({ isPackaged: true, appPath, resourcesPath: join(tmpdir(), 'does-not-exist-resources') })).toBe(join(appPath, 'demo'));
+      expect(resolveBundledDemoPath({ isBundled: true, appPath, resourcesPath: join(tmpdir(), 'does-not-exist-resources') })).toBe(join(appPath, 'demo'));
     } finally {
       rmSync(appPath, { recursive: true, force: true });
     }
@@ -44,8 +44,8 @@ describe('resolveBundledDemoPath', () => {
   it('returns null when no bundled demo exists', () => {
     const empty = mkdtempSync(join(tmpdir(), 'forgeloop-demo-empty-'));
     try {
-      expect(resolveBundledDemoPath({ isPackaged: false, appPath: empty })).toBeNull();
-      expect(resolveBundledDemoPath({ isPackaged: true, appPath: empty, resourcesPath: empty })).toBeNull();
+      expect(resolveBundledDemoPath({ isBundled: false, appPath: empty })).toBeNull();
+      expect(resolveBundledDemoPath({ isBundled: true, appPath: empty, resourcesPath: empty })).toBeNull();
     } finally {
       rmSync(empty, { recursive: true, force: true });
     }
@@ -55,7 +55,7 @@ describe('resolveBundledDemoPath', () => {
     const imposter = mkdtempSync(join(tmpdir(), 'forgeloop-demo-imposter-'));
     mkdirSync(join(imposter, 'demo', '.forgeloop'), { recursive: true });
     try {
-      expect(resolveBundledDemoPath({ isPackaged: false, appPath: imposter })).toBeNull();
+      expect(resolveBundledDemoPath({ isBundled: false, appPath: imposter })).toBeNull();
     } finally {
       rmSync(imposter, { recursive: true, force: true });
     }

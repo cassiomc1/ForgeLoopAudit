@@ -4,6 +4,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingState } from '../components/ui/LoadingState';
 import { cn } from '../lib/utils';
 import { Terminal, ChevronDown, ChevronRight } from 'lucide-react';
+import { auditApi } from '../lib/audit-client';
 import {
   executionKindLabel,
   executionIsolationDetails,
@@ -133,7 +134,7 @@ export function Executions({ snapshot, selectedTaskId, executionsRefreshToken = 
     setIsLoading(true);
     setError(null);
     try {
-      const result = await (window as any).forgeLoopAudit.getTaskExecutions(taskId);
+      const result = await auditApi.getTaskExecutions(taskId);
       if (requestId !== requestIdRef.current) return;
       setPage(result);
       setRawJson(null);

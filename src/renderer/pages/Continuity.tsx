@@ -3,6 +3,7 @@ import type { ContinuityLintView, ProjectSnapshot, TaskSummary } from '@shared/d
 import { EmptyState } from '../components/ui/EmptyState';
 import { CanonicalHandoffsPanel } from '../components/tasks/CanonicalHandoffsPanel';
 import { Repeat, AlertTriangle } from 'lucide-react';
+import { auditApi } from '../lib/audit-client';
 
 export function Continuity({ snapshot, selectedTaskId, onSelectedTaskChange, onOpenDiagnostics, handoffRefreshToken = 0 }: { snapshot: ProjectSnapshot; selectedTaskId?: string | null; onSelectedTaskChange?: (taskId: string) => void; onOpenDiagnostics?: () => void; handoffRefreshToken?: number }) {
   const [selectedTask, setSelectedTask] = useState<TaskSummary | null>(snapshot.tasks.find((t) => t.taskId === snapshot.activeTaskId) || snapshot.tasks[0] || null);
@@ -12,9 +13,7 @@ export function Continuity({ snapshot, selectedTaskId, onSelectedTaskChange, onO
     let cancelled = false;
     setContinuityLint(null);
     if (!selectedTask) return () => { cancelled = true; };
-    const read = window.forgeLoopAudit.getTaskContinuityLint?.(selectedTask.taskId);
-    if (!read) return () => { cancelled = true; };
-    read.then((result) => { if (!cancelled) setContinuityLint(result); }).catch(() => { if (!cancelled) setContinuityLint(null); });
+    auditApi.getTaskContinuityLint(selectedTask.taskId).then((result) => { if (!cancelled) setContinuityLint(result); }).catch(() => { if (!cancelled) setContinuityLint(null); });
     return () => { cancelled = true; };
   }, [selectedTask, handoffRefreshToken]);
   if (!snapshot.tasks.length) return <EmptyState title="No tasks available" description="Select a task to view continuity information." />;

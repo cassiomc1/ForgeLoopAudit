@@ -51,7 +51,7 @@ distinguish protocol examples from application failures.
 
 The scenario label never suppresses real validation or integrity errors.
 Schema errors, invalid artifacts, broken event hashes, policy-lock mismatches,
-unexpected phase drift, IPC errors, and ForgeLoopAudit failures must still be treated as
+unexpected phase drift, transport errors, and ForgeLoopAudit failures must still be treated as
 real defects.
 
 ## Regenerating

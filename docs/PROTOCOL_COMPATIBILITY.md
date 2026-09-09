@@ -2,8 +2,8 @@
 
 ForgeLoopAudit supports protocol v1, schema v1 and Integration API v1 from
 the pinned ForgeLoop source revision recorded in `schemas/provenance.json`
-(ForgeLoop **1.10.2**, commit
-`d286e1983177a0dfb1f0ceef6c2f6e30c406303a`). The runtime artifact registry
+(ForgeLoop **1.11.1**, commit
+`674f12c006b3ace12278f109b7ae24f57012d09c`). The runtime artifact registry
 and `SUPPORTED_PROTOCOL.requiredSchemas` are contract-tested to remain
 identical. See the [trusted schema boundary](../schemas/README.md) and
 [vendored runtime lineage](../vendor/README.md) for their verification
@@ -13,7 +13,7 @@ procedures.
 
 | Project / Build | Integration API | Result |
 |---|---|---|
-| Pinned ForgeLoop build (`1.10.2 @ d286e19...`) | Integration API v1 valid (`INTEGRATION_V1`) | Full tested ForgeLoopAudit capability set, including canonical handoffs v2 with exactly-once ledger-backed acceptance and advisory context providers v1; protocol/schema/API remain v1 |
+| Pinned ForgeLoop build (`1.11.1 @ 674f12c...`) | Integration API v1 valid (`INTEGRATION_V1`) | Full tested ForgeLoopAudit capability set, including canonical handoffs v2 with exactly-once ledger-backed acceptance, advisory context providers v1 and Repository Index/Search; protocol/schema/API remain v1 |
 | Other protocol-v1 / Integration API v1 build | Required core capabilities present; optional capability absent | Core support remains `INTEGRATION_V1`; optional panels and verification-execution provenance are enabled only when their individual capability contracts are advertised; the affected feature is unavailable |
 | Any protocol-v1 build | Missing CORE required resources or capability drift | Rejected with `INCOMPATIBLE` (fails closed; missing core resources, unsupported recovery contract, or broken executor parity) |
 | Protocol-v1 project | Integration API unavailable | Degraded mode (`ARTIFACT_ONLY`): visual reading + schema validation; canonical ownership and optional canonical projections are unavailable |
@@ -29,7 +29,7 @@ ForgeLoopAudit explicitly distinguishes core compatibility from additive optiona
 - **Missing CORE required resources or contract drift &rarr; `INCOMPATIBLE`**: Core resources (`protocol/info`, `project/tasks`, `task/status`, `task/ownership`, `task/contract`, `task/continuity`), Integration API version mismatch, broken executor parity, or incomplete `taskClaimRecovery` fail closed to `INCOMPATIBLE`.
 - **Missing OPTIONAL resources or feature contracts &rarr; Affected feature unavailable**: Optional resources (`task/actions`, `task/action`, `task/approvals`, `task/metrics`, `task/evaluations`, `project/capability-policy`, `task/workspace-binding`, `task/handoffs`, `task/responsibility`, `task/verification-scope`, `task/attestation`) or observability command restrictions degrade individual panels/views gracefully without compromising core protocol compatibility.
 
-ForgeLoop 1.10.0 adds the canonical handoff acceptance and advisory context
+ForgeLoop 1.11.x adds Repository Index/Search while retaining the canonical handoff acceptance and advisory context
 capability contracts while retaining the additive workspace binding,
 responsibility, differential verification scope and code attestation resources.
 ForgeLoopAudit reads these resources through selected-task, read-only adapter methods
@@ -81,7 +81,7 @@ is neutral, Integration API-only, lazy, opt-in, not persisted by ForgeLoop,
 non-authoritative, non-evidence and non-executable. ForgeLoopAudit reports whether the
 host advertises this contract but does not load memory, call recall, display
 retrieved results or persist provider output. This includes the optional
-host-injected Ripwire adapter introduced in ForgeLoop 1.10.2
+host-injected Ripwire adapter introduced in ForgeLoop 1.11.1
 (`createRipwireAdvisoryContextProvider`): ForgeLoopAudit never creates the
 provider, supplies an executable path or expected version, or invokes recall,
 so Ripwire process execution is never triggered from the auditor. Missing or malformed trust fields
@@ -122,8 +122,8 @@ Refresh the trusted schema set only from a controlled ForgeLoop checkout:
 ```bash
 node scripts/generate-schema-provenance.mjs \
   --source ../forgeloop \
-  --commit d286e1983177a0dfb1f0ceef6c2f6e30c406303a \
-  --package-version 1.10.2
+  --commit 674f12c006b3ace12278f109b7ae24f57012d09c \
+  --package-version 1.11.1
 npm run protocol:schemas:verify
 ```
 

@@ -1,37 +1,60 @@
 # Quality gates
 
-The current release baseline is ForgeLoopAudit `0.2.0-rc.3` with vendored ForgeLoop
-`1.10.2` at `d286e1983177a0dfb1f0ceef6c2f6e30c406303a` (protocol v1, schema v1,
-Integration API v1). `npm run verify:full` is the local fail-fast contract. Its current sequence is
-the authoritative list of shared gates:
+The current release is ForgeLoopAudit `0.3.0-rc.1` with vendored ForgeLoop
+`1.11.1` at `674f12c006b3ace12278f109b7ae24f57012d09c` (protocol v1, schema v1,
+Integration API v1). `npm run verify:full` is the shared fail-fast contract.
 
-1. ForgeLoop vendor lineage and version lineage;
-2. dependency policy and high/critical production audit;
-3. schema provenance, deterministic demo drift/verification and documentation
+## Local contract
+
+The contract verifies, in order:
+
+1. vendored ForgeLoop lineage and package/version lineage;
+2. dependency policy and the high/critical production audit;
+3. schema provenance, deterministic demo integrity and documentation
    conformance;
-4. TypeScript, ESLint, unit tests, release-contract tests, V8 coverage and
+4. TypeScript, ESLint, unit tests, release-contract tests, coverage and
    critical coverage;
-5. measured performance budget;
-6. production build; and
-7. package-content verification.
+5. measured performance budgets;
+6. the production renderer/server build; and
+7. npm package contents.
 
-The local contract does not claim native packaging, accessibility, CodeQL or
-public-release verification. Pull-request CI adds Electron smoke, the E2E
-suite, unpacked packaged smoke and Electron-fuse read-back on Ubuntu, macOS and
-Windows. GitHub's repository-default CodeQL setup remains the single CodeQL
-authority; this repository does not add an overlapping advanced workflow.
+The web-specific smoke command is:
 
-The V8 unit gate deliberately scopes out Electron/process/filesystem adapter
-modules whose executable coverage is collected by packaged smoke and Playwright
-E2E gates. Security and protocol pure functions remain in the unit denominator;
-this is a test-boundary decision, not a suppression of runtime verification.
-The exclusions are explicit in `vitest.config.ts`, and the critical gate keeps
-95% lines/functions and 90% branches for the pure security, IPC and protocol
-boundary.
+```bash
+npm run test:web-smoke
+```
 
-The packaged smoke logs its executable, elapsed launch time, PID, exit metadata,
-title, preload bridge and cleanup failures. A launch or first-window timeout
-fails the gate and forces cleanup. On Linux CI only, Chromium receives
-`--no-sandbox` because hosted runners do not provide the setuid sandbox
-ownership required by Electron; this runner accommodation does not weaken
-packaged runtime hardening or fuse assertions.
+It starts the built loopback server, bootstraps a same-origin browser session,
+checks dark/light theme switching, traverses the audit navigation and verifies a
+live watcher update. The screenshot command uses the same web server and
+Playwright Chromium path.
+
+## CI matrix
+
+The CI workflow runs `npm run verify:full` on Ubuntu, macOS and Windows. It then
+installs Playwright Chromium and runs the web smoke suite. CodeQL remains the
+repository-level static-analysis authority; this project does not add a second
+overlapping CodeQL workflow.
+
+The matrix proves the configured platform checks. It does not prove registry
+publication, production deployment, signing or notarization.
+
+## Coverage boundary
+
+Pure protocol, path-boundary, server security and renderer contract logic is
+covered by Vitest and browser smoke tests. Process bootstrap, filesystem access
+and browser behavior are verified through the web server test and Playwright
+instead of being hidden in a renderer-only coverage denominator. Missing
+optional ForgeLoop capabilities are tested as explicit unavailable states.
+
+## Required verification commands
+
+```bash
+npm run verify:full
+npm run test:web-smoke
+npm run screenshots:readme
+npm run screenshots:check
+```
+
+Do not infer publication, signing, deployment or completion authority from a
+green local command or a green CI job.

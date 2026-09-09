@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveRecentProjectKind } from '@main/ipc/project-kind';
+import { resolveRecentProjectKind } from '../../server/runtime/project-kind';
 import type { RecentProject } from '@shared/domain';
 
 describe('resolveRecentProjectKind', () => {

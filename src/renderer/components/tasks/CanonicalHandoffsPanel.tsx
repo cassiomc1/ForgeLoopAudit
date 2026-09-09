@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { ForgeLoopFeatureSupport, TaskHandoffsView } from '@shared/domain';
 import { Archive, CircleHelp } from 'lucide-react';
 import { HandoffAcceptanceBadge, HandoffAcceptanceDetail } from './HandoffAcceptanceBadge';
+import { auditApi } from '../../lib/audit-client';
 
 interface CanonicalHandoffsPanelProps {
   taskId: string;
@@ -37,7 +38,7 @@ export function CanonicalHandoffsPanel({ taskId, featureSupport, handoffRefreshT
 
   useEffect(() => {
     let cancelled = false;
-    const api = window.forgeLoopAudit;
+    const api = auditApi;
     const read = advertised && typeof api?.getTaskHandoffs === 'function'
       ? api.getTaskHandoffs(taskId).catch(() => unavailable(true))
       : Promise.resolve(unavailable(advertised));

@@ -1,244 +1,103 @@
 # ForgeLoopAudit — Current Implementation and Verification Matrix
 
-This is a current-state matrix, not an unchecked product backlog. Statuses are
-derived from the implementation, automated tests and workflow definitions in
-this repository.
+This is a current-state matrix for the web migration, not an unchecked
+backlog.
 
 | Status | Meaning |
 |---|---|
 | `[x]` | Implemented and covered by the current verification contract |
-| `[~]` | Partial, bounded or verified only in a specific environment |
-| `[ ]` | Not implemented or not yet verified |
-| `[-]` | Intentional non-goal for the current read-only release |
+| `[~]` | Partial, bounded or environment-specific |
+| `[ ]` | Not implemented or not verified |
+| `[-]` | Intentional non-goal for this release |
 
-## Foundation and shell
+## Foundation and web host
 
-- [x] Electron + Vite + React + TypeScript application shell.
-- [x] Node.js 20+ package/tooling baseline.
-- [x] Secure `BrowserWindow` with `nodeIntegration: false`,
-  `contextIsolation: true` and renderer sandboxing.
-- [x] Typed preload bridge and bounded project folder picker.
-- [x] Canonical selected-project path boundary with traversal and symlink
-  rejection.
-- [x] Dark design tokens, responsive shell, semantic headings and loading,
-  empty and error states.
-- [x] Auditor-first navigation: Audit Summary, Findings, Tasks, Evidence,
-  Quality, Policy & Trust, Audit History, Reports, Diagnostics and Settings;
-  protocol-object pages remain read-only drill-down surfaces.
+- [x] Local Node.js CLI and loopback web server.
+- [x] React/Vite renderer with typed same-origin HTTP client and SSE updates.
+- [x] One-time bootstrap token, HttpOnly/SameSite=Strict session and origin/host checks.
+- [x] CSP, security headers and static-file containment.
+- [x] Explicit API routes with safe error envelopes; no generic command/file dispatch.
+- [x] CLI-owned project selection, recent-project reopening and managed report destinations.
+- [x] Application data and audit history stored outside the audited project.
 
-Evidence: `src/main/app.ts`, `src/preload/`, `src/main/security/`,
-`src/renderer/App.tsx`, `tests/e2e/accessibility.spec.ts` and Electron smoke
-tests.
+Evidence: `src/server/`, `src/renderer/lib/audit-client.ts`,
+`src/server/__tests__/web-server-security.test.ts` and `tests/e2e/web-smoke.spec.ts`.
 
 ## ForgeLoop integration and trust boundary
 
-- [x] Detect ForgeLoop projects, including safe nested-project discovery.
-- [x] Load ForgeLoop `1.10.2` through the vendored Integration API v1, including the optional Structural Quality resource and exact capability contracts.
-- [x] Read `protocol/info` from `compatibility.schemaVersion`; no top-level
-  schema version is inferred.
-- [x] Fail closed on unsupported protocol/schema versions, missing core
-  resources, Integration API drift, executor-parity drift or incomplete
-  durable recovery capability.
-- [x] Select only `INTEGRATION_V1`, `ARTIFACT_ONLY` or `INCOMPATIBLE`; no
-  inferred legacy mode exists.
-- [x] Maintain the protocol/schema/Integration API v1 compatibility contract
-  while negotiating `canonicalHandoffs v2` and `advisoryContextProviders v1`
-  as additive feature metadata.
-- [x] Use canonical `project/tasks`, task status, ownership, contract and
-  continuity projections for semantic state.
-- [x] Keep raw artifact readers bounded, schema-validated, path-contained and
-  non-authoritative.
-- [x] Project canonical ownership, recovery state and operational state without
-  treating phase alone as proof of claim release.
-- [x] Read observability, durable actions, approvals, capability policy,
-  trajectory metrics/evaluations and execution provenance when advertised.
-- [x] Read the canonical task/context projection when adaptive execution
-  capabilities are advertised, display the resolved profile and bounded policy,
-  and use explicit balanced compatibility behavior for older hosts.
-- [x] Keep policy and next-action reads on the Integration API in
-  `INTEGRATION_V1`; older artifact-only compatibility paths use only the
-  allowlisted read-only CLI adapter.
+- [x] Vendored ForgeLoop `1.11.1` at
+  `674f12c006b3ace12278f109b7ae24f57012d09c`.
+- [x] Protocol v1, schema v1 and Integration API v1 provenance verification.
+- [x] Fail-closed `INTEGRATION_V1`, `ARTIFACT_ONLY` and `INCOMPATIBLE` modes.
+- [x] Canonical ownership, recovery, observability, actions, approvals,
+  policy, trajectory, workspace binding, handoffs, responsibility,
+  verification scope, attestation and execution-profile projections.
+- [x] `canonicalHandoffs v2` remains an operational receipt only.
+- [x] `advisoryContextProviders v1` remains host-provided, lazy and not loaded.
+- [x] Repository Index/Search is negotiated independently and marked discovery-only.
 
-Evidence: `src/main/core/integration/`,
-`src/main/core/protocol/`, `src/main/core/project/`,
-`src/main/core/tasks/`, `src/main/core/cli/` and their unit/integration tests.
-
-## Auditor domain
-
-- [x] Canonical task audit runs through the bundled Integration API `audit`
-  command with the exact `taskId` input contract and preserves non-zero domain
-  exits.
-- [x] Canonical and derived findings retain source, code, evidence, artifacts,
-  remediation, stable fingerprints and rule versions; unknown canonical codes
-  remain `UNKNOWN`.
-- [x] Project aggregation exposes separate integrity, completion-readiness,
-  quality and trust verdicts plus visible coverage and non-authoritative score
-  suppression below 60% coverage.
-- [x] Structural Quality is consumed from `task/structural-quality`; no
-  provider is launched by ForgeLoopAudit.
-- [x] Conservative derived rules use only canonical reflection, evidence,
-  context-observability or recovery projections; missing inputs produce no
-  inferred finding.
-- [x] Audit history is retained in application data with a default limit of 50;
-  deterministic diffs and JSON/Markdown/SARIF reports include trust labels and
-  provenance.
-
-Evidence: `src/shared/audit.ts`, `src/main/core/audit/`,
-`src/main/ipc/project.handlers.ts`, `src/preload/index.ts`,
-`src/renderer/pages/AuditSummary.tsx`, `src/renderer/pages/Findings.tsx`,
-`src/renderer/pages/AuditHistory.tsx`, `src/renderer/pages/Reports.tsx` and
-audit-focused tests.
-
-## ForgeLoop 1.10.0 additive boundary features
-
-- [x] Workspace Binding: display `UNBOUND`, `MATCH`, `MISMATCH`, `INVALID` or
-  `UNAVAILABLE`; ForgeLoopAudit never binds or rebinds.
-- [x] Canonical Handoffs v2: display immutable snapshots and the normalized
-  `OPEN`, `ACCEPTED`, `UNBOUND` or `INCONSISTENT` acceptance state separately
-  from mutable Continuity; ForgeLoopAudit never creates or accepts handoffs.
-- [x] Responsibility Constraints: display `NOT_APPLICABLE`, `VALID` or
-  `INVALID` with canonical errors; ForgeLoopAudit never sets responsibility.
-- [x] Differential Verification Scope: preserve requested `AUTO`, `CHANGED`,
-  `CLAIMED` or `FULL` and resolved `CHANGED`, `CLAIMED`, `FULL` or
-  `UNRESOLVED`; `IMPACTED` is unsupported.
-- [x] Code Attestation: display canonical status and independent
-  `PROCESSED`, `VERIFIED` or `ATTESTED` trust levels.
-- [x] Apply attestation read policy: automatic canonical reads are disabled
-  for `off`, required external providers, unknown providers or unavailable
-  configuration; external signing-provider verification is never automatic.
-- [x] Refresh these resources independently through targeted renderer epochs.
-- [x] Display an accepted handoff as **Accepted — operational receipt only**;
-  acceptance creates no claims, evidence, authority, delegation or completion
-  state, and the UI has no Accept control.
-- [x] Advertise `advisoryContextProviders v1` only when all trust fields are
-  exact; show host-provided/not-loaded status without loading memory, recalling
-  context, exposing retrieved results or persisting provider output.
-- [x] Add read-only continuity reconciliation with `PASS`/`WARN` status and
-  operational-context-only findings; warnings never become task failures.
-- [x] Verify trusted schema provenance and safe local `$ref` closure.
-
-Evidence: `src/main/core/integration/canonical-task-boundaries.ts`,
-`attestation-read-policy.ts`, `src/renderer/components/tasks/`,
-`src/renderer/pages/Evidence.tsx`, `src/renderer/projection-refresh.ts`,
-`schemas/provenance.json` and boundary-focused tests.
+Evidence: `src/main/core/integration/`, `src/main/core/protocol/`,
+`src/server/runtime/audit-runtime.ts`, `schemas/provenance.json` and
+`docs/PROTOCOL_COMPATIBILITY.md`.
 
 ## Product surfaces
 
-- [x] Overview: project identity, protocol/health status, task counts,
-  coverage, sessions, next safe actions and selected-task boundaries.
-- [x] Tasks: compact multi-task list, search, objective/phase/progress,
-  active/blocked/complete filters, blockers and ownership/recovery badges.
-- [x] Flow: React Flow lifecycle graph, current/completed/pending states,
-  blocked and verification context, node inspection and optional boundary
-  capability labels.
-- [x] Contract and routing: objective, deliverables, constraints, risks,
-  verification requirements, success criteria and guide routing details.
-- [x] Gates and evidence: required/satisfied/blocked checks, evidence kinds,
-  coverage summary, durable-action receipt context, verification scope and
-  attestation cards.
-- [x] Events: paginated/streamed event ledger, schema/chain validation,
-  sequence/timestamp/hash details and bounded event inspection.
-- [x] Executions: lazy bounded execution provenance with generic details and
-  capability-gated verification-isolation presentation.
-- [x] Continuity: canonical continuity, diagnostic context, sessions,
-  immutable handoff snapshots, operational acceptance receipts and typed
-  reconciliation findings with explicit non-evidence wording.
-- [x] Diagnostics, Actions, Policy and Settings: canonical read-only
-  projections, capability-aware unavailable states, policy context and
-  privacy-safe diagnostics.
-- [x] Execution Profile: requested/safety-floor/resolved/escalated values,
-  bounded context policy and provider/host/actor usage with NOT MEASURED
-  semantics for missing telemetry and comparisons.
-- [~] Dedicated task-command palette, phase filter and large-ledger
-  virtualization are not part of the current UI surface.
+- [x] Audit Summary, Findings, Tasks, Evidence, Quality, Policy & Trust,
+  Audit History, Reports, Repository Search, Diagnostics and Settings.
+- [x] Selected-task Contract, Lifecycle, Events, Executions, Continuity,
+  Actions and Task Boundaries detail surfaces.
+- [x] Dark, light and system themes with a shared theme provider.
+- [x] Code-owned shadcn-style Button, Card, Badge, Input, Separator and theme controls.
+- [x] Explicit unavailable/unknown/error states and reduced-motion behavior.
+- [x] Deterministic JSON/Markdown/SARIF reports and application-data history.
 
-Evidence: `src/renderer/pages/`, `src/renderer/components/`, the demo fixture,
-`tests/e2e/demo.spec.ts` and `tests/e2e/electron-smoke.spec.ts`.
+Evidence: `src/renderer/pages/`, `src/renderer/components/ui/`,
+`src/renderer/lib/theme.tsx`, `docs/UI_DESIGN_DIRECTION.md` and `screen/`.
 
-## Live updates and security
+## Live updates and safety
 
-- [x] Watch only bounded `.forgeloop` JSON/NDJSON paths.
-- [x] Coalesce bursts, retry atomic writes and retain the last valid snapshot
-  during transient parse failures.
-- [x] Reload only affected task/domain projections; workspace binding,
-  handoffs, responsibility, verification scope and attestation have separate
-  refresh paths.
-- [x] Enforce project containment, realpath/symlink checks, artifact allowlists,
-  JSON/NDJSON size/depth limits and hostile-string text rendering.
-- [x] Use a hardcoded read-only ForgeLoop CLI allowlist with `shell: false`,
-  timeout and bounded stdout.
-- [x] Reject arbitrary renderer IPC, generic file reads, arbitrary commands and
-  untrusted navigation.
+- [x] Bounded `.forgeloop` watcher with coalesced snapshot refreshes.
+- [x] Targeted projection refreshes for task, action, approval, policy,
+  handoff, responsibility, scope, attestation and evaluation changes.
+- [x] Path containment, trusted schemas, size/depth limits and hostile-string-safe rendering.
+- [x] Sanitized SSE update paths and no arbitrary browser filesystem access.
+- [x] Security tests for bootstrap, session, origin, CSP and traversal boundaries.
 
-Evidence: `src/main/watcher/`, `src/main/security/`,
-`src/main/core/cli/`, `src/preload/`, `src/main/ipc/` and security tests.
+## Tests, CI and release
 
-## UI and accessibility
-
-- [x] Use dark-first semantic color, restrained typography, compact density,
-  visible focus states and selected/hover states.
-- [x] Respect reduced motion and avoid decorative animation/glow as a product
-  requirement.
-- [x] Use semantic headings, accessible button names and text labels for state;
-  status is not color-only.
-- [~] Automated accessibility and keyboard smoke coverage is present; full
-  WCAG review and pixel-perfect native layout review remain environment-scoped
-  quality work rather than protocol guarantees.
-
-Evidence: `docs/UI_DESIGN_DIRECTION.md`, renderer styles,
-`tests/e2e/accessibility.spec.ts` and `tests/e2e/visual.spec.ts`.
-
-## Tests, CI and packaging
-
-- [x] Vitest unit and integration-style fixture tests.
-- [x] Playwright Electron tests for project opening, demo surfaces, preload
-  isolation and deterministic shell behavior.
-- [x] Schema, release-contract, demo-integrity, lineage, coverage and
-  performance gates.
-- [x] Shared `verify:full` gate and Ubuntu/macOS/Windows CI matrix.
-- [x] Electron smoke, unpacked packaged smoke and Electron-fuse verification
-  in CI.
-- [x] macOS, Windows and Linux unsigned preview packaging paths plus release
-  matrix, checksum, SBOM and evidence assembly workflows.
-- [~] Native packaging proof is supplied by the corresponding CI runner; a
-  local macOS checkout does not prove Windows or Linux packaging.
-- [-] Code signing, notarization, operator mode, task mutation, remote/cloud
-  access, AI summaries and automatic external signing-provider verification.
-
-Evidence: `package.json`, `scripts/verify-full.mjs`, `tests/`,
-`.github/workflows/ci.yml` and `.github/workflows/release.yml`.
+- [x] Vitest unit/integration suite and web server security tests.
+- [x] Playwright Chromium web smoke for startup, navigation, themes and live updates.
+- [x] Production screenshot capture through the same loopback web server.
+- [x] `npm run verify:full` shared contract.
+- [x] Ubuntu/macOS/Windows CI matrix and browser smoke step.
+- [x] npm package release workflow with checksum and `SBOM-cyclonedx.json`.
+- [~] CI platform execution is verified by GitHub Actions, not by one local checkout.
+- [-] Native Electron packaging, code signing, notarization, cloud access,
+  task mutation and automatic external-provider verification.
 
 ## Intentional demo coverage
 
-- [x] TASK-001: complete lifecycle with unsigned attestation artifacts and no
-  `ATTESTED` claim.
-- [x] TASK-002: verification cycle with rejected completion and persisted
-  `AUTO` → `CHANGED` verification scope.
-- [x] TASK-003: executing task with portable workspace-binding warning and
-  intentional canonical `INVALID` responsibility result.
-- [x] TASK-004: blocked/recovered task with mutable Continuity and canonical
-  handoff context.
-- [x] TASK-005: planned performance work and recorded baseline.
-- [x] TASK-006: completed security-policy scenario.
-- [x] Regenerate with `npm run demo:generate`; never hand-edit generated
-  `.forgeloop/` artifacts; verify with `npm run demo:verify`.
+- [x] TASK-001 complete lifecycle with unsigned attestation artifacts.
+- [x] TASK-002 verification cycle with persisted `AUTO` → `CHANGED` scope.
+- [x] TASK-003 workspace binding and responsibility constraints.
+- [x] TASK-004 blocked/recovery continuity and canonical handoff receipt.
+- [x] TASK-005 planned performance work.
+- [x] TASK-006 security-policy scenario.
 
 ## Verification commands
 
-The current command surface is defined in `package.json`. The minimum
-documentation and lineage checks are:
-
 ```bash
-npm ci
 npm run verify:forgeloop-lineage
 npm run protocol:schemas:verify
+npm run typecheck
+npm run lint
+npm test
+npm run test:web-smoke
+npm run screenshots:readme
+npm run screenshots:check
 npm run docs:check
-npm run demo:generate
-npm run demo:verify
 npm run verify:full
 ```
 
-`verify:full` proves the shared local contract. It does not by itself prove
-native packaging on every platform, signing, notarization or publication; see
-[`docs/QUALITY_GATES.md`](QUALITY_GATES.md) and
-[`docs/RELEASE_MODEL.md`](RELEASE_MODEL.md).
+The migration report in [`migration/WEB_IMPLEMENTATION_REPORT.md`](migration/WEB_IMPLEMENTATION_REPORT.md)
+records the architecture, security boundary, UI work and known limitations.

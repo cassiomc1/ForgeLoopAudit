@@ -45,7 +45,7 @@ export function summarizeCanonicalTaskStatus(value: unknown): CanonicalTaskStatu
 /**
  * Single canonical semantic projection for one task.
  *
- * Both the project snapshot and the GET_TASK IPC endpoint read tasks through
+ * Both the project snapshot and the typed task endpoint read tasks through
  * this service, so overview and inspector can never present conflicting
  * ownership/recovery facts. Everything canonical comes from the bundled
  * Integration API (`task/status`, `task/ownership`, canonical `next`); raw

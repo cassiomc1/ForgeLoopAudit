@@ -10,6 +10,7 @@ import { formatEvidenceSummary } from '../lib/evidence-display';
 import { TaskBoundariesPanel } from '../components/tasks/TaskBoundariesPanel';
 import { ExecutionProfilePanel } from '../components/tasks/ExecutionProfilePanel';
 import { ProjectInformation } from '../components/project/ProjectInformation';
+import { auditApi } from '../lib/audit-client';
 import {
   Activity,
   AlertTriangle,
@@ -61,9 +62,9 @@ export function Overview({ snapshot, detection, watcherStatus = { active: false 
     let cancelled = false;
     const featureSupport = snapshot.protocol.featureSupport;
     Promise.all([
-      featureSupport?.trajectoryMetrics === true ? window.forgeLoopAudit.getTaskMetrics(activeTask.taskId) : Promise.resolve(null),
-      featureSupport?.durableActions === true ? window.forgeLoopAudit.getTaskActions(activeTask.taskId) : Promise.resolve(null),
-      window.forgeLoopAudit.getTaskExecutionProfileContext(activeTask.taskId),
+      featureSupport?.trajectoryMetrics === true ? auditApi.getTaskMetrics(activeTask.taskId) : Promise.resolve(null),
+      featureSupport?.durableActions === true ? auditApi.getTaskActions(activeTask.taskId) : Promise.resolve(null),
+      auditApi.getTaskExecutionProfileContext(activeTask.taskId),
     ]).then(([metrics, actions, context]) => {
       if (!cancelled) {
         setCanonicalMetrics(metrics);

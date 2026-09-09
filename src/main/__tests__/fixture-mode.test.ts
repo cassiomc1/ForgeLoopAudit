@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isFixtureProjectMode } from '../ipc/fixture-mode';
+import { isFixtureProjectMode } from '../../server/runtime/fixture-mode';
 
 describe('fixture project mode', () => {
   it('stays disabled in packaged builds even when smoke variables are present', () => {

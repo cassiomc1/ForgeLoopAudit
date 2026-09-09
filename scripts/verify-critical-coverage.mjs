@@ -4,7 +4,7 @@ const summaryPath = process.argv[2] || 'coverage/coverage-summary.json';
 if (!existsSync(summaryPath)) throw new Error(`Coverage summary not found: ${summaryPath}`);
 
 const summary = JSON.parse(readFileSync(summaryPath, 'utf8'));
-const roots = ['src/main/security/', 'src/main/ipc/', 'src/main/core/protocol/'];
+const roots = ['src/main/security/', 'src/main/core/protocol/'];
 const metrics = ['lines', 'functions', 'branches'];
 const minimum = { lines: 95, functions: 95, branches: 90 };
 const rows = Object.entries(summary).filter(([file]) => file !== 'total' && roots.some((root) => file.replaceAll('\\', '/').includes(root)));

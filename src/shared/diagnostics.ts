@@ -2,7 +2,7 @@ import type { ForgeLoopCompatibilityMode } from './domain';
 
 export interface AuditRuntimeDiagnostics {
   auditVersion: string;
-  electronVersion: string;
+  runtime: 'web-local';
   nodeVersion: string;
   platform: string;
   arch: string;

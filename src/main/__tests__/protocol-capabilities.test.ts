@@ -253,6 +253,7 @@ describe('core/protocol/protocol-capabilities', () => {
         executionProfileContext: true,
         contextUsageObservability: true,
         structuralQuality: true,
+        repositoryIndex: false,
       });
     });
 

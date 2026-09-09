@@ -1,17 +1,17 @@
 # ForgeLoopAudit screenshot documentation
 
 These images are documentation captures of the real ForgeShop audit scenario,
-the production renderer build and the default dark theme. They are not
+the production renderer build, the local web server and the default dark theme. They are not
 illustrations or edited mockups. The capture metadata and page/task mapping are
 in [`manifest.json`](manifest.json).
 
 ## Source and freshness
 
-The source project is [`../demo/`](../demo/) and the capture uses
-`FORGELOOP_AUDIT_FIXTURE_PROJECT=demo` with a 1440 × 900 renderer viewport,
-100% zoom, an expanded sidebar and reduced motion. The capture contains the
-Electron content area only; it excludes operating-system chrome, local paths,
-credentials and transient loading state.
+The source project is [`../demo/`](../demo/) and the capture uses the built
+loopback web server with a 1440 × 900 browser viewport, 100% zoom, an expanded
+sidebar and reduced motion. The capture excludes operating-system chrome, local
+paths, credentials and transient loading state. The current capture is aligned
+to ForgeLoopAudit `0.3.0-rc.1` and ForgeLoop `1.11.1`.
 
 Regenerate the complete set after a user-visible layout, demo-state,
 terminology, theme or navigation change:
@@ -39,7 +39,7 @@ orphaned screenshot files.
 | `history-diff.png` | Audit History | — | Manual snapshots stored outside the audited project |
 | `report.png` | Reports | — | Deterministic report formats and provenance |
 | `diagnostics.png` | Diagnostics | `TASK-004` | Canonical diagnostic signals |
-| `settings.png` | Settings | — | Project context, ForgeLoopAudit preferences, ForgeLoop 1.10.2 and advisory capability metadata |
+| `settings.png` | Settings | — | Project context, ForgeLoopAudit preferences, ForgeLoop 1.11.1 and advisory capability metadata |
 
 ## Review checklist
 
