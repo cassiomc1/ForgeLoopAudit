@@ -17,20 +17,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with: { node-version: 22, cache: npm }
-      - name: Restore macOS system PATH
-        if: runner.os == 'macOS'
-        shell: bash
-        run: echo "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin" >> "$GITHUB_PATH"
       - run: npm ci
       - name: Run shared verification contract
         run: npm run verify:full
         env:
           FORGELOOP_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-      - run: if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then xvfb-run -a npm run test:electron-smoke; else npm run test:electron-smoke; fi
-        shell: bash
-      - run: if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then xvfb-run -a npm run test:e2e -- --grep-invert "deterministic primary shell"; else npm run test:e2e -- --grep-invert "deterministic primary shell"; fi
-        shell: bash
-      - run: if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then xvfb-run -a npm run test:packaged-smoke; else npm run test:packaged-smoke; fi
-        shell: bash
-      - run: npm run verify:electron-fuses -- dist-electron
-        shell: bash
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:web-smoke

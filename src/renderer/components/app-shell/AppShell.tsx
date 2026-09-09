@@ -85,6 +85,12 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
     </svg>
   ),
+  'search': (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <circle cx="11" cy="11" r="7" strokeWidth={2} />
+      <path strokeLinecap="round" strokeWidth={2} d="m20 20-4-4" />
+    </svg>
+  ),
 };
 
 export function AppShell({

@@ -1,6 +1,8 @@
-import { _electron as electron } from 'playwright';
+import { chromium } from 'playwright';
 import { expect } from '@playwright/test';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { spawn } from 'node:child_process';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const root = process.cwd();
@@ -9,6 +11,10 @@ const manifest = JSON.parse(readFileSync(join(screenDir, 'manifest.json'), 'utf8
 const width = manifest.viewport.width;
 const height = manifest.viewport.height;
 const packageVersion = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;
+const tempRoot = mkdtempSync(join(tmpdir(), 'forgeloop-audit-screenshots-'));
+const infoFile = join(tempRoot, 'server.json');
+let serverProcess;
+let browser;
 
 function assertCondition(condition, message) {
   if (!condition) throw new Error(message);
@@ -16,6 +22,15 @@ function assertCondition(condition, message) {
 
 function navigation(page, label) {
   return page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: label, exact: true });
+}
+
+async function waitForServerInfo() {
+  const deadline = Date.now() + 15_000;
+  while (!existsSync(infoFile)) {
+    if (Date.now() >= deadline) throw new Error('Local web server did not publish its bootstrap information');
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  return JSON.parse(readFileSync(infoFile, 'utf8'));
 }
 
 async function stabilize(page, heading) {
@@ -44,7 +59,7 @@ async function openSurface(page, label, heading, taskId) {
   await stabilize(page, heading);
 }
 
-async function capture(page, file, heading, assertion, scrollTarget) {
+async function capture(page, file, assertion, scrollTarget) {
   if (scrollTarget) {
     await scrollTarget.scrollIntoViewIfNeeded();
     await page.waitForTimeout(100);
@@ -53,36 +68,42 @@ async function capture(page, file, heading, assertion, scrollTarget) {
   await page.screenshot({ path: join(screenDir, file), animations: 'disabled' });
 }
 
-const app = await electron.launch({
-  args: ['.'],
+async function stopServer() {
+  if (!serverProcess || serverProcess.killed) return;
+  serverProcess.kill('SIGTERM');
+  await new Promise((resolve) => serverProcess.once('exit', resolve));
+}
+
+serverProcess = spawn(process.execPath, ['dist/server/cli.mjs', '--demo', '--port', '0', '--no-open'], {
+  cwd: root,
   env: {
     ...process.env,
-    NODE_ENV: 'production',
-    FORGELOOP_AUDIT_SMOKE: '1',
+    FORGELOOP_AUDIT_DATA_DIR: join(tempRoot, 'app-data'),
+    FORGELOOP_AUDIT_TEST_INFO_FILE: infoFile,
+    FORGELOOP_AUDIT_TEST_REUSABLE_BOOTSTRAP: '1',
+    FORGELOOP_AUDIT_NO_OPEN: '1',
   },
+  stdio: ['ignore', 'pipe', 'inherit'],
 });
+serverProcess.stdout.on('data', (chunk) => process.stdout.write(`[WebServer] ${chunk}`));
 
 try {
-  const page = await app.firstWindow();
-  await page.setViewportSize({ width, height });
+  const server = await waitForServerInfo();
+  browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width, height }, colorScheme: 'dark' });
   await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
+  await page.goto(server.bootstrapUrl);
   await page.addStyleTag({
     content: '*,:before,:after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }',
   });
 
-  // Click the same named demo-project action exposed to users so the screenshot
-  // shell identifies ForgeShop as a demo rather than a generic folder, and so the
-  // renderer performs its own post-open audit load. Calling the preload API
-  // directly leaves the UI on the `project-opened` reset, which sets audit state
-  // to null and renders "Canonical audit unavailable" with a "Retry audit" button.
-  await page.getByRole('button', { name: 'Open Demo Project', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Audit Summary', exact: true })).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole('region', { name: 'Demo project information' })).toContainText('ForgeShop');
   await expect(page.getByRole('region', { name: 'Demo project information' })).toContainText('errors are still real');
-  await page.getByRole('button', { name: 'Run audit', exact: true }).click();
+  await page.getByRole('button', { name: /Run audit|Retry audit/, exact: true }).click();
   await expect(page.getByText(/Audit score|Score unavailable/)).toBeVisible({ timeout: 15_000 });
 
-  await capture(page, 'audit-summary.png', 'Audit Summary', async () => {
+  await capture(page, 'audit-summary.png', async () => {
     await expect(page.getByText('Integrity', { exact: true })).toBeVisible();
     await expect(page.getByText('Completion readiness', { exact: true })).toBeVisible();
     await expect(page.getByText('Audit coverage', { exact: true })).toBeVisible();
@@ -90,13 +111,13 @@ try {
   });
 
   await openSurface(page, 'Findings', 'Findings');
-  await capture(page, 'findings.png', 'Findings', async () => {
+  await capture(page, 'findings.png', async () => {
     await expect(page.getByText('Canonical ForgeLoop results and explicitly labelled auditor observations.', { exact: true })).toBeVisible();
     await expect(page.getByRole('combobox').first()).toBeVisible();
   });
 
   await openSurface(page, 'Tasks', 'Tasks');
-  await capture(page, 'task-audit.png', 'Tasks', async () => {
+  await capture(page, 'task-audit.png', async () => {
     for (const taskId of ['TASK-001', 'TASK-002', 'TASK-003', 'TASK-004', 'TASK-005', 'TASK-006']) {
       await expect(page.getByText(taskId, { exact: true })).toBeVisible();
     }
@@ -105,7 +126,7 @@ try {
   });
 
   await openSurface(page, 'Evidence', 'Evidence Matrix', 'TASK-002');
-  await capture(page, 'evidence.png', 'Evidence Matrix', async () => {
+  await capture(page, 'evidence.png', async () => {
     await expect(page.getByRole('heading', { name: 'Verification Scope', exact: true })).toBeVisible();
     await expect(page.getByText('AUTO', { exact: true })).toBeVisible();
     await expect(page.getByText('CHANGED', { exact: true })).toBeVisible();
@@ -113,13 +134,13 @@ try {
   });
 
   await openSurface(page, 'Quality', 'Engineering Quality', 'TASK-001');
-  await capture(page, 'quality.png', 'Engineering Quality', async () => {
+  await capture(page, 'quality.png', async () => {
     await expect(page.getByText('Canonical Structural Quality projection; ForgeLoopAudit never runs a provider.', { exact: true })).toBeVisible();
     await expect(page.getByText(/Structural quality unavailable|Current status/)).toBeVisible();
   });
 
   await openSurface(page, 'Policy & Trust', 'Policy & Trust', 'TASK-006');
-  await capture(page, 'policy-trust.png', 'Policy & Trust', async () => {
+  await capture(page, 'policy-trust.png', async () => {
     await expect(page.getByText('Canonical policy, ownership boundaries and evidence trust signals for the selected task.', { exact: true })).toBeVisible();
     await expect(page.getByText('Trust boundary projections', { exact: true })).toBeVisible();
     await expect(page.getByText('Operational receipts only; never evidence.', { exact: true })).toBeVisible();
@@ -128,36 +149,37 @@ try {
   await openSurface(page, 'Audit History', 'Audit History');
   await page.getByRole('button', { name: 'Save baseline', exact: true }).click();
   await expect(page.getByText('Baseline saved.', { exact: true })).toBeVisible({ timeout: 15_000 });
-  await capture(page, 'history-diff.png', 'Audit History', async () => {
+  await capture(page, 'history-diff.png', async () => {
     await expect(page.getByText('Manual snapshots are stored in application data, outside the audited project.', { exact: true })).toBeVisible();
     await expect(page.getByText('Save baseline', { exact: true })).toBeVisible();
   });
 
   await openSurface(page, 'Reports', 'Reports');
-  await capture(page, 'report.png', 'Reports', async () => {
+  await capture(page, 'report.png', async () => {
     await expect(page.getByText('Deterministic reports generated from already-read audit data.', { exact: true })).toBeVisible();
-    await expect(page.getByText('Reports include ForgeLoop provenance, audit rules, timestamp, HEAD, fingerprint and [C]/[D]/[A] trust labels. The audited .forgeloop directory is protected by default.', { exact: true })).toBeVisible();
+    await expect(page.getByText('Reports include ForgeLoop provenance, audit rules, timestamp, HEAD, fingerprint and [C]/[D]/[A] trust labels. The audited .forgeloop directory is protected by default. Browser clients cannot choose arbitrary host paths.', { exact: true })).toBeVisible();
   });
 
   await openSurface(page, 'Diagnostics', 'Diagnostics', 'TASK-004');
-  await capture(page, 'diagnostics.png', 'Diagnostics', async () => {
+  await capture(page, 'diagnostics.png', async () => {
     await expect(page.getByText('Canonical history, trace, reflection and trajectory signals', { exact: true })).toBeVisible();
     await expect(page.getByText('BLOCKED', { exact: true })).toBeVisible();
     await expect(page.getByText('Canonical trajectory metrics', { exact: true })).toBeVisible();
   });
 
   await openSurface(page, 'Settings', 'Settings');
-  await capture(page, 'settings.png', 'Settings', async () => {
+  await capture(page, 'settings.png', async () => {
     await expect(page.getByText(`ForgeLoopAudit v${packageVersion}`, { exact: true })).toBeVisible();
     const protocolPanel = page.getByRole('heading', { name: 'ForgeLoop protocol', exact: true }).locator('..');
-    await expect(protocolPanel).toContainText('1.10.2');
+    await expect(protocolPanel).toContainText('1.11.1');
     await expect(protocolPanel).toContainText('Advisory context providers');
     await expect(protocolPanel).toContainText('Supported by ForgeLoop');
     await expect(protocolPanel).toContainText('INTEGRATION_V1');
   }, page.getByRole('heading', { name: 'ForgeLoop protocol', exact: true }));
-
 } finally {
-  await app.close();
+  await browser?.close();
+  await stopServer();
+  rmSync(tempRoot, { recursive: true, force: true });
 }
 
 console.log(`Captured ${manifest.screenshots.length} ForgeLoopAudit README screenshots at ${width}x${height}.`);

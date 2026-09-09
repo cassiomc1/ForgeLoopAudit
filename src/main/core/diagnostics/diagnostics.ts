@@ -3,7 +3,7 @@ import type { AuditRuntimeDiagnostics } from '@shared/diagnostics';
 export function buildAuditRuntimeDiagnostics(input: Partial<AuditRuntimeDiagnostics> = {}): AuditRuntimeDiagnostics {
   return {
     auditVersion: input.auditVersion || 'unknown',
-    electronVersion: input.electronVersion || process.versions.electron || 'unknown',
+    runtime: 'web-local',
     nodeVersion: input.nodeVersion || process.versions.node || 'unknown',
     platform: input.platform || process.platform,
     arch: input.arch || process.arch,

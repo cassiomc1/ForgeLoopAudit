@@ -21,6 +21,7 @@ import { Findings } from './pages/Findings';
 import { Quality } from './pages/Quality';
 import { AuditHistory } from './pages/AuditHistory';
 import { Reports } from './pages/Reports';
+import { Repository } from './pages/Repository';
 import { TaskAudit } from './pages/TaskAudit';
 import { EmptyState } from './components/ui/EmptyState';
 import { LoadingState } from './components/ui/LoadingState';
@@ -30,6 +31,7 @@ import {
   shouldApplySnapshotGeneration,
   taskProjectionRefreshEpoch,
 } from './projection-refresh';
+import { getAuditClient } from './lib/audit-client';
 
 export const NAV_ITEMS = [
   { id: 'audit-summary', label: 'Audit Summary', icon: 'layout-dashboard' },
@@ -40,6 +42,7 @@ export const NAV_ITEMS = [
   { id: 'policy-trust', label: 'Policy & Trust', icon: 'shield' },
   { id: 'audit-history', label: 'Audit History', icon: 'history' },
   { id: 'reports', label: 'Reports', icon: 'file-text' },
+  { id: 'repository', label: 'Repository Search', icon: 'search' },
   { id: 'diagnostics', label: 'Diagnostics', icon: 'activity' },
   { id: 'settings', label: 'Settings', icon: 'settings' },
 ] as const;
@@ -58,10 +61,6 @@ export const TASK_DETAIL_ITEMS = [
 
 export type NavItemId = typeof NAV_ITEMS[number]['id'] | typeof TASK_DETAIL_ITEMS[number]['id'] | 'policy';
 
-function getApi(): ForgeLoopAuditAPI {
-  return (window as any).forgeLoopAudit;
-}
-
 export function App() {
   const [detectionResult, setDetectionResult] = useState<ProjectDetectionResult | null>(null);
   const [snapshot, setSnapshot] = useState<ProjectSnapshot | null>(null);
@@ -76,7 +75,7 @@ export function App() {
   const [projectionRefreshEpochs, setProjectionRefreshEpochs] = useState(createProjectionRefreshEpochs);
   const latestSnapshotGeneration = useRef(0);
 
-  const api = getApi();
+  const api: ForgeLoopAuditAPI = getAuditClient();
 
   const loadRecentProjects = useCallback(async () => {
     try {
@@ -144,30 +143,16 @@ export function App() {
   useEffect(() => {
     void loadRecentProjects();
     const unsubscribe = api.subscribeProjectUpdates(handleProjectUpdate);
+    void api.getProjectState().then((state) => {
+      if (!state) return;
+      setDetectionResult(state.detection);
+      setSnapshot(state.snapshot);
+      setActiveNav('audit-summary');
+      void refreshAudit();
+    }).catch((err) => console.error('Failed to load the current local project:', err));
     void api.notifyRendererReady().catch((err) => console.error('Failed to notify renderer readiness:', err));
     return unsubscribe;
-  }, [api, handleProjectUpdate, loadRecentProjects]);
-
-  const handleOpenProject = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const result = await api.selectProject();
-      if (result) {
-        setDetectionResult(result);
-        setActiveNav('audit-summary');
-        setSnapshot(await api.getProjectSnapshot());
-        await refreshAudit();
-      }
-    } catch (err) {
-      const auditError: AuditAppError = err instanceof Error
-        ? { code: 'UNKNOWN_ERROR', message: err.message, recoverable: true }
-        : { code: 'UNKNOWN_ERROR', message: 'Failed to open project', recoverable: true };
-      setError(auditError);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [api, handleProjectUpdate, loadRecentProjects, refreshAudit]);
 
   const handleOpenRecentProject = async (path: string) => {
     try {
@@ -226,7 +211,6 @@ export function App() {
   if (!detectionResult) {
     return (
       <ProjectPicker
-        onOpenProject={handleOpenProject}
         onOpenDemoProject={handleOpenDemoProject}
         onOpenRecentProject={handleOpenRecentProject}
         recentProjects={recentProjects}
@@ -299,6 +283,8 @@ export function App() {
         return <AuditHistory audit={audit} onRefreshAudit={refreshAudit} />;
       case 'reports':
         return <Reports audit={audit} onRefreshAudit={refreshAudit} />;
+      case 'repository':
+        return <Repository />;
       case 'diagnostics':
         return <Diagnostics snapshot={snapshot} selectedTaskId={selectedTaskId} genericTaskRefreshToken={projectionRefreshEpochs.genericTask} evaluationsRefreshToken={taskRefresh('evaluations')} onSelectedTaskChange={setSelectedTaskId} />;
       case 'actions':

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { ProjectSnapshot, TaskSummary } from '@shared/domain';
 import { EmptyState } from '../components/ui/EmptyState';
 import { cn } from '../lib/utils';
+import { auditApi } from '../lib/audit-client';
 
 interface ContractProps {
   snapshot: ProjectSnapshot;
@@ -20,7 +21,7 @@ export function Contract({ snapshot, selectedTaskId, onSelectedTaskChange }: Con
 
   useEffect(() => {
     if (selectedTask) {
-      window.forgeLoopAudit.getRawArtifact({
+      auditApi.getRawArtifact({
         taskId: selectedTask.taskId,
         artifact: 'contract.json',
       }).then((content) => {

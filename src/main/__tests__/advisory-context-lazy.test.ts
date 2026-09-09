@@ -6,7 +6,7 @@ describe('advisory context ForgeLoopAudit boundary', () => {
     for (const path of [
       'src/main/core/project/project-snapshot.ts',
       'src/main/core/integration/forgeloop-integration.ts',
-      'src/main/ipc/project.handlers.ts',
+      'src/server/runtime/audit-runtime.ts',
     ]) {
       expect(readFileSync(path, 'utf8'), path).not.toContain('recallAdvisoryContext');
     }
@@ -16,7 +16,7 @@ describe('advisory context ForgeLoopAudit boundary', () => {
     for (const path of [
       'src/main/core/project/project-snapshot.ts',
       'src/main/core/integration/forgeloop-integration.ts',
-      'src/main/ipc/project.handlers.ts',
+      'src/server/runtime/audit-runtime.ts',
     ]) {
       expect(readFileSync(path, 'utf8'), path).not.toContain('createRipwireAdvisoryContextProvider');
     }

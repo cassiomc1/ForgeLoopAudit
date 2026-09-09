@@ -13,7 +13,6 @@ const ignoredDirectories = new Set([
   '.worktrees',
   'node_modules',
   'dist',
-  'dist-electron',
   'coverage',
   'test-results',
 ]);

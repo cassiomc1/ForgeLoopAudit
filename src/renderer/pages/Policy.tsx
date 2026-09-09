@@ -3,6 +3,7 @@ import type { ProjectSnapshot, TaskSummary, PolicySummary, CapabilityPolicyView 
 import { EmptyState } from '../components/ui/EmptyState';
 import { cn } from '../lib/utils';
 import { Shield, AlertTriangle, Lock, FileText, Activity } from 'lucide-react';
+import { auditApi } from '../lib/audit-client';
 
 interface PolicyProps {
   snapshot: ProjectSnapshot;
@@ -23,7 +24,7 @@ export function Policy({ snapshot, selectedTaskId, capabilityPolicyRefreshToken 
     if (!selectedTask) { setTaskPolicy(null); return; }
     let cancelled = false;
     setPolicyLoading(true);
-    window.forgeLoopAudit.getPolicyStatus(selectedTask.taskId)
+    auditApi.getPolicyStatus(selectedTask.taskId)
       .then((result) => { if (!cancelled) setTaskPolicy(result); })
       .catch(() => { if (!cancelled) setTaskPolicy(null); })
       .finally(() => { if (!cancelled) setPolicyLoading(false); });
@@ -35,7 +36,7 @@ export function Policy({ snapshot, selectedTaskId, capabilityPolicyRefreshToken 
       setCapabilityPolicy(null);
       return () => { cancelled = true; };
     }
-    window.forgeLoopAudit.getCapabilityPolicy()
+    auditApi.getCapabilityPolicy()
       .then((result) => { if (!cancelled) setCapabilityPolicy(result); })
       .catch(() => { if (!cancelled) setCapabilityPolicy(null); });
     return () => { cancelled = true; };

@@ -4,6 +4,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { cn } from '../lib/utils';
 import { Activity, Brain, Gauge, Lightbulb, ShieldAlert } from 'lucide-react';
 import { countInspectionSignals, formatIntervention, isStalledReflection, openHypothesisPresentation } from '../lib/diagnostic-display';
+import { auditApi } from '../lib/audit-client';
 
 type RecordValue = Record<string, unknown>;
 
@@ -69,12 +70,12 @@ export function Diagnostics({ snapshot, selectedTaskId, genericTaskRefreshToken 
     const metrics = features?.trajectoryMetrics === true;
     const evaluations = features?.trajectoryEvaluations === true;
     Promise.all([
-      observability ? window.forgeLoopAudit.getTaskHistory(selectedTask.taskId) : Promise.resolve(null),
-      observability ? window.forgeLoopAudit.getTaskTrace(selectedTask.taskId) : Promise.resolve(null),
-      observability ? window.forgeLoopAudit.getTaskReflection(selectedTask.taskId) : Promise.resolve(null),
-      observability ? window.forgeLoopAudit.getTaskInspection(selectedTask.taskId) : Promise.resolve(null),
-      metrics ? window.forgeLoopAudit.getTaskMetrics(selectedTask.taskId) : Promise.resolve(null),
-      evaluations ? window.forgeLoopAudit.getTaskEvaluations(selectedTask.taskId) : Promise.resolve(null),
+      observability ? auditApi.getTaskHistory(selectedTask.taskId) : Promise.resolve(null),
+      observability ? auditApi.getTaskTrace(selectedTask.taskId) : Promise.resolve(null),
+      observability ? auditApi.getTaskReflection(selectedTask.taskId) : Promise.resolve(null),
+      observability ? auditApi.getTaskInspection(selectedTask.taskId) : Promise.resolve(null),
+      metrics ? auditApi.getTaskMetrics(selectedTask.taskId) : Promise.resolve(null),
+      evaluations ? auditApi.getTaskEvaluations(selectedTask.taskId) : Promise.resolve(null),
     ]).then(([history, trace, reflection, inspection, metricsView, evaluationsView]) => {
       if (!cancelled) setViews({ history, trace, reflection, inspection, metrics: metricsView, evaluations: evaluationsView });
     }).catch((reason: unknown) => { if (!cancelled) setError(reason instanceof Error ? reason.message : 'Canonical diagnostics are unavailable.'); })

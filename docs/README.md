@@ -1,70 +1,60 @@
-# ForgeLoopAudit Documentation
+# ForgeLoopAudit documentation
 
-This index separates current product guidance from historical records and
-points each topic to its canonical owner. ForgeLoopAudit is a local-first,
-read-only engineering auditor; ForgeLoop remains the protocol authority.
-
-The current release baseline is ForgeLoopAudit `0.2.0-rc.3` with vendored ForgeLoop
-`1.10.2` at immutable commit
-`d286e1983177a0dfb1f0ceef6c2f6e30c406303a`, using protocol v1, schema v1 and
-Integration API v1. The current capability additions are
-`canonicalHandoffs v2` and `advisoryContextProviders v1`; their trust and
-read-only display rules are owned by [Protocol compatibility](PROTOCOL_COMPATIBILITY.md).
+This index separates current product guidance from historical records. The
+current product is ForgeLoopAudit `0.3.0-rc.1`, a local-first web auditor
+aligned to ForgeLoop `1.11.1` at immutable commit
+`674f12c006b3ace12278f109b7ae24f57012d09c` with protocol v1, schema v1 and
+Integration API v1. ForgeLoop remains the protocol authority.
 
 ## Start here
 
-- [Root README](../README.md) — product overview, trust model, compatibility,
-  demo and development commands.
-- [ForgeLoopAudit implementation specification](../FORGELOOP_AUDIT_IMPLEMENTATION_SPEC.md)
-  — architecture, security boundaries, UI model and current implementation
-  contract.
+- [Root README](../README.md) — product purpose, web startup, trust model,
+  demo and verification commands.
+- [Current implementation specification](../FORGELOOP_AUDIT_IMPLEMENTATION_SPEC.md)
+  — runtime architecture, HTTP/session boundary, UI and verification contract.
+- [Web migration report](migration/WEB_IMPLEMENTATION_REPORT.md) — completed
+  migration scope, evidence and known limitations.
 - [ForgeShop demo guide](../demo/README.md) — generated fixture truth and
   intentional scenario states.
-- [Screenshot guide](../screen/README.md) — source, mappings and freshness
-  rules for the visual documentation.
+- [Screenshot guide](../screen/README.md) — source, mappings and freshness rules.
 
 ## Current documentation owners
 
 | Topic | Canonical document | Implementation or machine source |
 |---|---|---|
-| Product purpose and getting started | [Root README](../README.md) | `src/renderer/`, `package.json` |
-| Architecture and security | [Implementation specification](../FORGELOOP_AUDIT_IMPLEMENTATION_SPEC.md) | `src/main/`, `src/preload/`, `src/renderer/` |
+| Product purpose and getting started | [Root README](../README.md) | `src/renderer/`, `src/server/`, `package.json` |
+| Architecture and security | [Implementation specification](../FORGELOOP_AUDIT_IMPLEMENTATION_SPEC.md) | `src/server/`, `src/main/core/`, `src/renderer/` |
 | Audit findings, coverage and provenance | [Implementation specification](../FORGELOOP_AUDIT_IMPLEMENTATION_SPEC.md) | `src/shared/audit.ts`, `src/main/core/audit/` |
-| Audit history, diffs and reports | [Implementation specification](../FORGELOOP_AUDIT_IMPLEMENTATION_SPEC.md) | `src/main/core/audit/audit-snapshot-store.ts`, `audit-diff.ts`, `audit-report.ts` |
+| Audit history, diffs and reports | [Implementation specification](../FORGELOOP_AUDIT_IMPLEMENTATION_SPEC.md) | `src/main/core/audit/`, `src/server/runtime/` |
 | ForgeLoop compatibility | [Protocol compatibility](PROTOCOL_COMPATIBILITY.md) | `src/main/core/protocol/`, `src/main/core/integration/` |
-| Operational recovery and failures | [Troubleshooting](TROUBLESHOOTING.md) | `src/main/`, `src/renderer/` |
+| Operational recovery and failures | [Troubleshooting](TROUBLESHOOTING.md) | `src/server/`, `src/main/core/`, `src/renderer/` |
 | Verification contract | [Quality gates](QUALITY_GATES.md) | `scripts/verify-full.mjs`, `.github/workflows/` |
 | Publication contract | [Release model](RELEASE_MODEL.md) | `docs/releases/`, `.github/workflows/release.yml` |
 | Visual/product principles | [UI design direction](UI_DESIGN_DIRECTION.md) | `src/renderer/`, `src/renderer/styles/` |
 | Implementation status | [Implementation checklist](IMPLEMENTATION_CHECKLIST.md) | `src/`, `tests/`, `scripts/` |
 | Dependency and audit policy | [Dependency policy](DEPENDENCY_POLICY.md) | `package.json`, `package-lock.json`, `scripts/dependency-policy.mjs` |
-| Trusted schemas | [Schemas README](../schemas/README.md) | `schemas/provenance.json`, `src/main/core/protocol/artifact-registry.ts` |
-| Vendored ForgeLoop lineage | [Vendor README](../vendor/README.md) | `package.json`, `package-lock.json`, vendored tarball |
+| Trusted schemas | [Schemas README](../schemas/README.md) | `schemas/provenance.json`, `src/main/core/protocol/` |
+| Vendored ForgeLoop lineage | [Vendor README](../vendor/README.md) | `package.json`, `package-lock.json`, `vendor/` |
 
 ## Verification and release
 
-- [Quality gates](QUALITY_GATES.md) explains what local, CI, platform and
-  release checks prove.
-- [Release model](RELEASE_MODEL.md) explains unsigned previews, platform
-  assets, checksums, SBOMs and evidence without conflating verification with
-  publication.
-- Machine contracts live under [`docs/releases/`](releases/) and remain
-  authoritative for release asset shape and identity.
+[Quality gates](QUALITY_GATES.md) explains what local, CI and release checks
+prove. [Release model](RELEASE_MODEL.md) explains the unsigned npm preview,
+checksums, SBOM and tag-triggered workflow without conflating verification with
+publication. Machine contracts live under [`docs/releases/`](releases/).
 
 ## Trust boundary
 
-- [Protocol compatibility](PROTOCOL_COMPATIBILITY.md) defines the Integration
-  API boundary, compatibility modes and independently degraded optional
-  features.
-- [Schemas README](../schemas/README.md) defines the trusted protocol-v1
-  schema boundary and provenance verification.
-- [Vendor README](../vendor/README.md) defines the pinned ForgeLoop archive
-  and controlled regeneration procedure.
+[Protocol compatibility](PROTOCOL_COMPATIBILITY.md) defines the Integration API
+boundary and capability degradation. [Schemas README](../schemas/README.md)
+defines the trusted protocol-v1 schema set. [Vendor README](../vendor/README.md)
+defines the pinned ForgeLoop archive and its digest.
 
 ## Historical records
 
-The dated verification records under [`docs/verification/`](verification/) and
-the plans/specifications under [`docs/superpowers/`](superpowers/) describe
-specific earlier repository states. They are historical records, not current
-product requirements. Their version numbers, commit IDs and test results must
-remain unchanged.
+The dated records under [`docs/verification/`](verification/),
+[`docs/superpowers/`](superpowers/) and
+[`docs/migration/WEB_BASELINE.md`](migration/WEB_BASELINE.md) describe earlier
+repository states. They are historical records, not current product
+requirements. Their version numbers, commit IDs and test results remain
+unchanged.

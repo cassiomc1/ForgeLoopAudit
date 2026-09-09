@@ -123,6 +123,16 @@ export interface ForgeLoopStructuralQualityFeatureSummary {
   maxOutputBytes: number;
 }
 
+export interface ForgeLoopRepositoryIndexFeatureSummary {
+  version: number;
+  required: boolean;
+  providerNeutral: boolean;
+  implementation: string;
+  engineVersion: string;
+  managedBinary: boolean;
+  resource: string;
+}
+
 export interface ForgeLoopCommandCapabilitySummary {
   name: string;
   baseRiskClass?: string;
@@ -150,6 +160,7 @@ export interface ForgeLoopCapabilitiesSummary {
     differentialVerificationScope?: ForgeLoopDifferentialVerificationScopeFeatureSummary;
     codeAttestation?: ForgeLoopCodeAttestationFeatureSummary;
     structuralQuality?: ForgeLoopStructuralQualityFeatureSummary;
+    repositoryIndex?: ForgeLoopRepositoryIndexFeatureSummary;
   };
   resources: string[];
   commands?: ForgeLoopCommandCapabilitySummary[];

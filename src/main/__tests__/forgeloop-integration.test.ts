@@ -20,7 +20,7 @@ describe('core/integration/forgeloop-integration', () => {
 
   describe('package identity', () => {
     it('exposes the bundled ForgeLoop package version', () => {
-      expect(adapter.getPackageVersion()).toBe('1.10.2');
+      expect(adapter.getPackageVersion()).toBe('1.11.1');
     });
 
     it('keeps the version constant synchronized with the installed dependency pin', () => {
@@ -28,7 +28,7 @@ describe('core/integration/forgeloop-integration', () => {
         readFileSync(join(process.cwd(), 'node_modules', '@cassiomc1', 'forgeloop', 'package.json'), 'utf8'),
       ) as { version: string };
       expect(installed.version).toBe(FORGELOOP_PACKAGE_VERSION);
-      expect(FORGELOOP_UPSTREAM_COMMIT).toBe('d286e1983177a0dfb1f0ceef6c2f6e30c406303a');
+      expect(FORGELOOP_UPSTREAM_COMMIT).toBe('674f12c006b3ace12278f109b7ae24f57012d09c');
       const dependencySpec = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8')).dependencies as Record<string, string>;
       expect(dependencySpec).toHaveProperty('@cassiomc1/forgeloop');
     });

@@ -20,6 +20,7 @@ const CURRENT_DOCS = [
   'docs/RELEASE_MODEL.md',
   'docs/TROUBLESHOOTING.md',
   'docs/UI_DESIGN_DIRECTION.md',
+  'docs/migration/WEB_IMPLEMENTATION_REPORT.md',
 ];
 const HISTORICAL_DIRS = ['docs/superpowers', 'docs/verification'];
 const STALE_ACTIVE_RELEASE = /\bRC[0-9]+\b/iu;
@@ -145,8 +146,8 @@ function validateCurrentFacts(root, packageJson, provenance, archiveName, archiv
   const current = Object.fromEntries(CURRENT_DOCS.map((file) => [file, readText(root, file)]));
   const currentText = Object.values(current).join('\n');
 
-  assertCondition(packageJson.version === '0.2.0-rc.3', `package.json version must remain 0.2.0-rc.3, got ${packageJson.version}`);
-  assertCondition(version === '1.10.2', `schema provenance must pin ForgeLoop 1.10.2, got ${version}`);
+  assertCondition(packageJson.version === '0.3.0-rc.1', `package.json version must remain 0.3.0-rc.1, got ${packageJson.version}`);
+  assertCondition(version === '1.11.1', `schema provenance must pin ForgeLoop 1.11.1, got ${version}`);
   assertCondition(typeof commit === 'string' && /^[a-f0-9]{40}$/u.test(commit), 'schema provenance must contain a 40-character ForgeLoop commit');
   assertCondition(provenance.protocolVersion === 1, 'schema provenance must pin protocol v1');
   assertCondition(!STALE_ACTIVE_RELEASE.test(currentText), 'current documentation contains a stale active RC number');
@@ -201,6 +202,7 @@ function validateCurrentFacts(root, packageJson, provenance, archiveName, archiv
     'docs/UI_DESIGN_DIRECTION.md': ['Current navigation and trust surfaces', 'Task Boundaries', 'Verification Scope', 'Attestation'],
     'docs/TROUBLESHOOTING.md': ['INTEGRATION_V1', 'COMMIT_UNKNOWN', 'UNAVAILABLE', 'Workspace binding'],
     'docs/DEPENDENCY_POLICY.md': ['npm run dependency:policy', 'npm run audit:prod', 'npm run verify:forgeloop-lineage'],
+    'docs/migration/WEB_IMPLEMENTATION_REPORT.md': ['web migration report', '0.3.0-rc.1', '1.11.1', 'loopback', 'Discovery only'],
   };
   for (const [file, facts] of Object.entries(required)) {
     for (const fact of facts) assertCondition(current[file].includes(fact), `${file} is missing current fact: ${fact}`);

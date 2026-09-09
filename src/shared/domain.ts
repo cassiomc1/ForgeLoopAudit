@@ -9,6 +9,7 @@ import type {
   StructuralQualityAuditView,
   TaskAuditSnapshot,
 } from './audit';
+import type { AuditRuntimeDiagnostics } from './diagnostics';
 
 export type ForgeLoopPhase =
   | 'RECEIVED'
@@ -115,6 +116,106 @@ export interface ForgeLoopFeatureSupport {
   executionProfileContext?: boolean;
   contextUsageObservability?: boolean;
   structuralQuality?: boolean;
+  repositoryIndex?: boolean;
+}
+
+export type RepositoryIndexHealth =
+  | 'READY'
+  | 'INDEXING'
+  | 'NOT_INITIALIZED'
+  | 'ENGINE_MISSING'
+  | 'ENGINE_INVALID'
+  | 'SERVER_DOWN'
+  | 'SERVER_UNHEALTHY'
+  | 'ERROR'
+  | 'UNAVAILABLE';
+
+export interface RepositoryIndexProjection {
+  schemaVersion: 1 | null;
+  available: boolean;
+  source: 'FORGELOOP_INTEGRATION' | 'UNAVAILABLE';
+  required: boolean | null;
+  engine: string | null;
+  engineVersion: string | null;
+  managedBinary: boolean | null;
+  overridden: boolean | null;
+  index: {
+    present: boolean | null;
+    complete: boolean | null;
+    files: number | null;
+    trigrams: number | null;
+    createdAt: number | null;
+    updatedAt: number | null;
+  };
+  policy: {
+    maxFileSize: string | number | null;
+    maxCpuPercent: number | null;
+    watcherQueueCap: number | null;
+    autoSaveMutations: number | null;
+  };
+  server: {
+    running: boolean | null;
+    owned: boolean | null;
+    pid: number | null;
+    port: number | null;
+    watcher: string | null;
+    indexing: string | null;
+    files: number | null;
+  };
+  health: RepositoryIndexHealth;
+  diagnostics: Array<{ code: string; message: string }>;
+  message?: string;
+}
+
+export interface RepositorySearchRequest {
+  pattern: string;
+  globs?: string[];
+  types?: string[];
+  fixedStrings?: boolean;
+  ignoreCase?: boolean;
+  smartCase?: boolean;
+  wordRegexp?: boolean;
+  context?: number | null;
+  beforeContext?: number | null;
+  afterContext?: number | null;
+  maxCount?: number | null;
+  filesWithMatches?: boolean;
+  stats?: boolean;
+}
+
+export interface RepositorySearchMatch {
+  path: string;
+  line: number;
+  column: number | null;
+  offset: number | null;
+  text: string;
+  submatches: Array<{ start: number; end: number; match: string | null }>;
+}
+
+export interface RepositorySearchResult {
+  available: boolean;
+  source: 'FORGELOOP_INTEGRATION' | 'UNAVAILABLE';
+  query: RepositorySearchRequest & { globs: string[]; types: string[] };
+  repositoryIndex: { engine: string; engineVersion: string | null; indexed: boolean; server: boolean } | null;
+  matches: RepositorySearchMatch[];
+  contexts: RepositorySearchMatch[];
+  files: string[];
+  stats: Record<string, number>;
+  metrics: {
+    queryDurationMs: number | null;
+    nativeDurationMs: number | null;
+    matchCount: number;
+    matchedFileCount: number;
+    engine: string | null;
+    engineVersion: string | null;
+    serverUsed: boolean | null;
+    exitCode: number | null;
+    ignoredNativeEvents: number | null;
+    bytesSearched?: number;
+    matchedLines?: number;
+  } | null;
+  trust: 'DISCOVERY_ONLY';
+  message?: string;
 }
 
 export type ExecutionProfileName = 'light' | 'balanced' | 'full';
@@ -1061,9 +1162,11 @@ export interface ForgeLoopAuditAPI {
   listAuditHistory(): Promise<AuditSnapshotMetadata[]>;
   compareAudits(baseAuditId: string, currentAuditId?: string): Promise<AuditDiff>;
   exportAuditReport(options: AuditExportOptions): Promise<AuditExportResult>;
+  getProjectState(): Promise<{ detection: ProjectDetectionResult; snapshot: ProjectSnapshot } | null>;
   getProjectSnapshot(): Promise<ProjectSnapshot>;
   getTask(taskId: string): Promise<TaskSnapshot>;
   getTaskEvents(taskId: string, cursor?: string, limit?: number): Promise<EventPage>;
+  validateEventLedger(taskId: string): Promise<NonNullable<EventPage['validation']>>;
   getPolicyStatus(taskId?: string): Promise<PolicySummary | null>;
   getRawArtifact(request: RawArtifactRequest): Promise<string>;
   getRawCollectionArtifact(request: RawCollectionArtifactRequest): Promise<string>;
@@ -1082,6 +1185,15 @@ export interface ForgeLoopAuditAPI {
   getTaskResponsibility(taskId: string): Promise<ResponsibilityView>;
   getTaskVerificationScope(taskId: string): Promise<VerificationScopeView>;
   getTaskAttestation(taskId: string): Promise<TaskAttestationView>;
+  getTaskContinuityLint(taskId: string): Promise<ContinuityLintView>;
+  getTaskExecutionProfileContext(taskId: string): Promise<ExecutionProfileContextView>;
+  getTaskExecutions(taskId: string, limit?: number): Promise<ExecutionPage>;
+  getDiagnostics(): Promise<AuditRuntimeDiagnostics>;
+  getAppVersion(): Promise<string>;
+  getRepositoryIndexStatus(): Promise<RepositoryIndexProjection>;
+  searchRepository(request: RepositorySearchRequest): Promise<RepositorySearchResult>;
+  minimizeWindow(): Promise<void>;
+  toggleMaximizeWindow(): Promise<boolean>;
   getRecentProjects(): Promise<RecentProject[]>;
   addRecentProject(project: RecentProject): Promise<void>;
   removeRecentProject(path: string): Promise<void>;

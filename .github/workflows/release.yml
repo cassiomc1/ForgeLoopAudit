@@ -9,11 +9,8 @@ permissions:
   contents: read
 
 jobs:
-  macos:
-    runs-on: macos-latest
-    if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
-    env:
-      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+  web-package:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -24,142 +21,13 @@ jobs:
         run: node scripts/assert-release-version.mjs "${{ github.ref_name }}"
       - name: Run full release verification contract
         run: npm run verify:full
-      - name: Build unsigned macOS preview app
-        run: npm run build && npx --no-install electron-builder --mac --dir --config electron-builder.release.yml --publish never
-      - name: Smoke macOS packaged app
-        run: node scripts/packaged-smoke.mjs
-      - name: Open bundled demo in packaged macOS app
-        run: node scripts/packaged-open-demo.mjs
-      - name: Apply and verify macOS Electron fuses
-        run: npm run verify:electron-fuses -- dist-electron
-      - name: Verify unsigned macOS packaged app
+      - name: Build the local web package
+        run: npm pack --pack-destination release-assets
+      - name: Generate checksums and SBOM
         run: |
-          set -euo pipefail
-
-          found=0
-          while IFS= read -r app; do
-            found=1
-            test -f "$app/Contents/Resources/app.asar"
-          done < <(
-            find dist-electron -mindepth 2 -maxdepth 2 -name '*.app' -type d -print
-          )
-
-          test "$found" -eq 1
-      - name: Build macOS unsigned distributables
-        run: npx --no-install electron-builder --mac --config electron-builder.release.yml --publish never
-      - name: Verify macOS release matrix
-        run: node scripts/assert-release-matrix.mjs macos
-      - run: node scripts/stage-release.mjs macos
+          sha256sum release-assets/*.tgz > release-assets/SHA256SUMS
+          npm sbom --sbom-format cyclonedx --sbom-type application > release-assets/SBOM-cyclonedx.json
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: forgeloop-audit-macos
-          path: release-staging/macos/*
-
-  windows:
-    runs-on: windows-latest
-    if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with: { node-version: 22, cache: npm }
-      - run: npm ci
-      - name: Verify tag matches package version
-        if: ${{ github.ref_type == 'tag' }}
-        run: node scripts/assert-release-version.mjs "${{ github.ref_name }}"
-      - name: Run full release verification contract
-        run: npm run verify:full
-      - name: Build Windows unpacked app
-        run: npm run build && npx --no-install electron-builder --win --dir --config electron-builder.release.yml --publish never
-      - name: Smoke Windows packaged app
-        run: node scripts/packaged-smoke.mjs
-      - name: Open bundled demo in packaged Windows app
-        run: node scripts/packaged-open-demo.mjs
-      - name: Verify Windows Electron fuses
-        run: npm run verify:electron-fuses -- dist-electron
-      - name: Build Windows distributables
-        run: npx --no-install electron-builder --win --config electron-builder.release.yml --publish never
-      - name: Verify Windows release matrix
-        run: node scripts/assert-release-matrix.mjs windows
-      - run: node scripts/stage-release.mjs windows
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: forgeloop-audit-windows
-          path: release-staging/windows/*
-
-  linux:
-    runs-on: ubuntu-latest
-    if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with: { node-version: 22, cache: npm }
-      - run: npm ci
-      - name: Verify tag matches package version
-        if: ${{ github.ref_type == 'tag' }}
-        run: node scripts/assert-release-version.mjs "${{ github.ref_name }}"
-      - name: Run full release verification contract
-        run: npm run verify:full
-      - name: Build Linux unpacked app
-        run: npm run build && npx --no-install electron-builder --linux --dir --config electron-builder.release.yml --publish never
-      - name: Smoke Linux packaged app
-        run: xvfb-run -a node scripts/packaged-smoke.mjs
-      - name: Open bundled demo in packaged Linux app
-        run: xvfb-run -a node scripts/packaged-open-demo.mjs
-      - name: Verify Linux Electron fuses
-        run: npm run verify:electron-fuses -- dist-electron
-      - name: Build Linux distributables
-        run: npx --no-install electron-builder --linux --config electron-builder.release.yml --publish never
-      - name: Verify Linux release matrix
-        run: node scripts/assert-release-matrix.mjs linux
-      - run: node scripts/stage-release.mjs linux
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: forgeloop-audit-linux
-          path: release-staging/linux/*
-
-  assemble:
-    needs: [macos, windows, linux]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with: { node-version: 22, cache: npm }
-      - run: npm ci
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          pattern: forgeloop-audit-*
-          path: release-assets
-          merge-multiple: true
-      - name: Remove staging-only release metadata from the public bundle
-        run: find release-assets -name 'RELEASE-METADATA-*.json' -type f -delete
-      - name: Generate lockfile SBOM
-        run: npm sbom --sbom-format cyclonedx --sbom-type application > release-assets/SBOM-cyclonedx.json
-      - name: Bind SBOM application identity to the package name
-        run: node scripts/normalize-release-sbom.mjs release-assets/SBOM-cyclonedx.json
-      - name: Verify staged checksums
-        run: node scripts/verify-release-assets.mjs release-assets
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: forgeloop-audit-assembled
+          name: forgeloop-audit-web
           path: release-assets/*
-
-  publish:
-    needs: [assemble]
-    if: ${{ startsWith(github.ref, 'refs/tags/') }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          pattern: forgeloop-audit-assembled
-          path: release-assets
-          merge-multiple: true
-      - name: Publish GitHub release assets
-        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
-        with:
-          files: release-assets/*
-          generate_release_notes: true
-          fail_on_unmatched_files: true
-          prerelease: ${{ contains(github.ref_name, '-rc.') }}
-          make_latest: ${{ contains(github.ref_name, '-rc.') && 'false' || 'true' }}

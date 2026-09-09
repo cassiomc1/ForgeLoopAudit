@@ -11,6 +11,7 @@ import { AlertTriangle, CheckCircle, CircleHelp, GitBranch, Link2, Shield, UserR
 import { OwnershipBadge } from '../task/OwnershipBadge';
 import { cn } from '../../lib/utils';
 import { HandoffAcceptanceBadge, HandoffAcceptanceDetail } from './HandoffAcceptanceBadge';
+import { auditApi } from '../../lib/audit-client';
 
 interface TaskBoundariesPanelProps {
   task: TaskSummary;
@@ -151,7 +152,7 @@ export function TaskBoundariesPanel({
 
   useEffect(() => {
     let cancelled = false;
-    const api = window.forgeLoopAudit;
+    const api = auditApi;
     const workspacePromise = workspaceAdvertised && typeof api?.getTaskWorkspaceBinding === 'function'
       ? api.getTaskWorkspaceBinding(task.taskId).catch(() => unavailableWorkspace(true))
       : Promise.resolve(unavailableWorkspace(workspaceAdvertised));
@@ -162,7 +163,7 @@ export function TaskBoundariesPanel({
 
   useEffect(() => {
     let cancelled = false;
-    const api = window.forgeLoopAudit;
+    const api = auditApi;
     const handoffsPromise = handoffsAdvertised && typeof api?.getTaskHandoffs === 'function'
       ? api.getTaskHandoffs(task.taskId).catch(() => unavailableHandoffs(true))
       : Promise.resolve(unavailableHandoffs(handoffsAdvertised));
@@ -173,7 +174,7 @@ export function TaskBoundariesPanel({
 
   useEffect(() => {
     let cancelled = false;
-    const api = window.forgeLoopAudit;
+    const api = auditApi;
     const responsibilityPromise = responsibilityAdvertised && typeof api?.getTaskResponsibility === 'function'
       ? api.getTaskResponsibility(task.taskId).catch(() => unavailableResponsibility(true))
       : Promise.resolve(unavailableResponsibility(responsibilityAdvertised));

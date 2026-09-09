@@ -102,6 +102,7 @@ const EMPTY_FEATURE_SUPPORT: ForgeLoopFeatureSupport = Object.freeze({
   executionProfileContext: false,
   contextUsageObservability: false,
   structuralQuality: false,
+  repositoryIndex: false,
 });
 
 function hasResource(capabilities: ForgeLoopCapabilitiesSummary, resource: string): boolean {
@@ -254,6 +255,16 @@ export function deriveFeatureSupport(capabilities: ForgeLoopCapabilitiesSummary)
       && structuralQuality.baselineImmutableAfterExecution === true
       && hasResource(capabilities, 'task/structural-quality'),
   );
+  const repositoryIndex = capabilities.features.repositoryIndex;
+  const repositoryIndexSupported = Boolean(
+    repositoryIndex
+      && repositoryIndex.version === 1
+      && repositoryIndex.required === true
+      && repositoryIndex.providerNeutral === true
+      && repositoryIndex.managedBinary === true
+      && repositoryIndex.resource === 'repository/index-status'
+      && hasResource(capabilities, 'repository/index-status'),
+  );
 
   return {
     canonicalOwnership: coreResourcesPresent,
@@ -278,6 +289,7 @@ export function deriveFeatureSupport(capabilities: ForgeLoopCapabilitiesSummary)
     executionProfileContext: executionProfileContextSupported,
     contextUsageObservability: contextUsageObservabilitySupported,
     structuralQuality: structuralQualitySupported,
+    repositoryIndex: repositoryIndexSupported,
   };
 }
 

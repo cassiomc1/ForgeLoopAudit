@@ -1,4 +1,6 @@
 import { clsx } from 'clsx';
+import { auditApi } from '../../lib/audit-client';
+import { ThemeToggle } from '../ui/theme-toggle';
 
 interface TitleBarProps {
   projectName?: string;
@@ -8,7 +10,7 @@ interface TitleBarProps {
 
 export function TitleBar({ projectName, className, children }: TitleBarProps) {
   const handleDoubleClick = () => {
-    void window.forgeLoopAudit?.toggleMaximizeWindow?.().catch(() => undefined);
+    void auditApi.toggleMaximizeWindow().catch(() => undefined);
   };
 
   return (
@@ -35,7 +37,10 @@ export function TitleBar({ projectName, className, children }: TitleBarProps) {
         </>
       )}
 
-      <div className="app-no-drag flex items-center gap-3 ml-auto min-w-0">{children}</div>
+      <div className="app-no-drag flex items-center gap-2 ml-auto min-w-0">
+        <ThemeToggle />
+        {children}
+      </div>
     </div>
   );
 }

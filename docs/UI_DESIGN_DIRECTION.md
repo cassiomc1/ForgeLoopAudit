@@ -1,202 +1,77 @@
-# ForgeLoopAudit — UI Design Direction
+# ForgeLoopAudit UI design direction
 
 ## Goal
 
-Create a premium dark developer interface that makes ForgeLoop state readable at a glance without becoming visually noisy.
+Make ForgeLoop state readable at a glance in a calm, precise local web
+interface. The current implementation is ForgeLoopAudit `0.3.0-rc.1` aligned to
+ForgeLoop `1.11.1` at
+`674f12c006b3ace12278f109b7ae24f57012d09c` (protocol v1, schema v1, Integration
+API v1).
 
 ## Visual language
 
-The product should feel calm, precise, technical and modern.
+The product is dark by default, compact and information-rich. It uses semantic
+color, restrained typography, visible focus, and text labels for state. The
+renderer has a light theme and a system theme through the same provider. UI
+primitives are code-owned shadcn-style components following the composable
+approach described by [shadcn/ui](https://ui.shadcn.com/).
 
-Reference quality bar:
-
-- Linear
-- Raycast
-- Vercel dashboard
-- GitHub Desktop
-- modern observability tooling
-
-Do not clone any product directly.
-
-## Core principles
-
-1. Dark by default.
-2. Minimal chrome.
-3. Strong hierarchy through spacing and typography rather than decoration.
-4. Color is semantic.
-5. Current state is obvious immediately.
-6. Healthy systems look calm.
-7. Blockers and protocol errors are impossible to miss.
-8. Technical detail is available on demand, not forced on the default view.
-
-## Palette
+Palette tokens are defined in `src/renderer/styles/index.css` and Tailwind:
 
 ```text
-App background       #09090B
-Primary surface      #0D0D10
-Secondary surface    #121216
-Elevated surface     #17171C
-Hover surface        #1C1C22
-Border subtle        #24242A
-Border strong        #303038
-Text primary         #F5F5F6
-Text secondary       #A1A1AA
-Text muted           #71717A
-Forge accent         #FF7A18
-Forge accent hover   #FF8A32
-Success              #22C55E
-Warning              #F59E0B
-Danger               #EF4444
-Info                  #60A5FA
+dark background      #09090B
+light background     #FAFAFA
+primary accent       Forge orange
+success              green
+warning              amber
+danger               red
+muted text           zinc
 ```
 
-## Typography
-
-Primary: Inter  
-Technical: JetBrains Mono
-
-Use restrained font weights. Prefer whitespace and alignment over oversized headings.
-
-## Main shell
-
-```text
-┌──────────────────────────────────────────────────────────────────────┐
-│ ForgeLoopAudit      project-name      protocol v1       ● Live   │
-├──────────────┬───────────────────────────────────────────────────────┤
-│ Audit Summary│                                                       │
-│ Findings     │                                                       │
-│ Tasks        │                    Main View                          │
-│ Evidence     │                                                       │
-│ Quality      │                                                       │
-│ Policy & Trust│                                                     │
-│ Audit History│                                                       │
-│ Reports      │                                                       │
-│ Diagnostics  │                                                       │
-│ Settings     │                                                       │
-└──────────────┴───────────────────────────────────────────────────────┘
-```
+Typography is compact and technical: interface text uses the system sans stack;
+hashes, protocol values and paths use a monospace stack. Whitespace and
+alignment carry hierarchy instead of decorative effects.
 
 ## Current navigation and trust surfaces
 
-The current release is ForgeLoopAudit `0.2.0-rc.3` with ForgeLoop `1.10.2` at
-`d286e1983177a0dfb1f0ceef6c2f6e30c406303a` (protocol v1, schema v1, Integration
-API v1). The auditor-first shell exposes these surfaces in order: Audit Summary,
-Findings, Tasks, Evidence, Quality, Policy & Trust, Audit History, Reports,
-Diagnostics and Settings. The former protocol-object surfaces remain available
-as read-only drill-down views from the auditor and selected-task surfaces.
-Verification Scope and Code Attestation are presented in Evidence, while
-Workspace Binding, Responsibility Constraints and Canonical Handoffs are
-presented through Policy & Trust, Task Boundaries and task-boundary detail.
+The main navigation is Audit Summary, Findings, Tasks, Evidence, Quality,
+Policy & Trust, Audit History, Reports, Repository Search, Diagnostics and
+Settings. Selected-task detail includes Contract, Lifecycle, Events,
+Executions, Continuity, Actions and Task Boundaries.
 
-Trust states must remain explicit and must never rely on color alone:
+Trust surfaces keep these concepts separate:
 
-| State | Presentation guidance |
-|---|---|
-| `UNAVAILABLE` | Neutral warning with the missing capability or resource and no inferred value |
-| `UNKNOWN` | Neutral unresolved value; distinguish missing knowledge from a negative result |
-| `UNBOUND` | Neutral informational state; no workspace binding was recorded |
-| `UNRESOLVED` | Warning state for a canonical verification-scope result that ForgeLoop could not resolve |
-| `INVALID` | Strong danger state with the canonical error code/message and fail-closed semantics |
-| `VERIFIED` | Positive trust label only when the canonical attestation result says so |
-| `ATTESTED` | Strongest trust label only when the canonical completion-ledger-bound attestation says so |
-| `ACCEPTED` | Operational receipt only; no claims, evidence, authority, delegation or completion state |
+- **Task Boundaries** show workspace binding, responsibility and canonical
+  handoff context as read-only projections.
+- **Verification Scope** shows ForgeLoop’s requested/resolved scope and never
+  claims attestation coverage.
+- **Attestation** shows canonical status and trust level; the auditor never
+  creates or signs an attestation.
+- Repository Search is marked **Discovery only** and cannot create evidence.
+- An accepted handoff is an operational receipt only, not authority, delegation,
+  completion or evidence.
 
-`PROCESSED`, `VERIFIED` and `ATTESTED` are attestation trust levels, not
-verification-scope values. `canonicalHandoffs v2` acceptance is rendered as
-**Accepted — operational receipt only**. Handoffs, acceptance receipts and
-Continuity are context surfaces, not completion or review evidence. The
-`advisoryContextProviders v1` row reports a host-provided capability as
-**Not loaded by ForgeLoopAudit**; it never exposes memory or retrieved results.
-Optional capability failure should degrade only the affected surface and leave
-the core protocol mode visible.
+Optional capability failure is displayed as `UNAVAILABLE`, `UNKNOWN` or an
+explicit canonical error. It is never silently rendered as a pass. Status is
+never conveyed by color alone.
 
-## Signature view
+## Interaction and motion
 
-The lifecycle graph is the product identity.
-
-Completed nodes should be quiet. The current node should carry the strongest visual emphasis. Failure and blocked states should be strongly semantic without using constant animation.
-
-```text
-REQUEST
-   │
-DISCOVERY
-   │
-CONTRACT
-   │
-ROUTING
-   │
-DESIGN
-   │
-PLAN
-   │
-EXECUTE ─────────────────┐
-   │                     │
-VERIFY                   │
-   │                     │
- failure                 │
-   ▼                     │
-DIAGNOSE                 │
-   │                     │
-CORRECT ─────────────────┘
-   │
-REVIEW
-   │
-COMPLETE
-```
-
-## Motion
-
-Use subtle transition animation only when it communicates new state. Respect `prefers-reduced-motion`.
-
-Recommended motion:
-
-- node status transition;
-- new event insertion;
-- inspector reveal;
-- selected task transition;
-- live status pulse at low frequency.
-
-Avoid glow, parallax, looping background effects and decorative particle systems.
-
-## Density
-
-This is a developer tool. Prefer compact information-rich rows over large marketing-style cards.
-
-Use metric cards only for high-level summary values.
-
-## Panels
-
-Right-side inspectors should expose technical details without navigating away from context.
-
-Recommended width: 360–440 px depending on window size.
-
-## Status treatment
-
-Never rely on color alone.
-
-Examples:
-
-```text
-✓ VALID
-○ INCOMPLETE
-! STALE
-! INCONSISTENT
-× INVALID
-```
-
-## Empty states
-
-Empty states must explain what ForgeLoop artifact or action will make content appear. Avoid generic illustrations.
+Use subtle transitions for state changes, inspector reveals and live updates.
+Respect `prefers-reduced-motion`; avoid glow, parallax and looping decoration.
+Empty states explain which ForgeLoop artifact or CLI action will make content
+appear. The browser cannot choose arbitrary filesystem paths: the CLI/server
+owns project selection and report destinations.
 
 ## Accessibility
 
-- WCAG AA contrast
-- visible keyboard focus
-- semantic labels
-- reduced motion
-- keyboard navigable graph alternative
-- no status conveyed only through color
+- semantic headings and landmark navigation;
+- visible keyboard focus and accessible button names;
+- WCAG AA contrast targets;
+- reduced-motion support;
+- text labels and icons together for status; and
+- keyboard-readable alternatives for graph and dense technical views.
 
-## Final design criterion
-
-The interface should look production-ready even when no animation is running and no gradient is visible. Its quality must come from composition, spacing, typography, information hierarchy and precise state visualization.
+The final criterion is a production-ready screen when animation is disabled and
+no gradient is visible: composition, spacing, typography and information
+hierarchy must carry the experience.

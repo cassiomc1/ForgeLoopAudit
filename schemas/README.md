@@ -1,11 +1,11 @@
 # ForgeLoop protocol schemas
 
-This directory vendors the ForgeLoop protocol-v1 JSON Schemas used by ForgeLoopAudit's Ajv trust boundary. The files are shipped with the Electron application so packaged builds do not silently fall back to handwritten shape checks.
+This directory vendors the ForgeLoop protocol-v1 JSON Schemas used by ForgeLoopAudit's Ajv trust boundary. The files are shipped with the local web package so runtime checks do not silently fall back to handwritten shape checks.
 
 The schema filenames and protocol version are bound by `src/main/core/protocol/artifact-registry.ts`. Refresh these files only from the matching ForgeLoop protocol-v1 schema set and rerun the artifact validation fixtures.
 
-`provenance.json` currently pins ForgeLoop `1.10.2` at commit
-`d286e1983177a0dfb1f0ceef6c2f6e30c406303a` and records protocol v1, the
+`provenance.json` currently pins ForgeLoop `1.11.1` at commit
+`674f12c006b3ace12278f109b7ae24f57012d09c` and records protocol v1, the
 upstream path and SHA-256 for every trusted schema. Trusted schemas include
 workspace binding, canonical handoffs, responsibility, verification scope,
 code manifests, in-toto statements, code-attestation predicates and

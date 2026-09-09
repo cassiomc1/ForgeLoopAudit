@@ -11,7 +11,7 @@ const repositoryRoot = process.cwd();
 function copyRepository() {
   const parent = mkdtempSync(join(tmpdir(), 'forgeloop-audit-docs-'));
   const root = join(parent, 'repo');
-  const excludedDirectories = ['.git', 'node_modules', 'dist', 'dist-electron', '.worktrees', 'coverage', 'test-results', 'playwright-report'];
+  const excludedDirectories = ['.git', 'node_modules', 'dist', '.worktrees', 'coverage', 'test-results', 'playwright-report'];
   cpSync(repositoryRoot, root, {
     recursive: true,
     filter: (source) => {
@@ -54,7 +54,7 @@ test('rejects a package release-version mismatch', () => {
 test('rejects a ForgeLoop provenance-version mismatch', () => {
   withRepository((root) => {
     updateJson(root, 'schemas/provenance.json', (provenance) => { provenance.forgeLoopPackageVersion = '1.6.3'; });
-    assert.throws(() => runDocConformance(root, { validateLineage: false }), /schema provenance must pin ForgeLoop 1\.10\.2/);
+    assert.throws(() => runDocConformance(root, { validateLineage: false }), /schema provenance must pin ForgeLoop 1\.11\.1/);
   });
 });
 

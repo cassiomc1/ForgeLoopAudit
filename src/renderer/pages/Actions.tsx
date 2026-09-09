@@ -7,6 +7,7 @@ import { ActionDetail } from '../components/actions/ActionDetail';
 import { ActionReadinessSummary } from '../components/actions/ActionReadinessSummary';
 import { cn } from '../lib/utils';
 import { AlertTriangle, Shield } from 'lucide-react';
+import { auditApi } from '../lib/audit-client';
 
 interface ActionsProps {
   snapshot: ProjectSnapshot;
@@ -35,7 +36,7 @@ export function Actions({ snapshot, selectedTaskId, actionsRefreshToken = 0, onS
     let cancelled = false;
     setLoading(true);
     setError(null);
-    window.forgeLoopAudit.getTaskActions(selectedTask.taskId)
+    auditApi.getTaskActions(selectedTask.taskId)
       .then((result) => {
         if (!cancelled) {
           setView(result);

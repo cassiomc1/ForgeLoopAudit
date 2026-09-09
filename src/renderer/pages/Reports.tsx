@@ -1,10 +1,62 @@
 import { useState } from 'react';
 import type { ProjectAuditSnapshot } from '@shared/audit';
+import { Badge } from '../components/ui/badge';
+import { Button } from '../components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { auditApi } from '../lib/audit-client';
 
 export function Reports({ audit, onRefreshAudit }: { audit: ProjectAuditSnapshot | null; onRefreshAudit: () => void }) {
   const [format, setFormat] = useState<'JSON' | 'MARKDOWN' | 'SARIF'>('MARKDOWN');
-  const [destinationPath, setDestinationPath] = useState('');
   const [message, setMessage] = useState('');
-  const exportReport = async () => { if (!destinationPath.trim()) { setMessage('Enter an absolute destination path.'); return; } try { const result = await window.forgeLoopAudit.exportAuditReport({ format, destinationPath: destinationPath.trim() }); setMessage(`Exported ${result.format} report (${result.bytes} bytes) to ${result.destinationPath}.`); } catch (error) { setMessage(error instanceof Error ? error.message : 'Report export failed.'); } };
-  return <div className="space-y-5 animate-fade-in"><div><h1 className="text-xl font-semibold text-forge-text-primary">Reports</h1><p className="text-sm text-forge-text-muted mt-1">Deterministic reports generated from already-read audit data.</p></div>{!audit ? <div className="bg-forge-warning/10 border border-forge-warning/30 rounded-10 p-5"><p className="text-sm text-forge-warning">No current audit loaded.</p><button className="btn-secondary mt-3" onClick={onRefreshAudit}>Run audit</button></div> : <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-10 p-5 space-y-4"><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><label className="text-sm text-forge-text-secondary">Format<select className="input mt-1" value={format} onChange={(event) => setFormat(event.target.value as typeof format)}><option>MARKDOWN</option><option>JSON</option><option>SARIF</option></select></label><label className="text-sm text-forge-text-secondary">Absolute destination path<input className="input mt-1" value={destinationPath} onChange={(event) => setDestinationPath(event.target.value)} placeholder="/tmp/forgeloop-audit-report.md" /></label></div><p className="text-xs text-forge-text-muted">Reports include ForgeLoop provenance, audit rules, timestamp, HEAD, fingerprint and [C]/[D]/[A] trust labels. The audited .forgeloop directory is protected by default.</p><button className="btn-primary" onClick={exportReport}>Export report</button>{message && <p className="text-sm text-forge-text-secondary">{message}</p>}</div>}</div>;
+
+  const exportReport = async () => {
+    try {
+      const result = await auditApi.exportAuditReport({ format, destinationPath: 'managed-by-local-server' });
+      setMessage(`Exported ${result.format} report (${result.bytes} bytes) to the managed application export directory.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Report export failed.');
+    }
+  };
+
+  return (
+    <div className="space-y-5 animate-fade-in">
+      <div>
+        <h1 className="text-xl font-semibold text-forge-text-primary">Reports</h1>
+        <p className="text-sm text-forge-text-muted mt-1">Deterministic reports generated from already-read audit data.</p>
+      </div>
+      {!audit ? (
+        <Card className="border-forge-warning/30 bg-forge-warning/10">
+          <CardContent className="p-5">
+            <p className="text-sm text-forge-warning">No current audit loaded.</p>
+            <Button variant="outline" className="mt-3" onClick={onRefreshAudit}>Run audit</Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <CardTitle>Export an audit report</CardTitle>
+                <CardDescription className="mt-2">The local web host chooses a private application-data destination for every export.</CardDescription>
+              </div>
+              <Badge variant="outline">Managed storage</Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <label className="block text-sm text-forge-text-secondary">
+              Format
+              <select className="input mt-1" value={format} onChange={(event) => setFormat(event.target.value as typeof format)}>
+                <option>MARKDOWN</option>
+                <option>JSON</option>
+                <option>SARIF</option>
+              </select>
+            </label>
+            <p className="text-xs text-forge-text-muted">Reports include ForgeLoop provenance, audit rules, timestamp, HEAD, fingerprint and [C]/[D]/[A] trust labels. The audited .forgeloop directory is protected by default. Browser clients cannot choose arbitrary host paths.</p>
+            <Button onClick={exportReport}>Export report</Button>
+            {message && <p className="text-sm text-forge-text-secondary">{message}</p>}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
 }

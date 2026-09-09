@@ -1,15 +1,20 @@
 # Vendored ForgeLoop runtime dependency
 
-`cassiomc1-forgeloop-1.10.2-d286e19.tgz` is the packed ForgeLoop runtime used by
-ForgeLoopAudit through the public `@cassiomc1/forgeloop/integration` subpath.
+`cassiomc1-forgeloop-1.11.1-674f12c.tgz` is the packed ForgeLoop `1.11.1` runtime used
+by ForgeLoopAudit through the public `@cassiomc1/forgeloop/integration`
+subpath.
 
 - Source repository: `cassiomc1/forgeloop`
-- Pinned commit: `d286e1983177a0dfb1f0ceef6c2f6e30c406303a`
-- Package version: `1.10.2`
-- SHA-256: `0cee3747d2dfa9f938d2efe9380a840681123ff92407d0e567f8395bd6f9f8b4`
+- Pinned commit: `674f12c006b3ace12278f109b7ae24f57012d09c`
+- Package version: `1.11.1`
+- SHA-256: `3457050fc517c3d1f672558fe774abd55ca89f58e77ea0f19573aa1e98a2b4c9`
 
-The archive is pinned to the immutable ForgeLoop v1.10.2 release commit so
-packaged ForgeLoopAudit builds do not depend on a sibling ForgeLoop checkout, a
+The archive is packed from the peeled immutable `v1.11.1` release commit.
+ForgeLoopAudit uses its Integration API v1 for canonical audit resources and
+the explicit Repository Index/Search operations. Repository discovery results
+remain engineering navigation data, never lifecycle evidence or authority.
+
+Packaged ForgeLoopAudit builds do not depend on a sibling ForgeLoop checkout, a
 floating branch, or network package resolution at runtime.
 
 Verify the complete package, lockfile, archive and schema lineage with:

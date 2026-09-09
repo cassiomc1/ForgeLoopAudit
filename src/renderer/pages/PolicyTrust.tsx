@@ -9,6 +9,7 @@ import type {
   WorkspaceBindingView,
 } from '@shared/domain';
 import { StatusBadge } from '../components/ui/StatusBadge';
+import { auditApi } from '../lib/audit-client';
 
 interface PolicyTrustProps {
   snapshot: ProjectSnapshot;
@@ -40,7 +41,7 @@ export function PolicyTrust({ snapshot, selectedTaskId, capabilityPolicyRefreshT
       setCapabilityPolicy(null);
       return () => { cancelled = true; };
     }
-    window.forgeLoopAudit.getCapabilityPolicy().then((value) => { if (!cancelled) setCapabilityPolicy(value); }).catch(() => { if (!cancelled) setCapabilityPolicy(null); });
+    auditApi.getCapabilityPolicy().then((value) => { if (!cancelled) setCapabilityPolicy(value); }).catch(() => { if (!cancelled) setCapabilityPolicy(null); });
     return () => { cancelled = true; };
   }, [snapshot.protocol.featureSupport?.capabilityPolicy, capabilityPolicyRefreshToken]);
 
@@ -51,11 +52,11 @@ export function PolicyTrust({ snapshot, selectedTaskId, capabilityPolicyRefreshT
       return () => { cancelled = true; };
     }
     Promise.all([
-      window.forgeLoopAudit.getTaskWorkspaceBinding(taskId).catch(() => unavailable('Workspace binding is unavailable.')),
-      window.forgeLoopAudit.getTaskResponsibility(taskId).catch(() => unavailable('Responsibility constraints are unavailable.')),
-      window.forgeLoopAudit.getTaskHandoffs(taskId).catch(() => unavailable('Canonical handoffs are unavailable.')),
-      window.forgeLoopAudit.getTaskVerificationScope(taskId).catch(() => unavailable('Verification scope is unavailable.')),
-      window.forgeLoopAudit.getTaskAttestation(taskId).catch(() => unavailable('Code attestation is unavailable.')),
+      auditApi.getTaskWorkspaceBinding(taskId).catch(() => unavailable('Workspace binding is unavailable.')),
+      auditApi.getTaskResponsibility(taskId).catch(() => unavailable('Responsibility constraints are unavailable.')),
+      auditApi.getTaskHandoffs(taskId).catch(() => unavailable('Canonical handoffs are unavailable.')),
+      auditApi.getTaskVerificationScope(taskId).catch(() => unavailable('Verification scope is unavailable.')),
+      auditApi.getTaskAttestation(taskId).catch(() => unavailable('Code attestation is unavailable.')),
     ]).then(([workspace, responsibility, handoffs, verificationScope, attestation]) => {
       if (!cancelled) setTrust({ workspace: workspace as WorkspaceBindingView, responsibility: responsibility as ResponsibilityView, handoffs: handoffs as TaskHandoffsView, verificationScope: verificationScope as VerificationScopeView, attestation: attestation as TaskAttestationView });
     });

@@ -3,6 +3,7 @@ import type { ProjectSnapshot, TaskSummary, TaskAttestationView, VerificationSco
 import { NoEvidenceState } from '../components/ui/EmptyState';
 import { cn, getEvidenceKindColor, getEvidenceKindLabel } from '../lib/utils';
 import { AlertTriangle, FileCheck2, ShieldCheck } from 'lucide-react';
+import { auditApi } from '../lib/audit-client';
 
 interface EvidenceProps {
   snapshot: ProjectSnapshot;
@@ -28,7 +29,7 @@ export function Evidence({ snapshot, selectedTaskId, genericTaskRefreshToken = 0
   useEffect(() => {
     if (!selectedTaskKey) { setExecutionReceipt(null); return; }
     let cancelled = false;
-    window.forgeLoopAudit.getTask(selectedTaskKey).then((task) => { if (!cancelled) setExecutionReceipt(task.executionReceipt || null); }).catch(() => { if (!cancelled) setExecutionReceipt(null); });
+    auditApi.getTask(selectedTaskKey).then((task) => { if (!cancelled) setExecutionReceipt(task.executionReceipt || null); }).catch(() => { if (!cancelled) setExecutionReceipt(null); });
     return () => { cancelled = true; };
   }, [genericTaskRefreshToken, selectedTaskKey]);
 
@@ -52,7 +53,7 @@ export function Evidence({ snapshot, selectedTaskId, genericTaskRefreshToken = 0
       error: { code: 'E_FEATURE_UNAVAILABLE', message: 'Differential Verification Scope is not advertised by this ForgeLoop build.' },
     };
     const scopePromise = scopeFeatureAvailable
-      ? window.forgeLoopAudit.getTaskVerificationScope(selectedTaskKey).catch(() => scopeUnavailable)
+      ? auditApi.getTaskVerificationScope(selectedTaskKey).catch(() => scopeUnavailable)
       : Promise.resolve(scopeUnavailable);
     scopePromise.then((scope) => { if (!cancelled) setVerificationScope(scope); });
     return () => { cancelled = true; };
@@ -76,7 +77,7 @@ export function Evidence({ snapshot, selectedTaskId, genericTaskRefreshToken = 0
       errors: [{ code: 'E_FEATURE_UNAVAILABLE', message: 'Code attestation is not advertised by this ForgeLoop build.' }],
     };
     const attestationPromise = attestationFeatureAvailable
-      ? window.forgeLoopAudit.getTaskAttestation(selectedTaskKey).catch(() => attestationUnavailable)
+      ? auditApi.getTaskAttestation(selectedTaskKey).catch(() => attestationUnavailable)
       : Promise.resolve(attestationUnavailable);
     attestationPromise.then((attestationView) => { if (!cancelled) setAttestation(attestationView); });
     return () => { cancelled = true; };

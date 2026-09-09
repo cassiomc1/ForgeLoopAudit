@@ -3,10 +3,14 @@ import { FolderOpen, FlaskConical, Clock, X } from 'lucide-react';
 import type { RecentProject } from '@shared/domain';
 import { ErrorState } from '../components/ui/EmptyState';
 import { LoadingState } from '../components/ui/LoadingState';
+import { Badge } from '../components/ui/badge';
+import { Button } from '../components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { ThemeToggle } from '../components/ui/theme-toggle';
 import { cn } from '../lib/utils';
+import { auditApi } from '../lib/audit-client';
 
 interface ProjectPickerProps {
-  onOpenProject: () => void;
   onOpenDemoProject: () => void;
   onOpenRecentProject: (path: string) => void;
   recentProjects: RecentProject[];
@@ -14,13 +18,12 @@ interface ProjectPickerProps {
   error?: { message: string; details?: string; code: string } | null;
 }
 
-export function ProjectPicker({ onOpenProject, onOpenDemoProject, onOpenRecentProject, recentProjects, isLoading, error }: ProjectPickerProps) {
+export function ProjectPicker({ onOpenDemoProject, onOpenRecentProject, recentProjects, isLoading, error }: ProjectPickerProps) {
   const [hoveredRecent, setHoveredRecent] = useState<string | null>(null);
   const [appVersion, setAppVersion] = useState<string | null>(null);
 
   useEffect(() => {
-    const api = (window as any).forgeLoopAudit;
-    api?.getAppVersion?.().then(setAppVersion).catch(() => setAppVersion(null));
+    auditApi.getAppVersion().then(setAppVersion).catch(() => setAppVersion(null));
   }, []);
 
   const formatDate = (dateString: string) => {
@@ -39,9 +42,11 @@ export function ProjectPicker({ onOpenProject, onOpenDemoProject, onOpenRecentPr
   return (
     <div className="flex h-screen w-full flex-col forge-background">
       <div
-        className="app-drag-region h-12 shrink-0 border-b forge-border-subtle forge-primary-surface"
-        onDoubleClick={() => void window.forgeLoopAudit?.toggleMaximizeWindow?.().catch(() => undefined)}
-      />
+        className="flex h-12 shrink-0 items-center justify-between border-b forge-border-subtle forge-primary-surface px-4"
+      >
+        <span className="text-sm font-semibold text-forge-text-primary">ForgeLoopAudit</span>
+        <ThemeToggle />
+      </div>
       <div className="flex-1 flex flex-col items-center justify-center px-8">
         <div className="w-full max-w-2xl animate-fade-in">
           <div className="text-center mb-12">
@@ -57,38 +62,43 @@ export function ProjectPicker({ onOpenProject, onOpenDemoProject, onOpenRecentPr
           </div>
 
           {error && (
-            <ErrorState message={error.message} details={error.details} onRetry={onOpenProject} />
+            <ErrorState message={error.message} details={error.details} onRetry={onOpenDemoProject} />
           )}
 
-          <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-12 p-6 mb-8">
-            <button
-              className="btn-primary w-full justify-center py-3 gap-2"
-              onClick={onOpenProject}
-              disabled={isLoading}
-            >
-              <FolderOpen className="w-5 h-5" />
-              <span>Open ForgeLoop Project</span>
-              {isLoading && <LoadingState message="Opening..." />}
-            </button>
-            <button
-              className="btn-secondary w-full justify-center py-3 gap-2 mt-3"
-              onClick={onOpenDemoProject}
-              disabled={isLoading}
-            >
-              <FlaskConical className="w-5 h-5" />
-              <span>Open Demo Project</span>
-            </button>
-            <p className="text-center text-xs text-forge-text-muted mt-3">
-              Scenario-rich ForgeShop fixture with intentional complete, active, blocked, and planned tasks.
-              Includes intentional COMPLETE, VERIFYING, EXECUTING, BLOCKED, and PLANNED scenarios.
-            </p>
-            <p className="text-center text-xs text-forge-text-muted mt-1">
-              Use it to explore verification, recovery, continuity, evidence, and policy behavior.
-            </p>
-            <p className="text-center text-xs text-forge-text-muted mt-3">
-              Select a project directory or a parent folder; ForgeLoopAudit searches subfolders for a <code className="font-mono text-forge-text-secondary">.forgeloop</code> project
-            </p>
-          </div>
+          <Card className="mb-8">
+            <CardHeader>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <CardTitle>Choose an audit project</CardTitle>
+                  <CardDescription className="mt-2">The local web host keeps project selection and filesystem access outside the browser.</CardDescription>
+                </div>
+                <Badge variant="outline">Local only</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Button
+                variant="secondary"
+                size="lg"
+                className="w-full"
+                onClick={onOpenDemoProject}
+                disabled={isLoading}
+              >
+                <FlaskConical className="w-5 h-5" />
+                <span>Open Demo Project</span>
+                {isLoading && <LoadingState message="Opening..." />}
+              </Button>
+              <div className="rounded-lg border border-border bg-muted/40 p-4">
+                <p className="text-sm font-medium text-foreground">Open another project from the CLI</p>
+                <code className="mt-2 block overflow-x-auto rounded-md bg-background px-3 py-2 text-xs text-muted-foreground">npx forgeloop-audit --project /path/to/project</code>
+              </div>
+              <p className="text-center text-xs text-forge-text-muted">
+                ForgeLoopAudit searches the selected project for a <code className="font-mono text-forge-text-secondary">.forgeloop</code> directory. No browser upload or arbitrary path picker is used.
+              </p>
+              <p className="text-center text-xs text-forge-text-muted">
+                Scenario-rich ForgeShop fixture with intentional complete, active, blocked, and planned tasks.
+              </p>
+            </CardContent>
+          </Card>
 
           {recentProjects.length > 0 && (
             <div className="bg-forge-primary-surface border border-forge-border-subtle rounded-12 overflow-hidden">
