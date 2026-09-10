@@ -25,9 +25,11 @@ Evidence: `src/server/`, `src/renderer/lib/audit-client.ts`,
 
 ## ForgeLoop integration and trust boundary
 
-- [x] Vendored ForgeLoop `1.11.1` at
-  `674f12c006b3ace12278f109b7ae24f57012d09c`.
+- [x] Vendored ForgeLoop `1.12.0` at
+  `ea362768dacfe885b1cc2729dd32ee661d60008f`.
 - [x] Protocol v1, schema v1 and Integration API v1 provenance verification.
+- [x] Canonical `flutter` guide IDs are accepted and preserved without local
+  Flutter detection or guide-selection authority.
 - [x] Fail-closed `INTEGRATION_V1`, `ARTIFACT_ONLY` and `INCOMPATIBLE` modes.
 - [x] Canonical ownership, recovery, observability, actions, approvals,
   policy, trajectory, workspace binding, handoffs, responsibility,

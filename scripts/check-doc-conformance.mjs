@@ -25,6 +25,7 @@ const CURRENT_DOCS = [
 const HISTORICAL_DIRS = ['docs/superpowers', 'docs/verification'];
 const STALE_ACTIVE_RELEASE = /\bRC[0-9]+\b/iu;
 const STALE_FORGELOOP_FACTS = /\b1\.6\.1\b|f331100cff[a-f0-9]*/iu;
+const STALE_ACTIVE_FORGELOOP_BASELINE = /\b1\.11\.1\b|674f12c006b3ace12278f109b7ae24f57012d09c/iu;
 
 function fail(message) {
   throw new Error(`Documentation conformance failed: ${message}`);
@@ -146,12 +147,13 @@ function validateCurrentFacts(root, packageJson, provenance, archiveName, archiv
   const current = Object.fromEntries(CURRENT_DOCS.map((file) => [file, readText(root, file)]));
   const currentText = Object.values(current).join('\n');
 
-  assertCondition(packageJson.version === '0.3.0-rc.1', `package.json version must remain 0.3.0-rc.1, got ${packageJson.version}`);
-  assertCondition(version === '1.11.1', `schema provenance must pin ForgeLoop 1.11.1, got ${version}`);
+  assertCondition(packageJson.version === '0.3.0-rc.2', `package.json version must remain 0.3.0-rc.2, got ${packageJson.version}`);
+  assertCondition(version === '1.12.0', `schema provenance must pin ForgeLoop 1.12.0, got ${version}`);
   assertCondition(typeof commit === 'string' && /^[a-f0-9]{40}$/u.test(commit), 'schema provenance must contain a 40-character ForgeLoop commit');
   assertCondition(provenance.protocolVersion === 1, 'schema provenance must pin protocol v1');
   assertCondition(!STALE_ACTIVE_RELEASE.test(currentText), 'current documentation contains a stale active RC number');
   assertCondition(!STALE_FORGELOOP_FACTS.test(currentText), 'current documentation contains stale ForgeLoop 1.6.1 lineage');
+  assertCondition(!STALE_ACTIVE_FORGELOOP_BASELINE.test(currentText), 'current documentation contains the retired ForgeLoop 1.11.1 baseline');
 
   const required = {
     'README.md': [
@@ -166,6 +168,8 @@ function validateCurrentFacts(root, packageJson, provenance, archiveName, archiv
       'exactly-once',
       'operational receipt',
       'advisory context',
+      'Flutter',
+      'selected guide IDs',
     ],
     'FORGELOOP_AUDIT_IMPLEMENTATION_SPEC.md': [
       `ForgeLoop \`${version}\``,
@@ -176,6 +180,7 @@ function validateCurrentFacts(root, packageJson, provenance, archiveName, archiv
       'Current implementation and design reference',
       'canonicalHandoffs v2',
       'advisoryContextProviders v1',
+      'does not reimplement detection',
     ],
     'docs/PROTOCOL_COMPATIBILITY.md': [
       `ForgeLoop **${version}**`,
@@ -190,19 +195,21 @@ function validateCurrentFacts(root, packageJson, provenance, archiveName, archiv
       'task/attestation',
       'canonicalHandoffs v2',
       'advisoryContextProviders v1',
+      'selectedGuideIds',
+      'not evidence',
     ],
-    'docs/RELEASE_MODEL.md': ['unsigned preview', 'release-matrix.json', 'SBOM-cyclonedx.json', 'tag-triggered workflow'],
-    'docs/QUALITY_GATES.md': ['npm run verify:full', 'Ubuntu', 'macOS', 'Windows', 'CodeQL'],
-    'docs/IMPLEMENTATION_CHECKLIST.md': ['Current Implementation and Verification Matrix', '[x]', '[~]', '[-]', 'TASK-006'],
-    'docs/README.md': ['Current documentation owners', 'Historical records', 'Trust boundary'],
-    'schemas/README.md': [`ForgeLoop \`${version}\``, commit, 'protocol v1', 'npm run protocol:schemas:verify'],
-    'vendor/README.md': [archiveName, commit, archiveSha256, 'npm run verify:forgeloop-lineage'],
-    'screen/README.md': ['npm run screenshots:readme', 'npm run screenshots:check', 'ForgeShop', '1440 × 900'],
+    'docs/RELEASE_MODEL.md': ['unsigned preview', 'release-matrix.json', 'SBOM-cyclonedx.json', 'tag-triggered workflow', '1.12.0', 'Flutter'],
+    'docs/QUALITY_GATES.md': ['npm run verify:full', 'Ubuntu', 'macOS', 'Windows', 'CodeQL', '1.12.0'],
+    'docs/IMPLEMENTATION_CHECKLIST.md': ['Current Implementation and Verification Matrix', '[x]', '[~]', '[-]', 'TASK-006', 'flutter'],
+    'docs/README.md': ['Current documentation owners', 'Historical records', 'Trust boundary', '1.12.0', 'flutter'],
+    'schemas/README.md': [`ForgeLoop \`${version}\``, commit, 'protocol v1', 'npm run protocol:schemas:verify', 'Schema v1'],
+    'vendor/README.md': [archiveName, commit, archiveSha256, 'npm run verify:forgeloop-lineage', 'flutter'],
+    'screen/README.md': ['npm run screenshots:readme', 'npm run screenshots:check', 'ForgeShop', '1440 × 900', '1.12.0'],
     'demo/README.md': ['ForgeShop', 'TASK-001', 'TASK-006', 'npm run demo:verify'],
     'docs/UI_DESIGN_DIRECTION.md': ['Current navigation and trust surfaces', 'Task Boundaries', 'Verification Scope', 'Attestation'],
     'docs/TROUBLESHOOTING.md': ['INTEGRATION_V1', 'COMMIT_UNKNOWN', 'UNAVAILABLE', 'Workspace binding'],
     'docs/DEPENDENCY_POLICY.md': ['npm run dependency:policy', 'npm run audit:prod', 'npm run verify:forgeloop-lineage'],
-    'docs/migration/WEB_IMPLEMENTATION_REPORT.md': ['web migration report', '0.3.0-rc.1', '1.11.1', 'loopback', 'Discovery only'],
+    'docs/migration/WEB_IMPLEMENTATION_REPORT.md': ['web migration report', '0.3.0-rc.2', '1.12.0', 'flutter', 'loopback', 'Discovery only'],
   };
   for (const [file, facts] of Object.entries(required)) {
     for (const fact of facts) assertCondition(current[file].includes(fact), `${file} is missing current fact: ${fact}`);

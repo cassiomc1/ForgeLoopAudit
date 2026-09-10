@@ -2,11 +2,16 @@
 
 ## Scope completed
 
-ForgeLoopAudit `0.3.0-rc.1` now uses a local loopback web host and browser
-renderer aligned to ForgeLoop `1.11.1` at commit
-`674f12c006b3ace12278f109b7ae24f57012d09c`. The vendored package is the local
-archive `vendor/cassiomc1-forgeloop-1.11.1-674f12c.tgz`; its SHA-256 is
-`3457050fc517c3d1f672558fe774abd55ca89f58e77ea0f19573aa1e98a2b4c9`.
+ForgeLoopAudit `0.3.0-rc.2` now uses a local loopback web host and browser
+renderer aligned to ForgeLoop `1.12.0` at commit
+`ea362768dacfe885b1cc2729dd32ee661d60008f`. The vendored package is the local
+archive `vendor/cassiomc1-forgeloop-1.12.0-ea36276.tgz`; its SHA-256 is
+`b36b03bdbc79537af25e5d633962839c2e00cac3d9416cd014758852e31bcde1`.
+
+ForgeLoop owns the new deterministic Flutter project detection and canonical
+`flutter` guide routing. ForgeLoopAudit preserves canonical route/context guide
+IDs without recomputing project classification or treating guide selection as
+verification evidence.
 
 The pre-migration state is preserved in
 [`WEB_BASELINE.md`](WEB_BASELINE.md). That file is a historical record and is

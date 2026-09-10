@@ -563,7 +563,7 @@ export class AuditRuntime {
 
   async getRepositoryIndexStatus(): Promise<RepositoryIndexProjection> {
     if (!this.currentIntegration || !this.currentFeatureSupport?.repositoryIndex || !this.getCurrentProjectRoot()) {
-      return unavailableRepositoryIndex('ForgeLoop 1.11.1 Repository Index is not available for this project.');
+      return unavailableRepositoryIndex('ForgeLoop 1.12.0 Repository Index is not available for this project.');
     }
     if (!this.currentIntegration.getRepositoryIndexStatus) return unavailableRepositoryIndex('The installed ForgeLoop Integration API does not expose Repository Index status.');
     return this.currentIntegration.getRepositoryIndexStatus(this.getCurrentProjectRoot()!);

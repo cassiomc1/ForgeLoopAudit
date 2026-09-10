@@ -1,10 +1,16 @@
 # ForgeLoopAudit — Current implementation and design reference
 
 This document describes the shipped web implementation. It is the current
-implementation and design reference for ForgeLoopAudit `0.3.0-rc.1`, aligned to
-ForgeLoop `1.11.1` at immutable commit
-`674f12c006b3ace12278f109b7ae24f57012d09c` with protocol v1, schema v1 and
+implementation and design reference for ForgeLoopAudit `0.3.0-rc.2`, aligned to
+ForgeLoop `1.12.0` at immutable commit
+`ea362768dacfe885b1cc2729dd32ee661d60008f` with protocol v1, schema v1 and
 Integration API v1.
+
+ForgeLoop `1.12.0` owns deterministic Flutter project detection, monorepo scope
+matching and canonical guide routing. ForgeLoopAudit consumes the resulting
+bounded route/context projection, preserves guide IDs such as `flutter`, and
+does not reimplement detection or promote selected guides to evidence,
+authority or completion.
 
 ## Product boundary
 

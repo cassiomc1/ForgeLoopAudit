@@ -1,10 +1,14 @@
 # Release model
 
-ForgeLoopAudit `0.3.0-rc.1` is an unsigned preview npm package aligned to
-ForgeLoop `1.11.1` at immutable commit
-`674f12c006b3ace12278f109b7ae24f57012d09c`, with protocol v1, schema v1 and
+ForgeLoopAudit `0.3.0-rc.2` is an unsigned preview npm package aligned to
+ForgeLoop `1.12.0` at immutable commit
+`ea362768dacfe885b1cc2729dd32ee661d60008f`, with protocol v1, schema v1 and
 Integration API v1. The current release asset is the package produced by
 `npm pack`; native Electron packaging is no longer part of the product.
+
+The upstream 1.12.0 change is routing-only for this boundary: ForgeLoop owns
+structured Flutter project detection and canonical guide selection, while
+ForgeLoopAudit remains a read-only consumer of route/context data.
 
 The machine-readable asset authority is
 [`release-matrix.json`](releases/release-matrix.json). It describes one
