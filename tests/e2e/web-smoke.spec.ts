@@ -24,7 +24,7 @@ test('local web host bootstraps a same-origin session and renders the demo', asy
   const projectResponse = await page.request.get(`${serverInfo().origin}/api/v1/project`);
   expect(projectResponse.ok()).toBeTruthy();
   const projectPayload = await projectResponse.json() as { data?: { detection?: { forgeLoopVersion?: string } } };
-  expect(projectPayload.data?.detection?.forgeLoopVersion).toBe('1.11.1');
+  expect(projectPayload.data?.detection?.forgeLoopVersion).toBe('1.12.0');
 });
 
 test('light and dark themes switch through the shadcn-style theme control', async ({ page }) => {

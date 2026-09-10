@@ -4,8 +4,8 @@ This directory vendors the ForgeLoop protocol-v1 JSON Schemas used by ForgeLoopA
 
 The schema filenames and protocol version are bound by `src/main/core/protocol/artifact-registry.ts`. Refresh these files only from the matching ForgeLoop protocol-v1 schema set and rerun the artifact validation fixtures.
 
-`provenance.json` currently pins ForgeLoop `1.11.1` at commit
-`674f12c006b3ace12278f109b7ae24f57012d09c` and records protocol v1, the
+`provenance.json` currently pins ForgeLoop `1.12.0` at commit
+`ea362768dacfe885b1cc2729dd32ee661d60008f` and records protocol v1, the
 upstream path and SHA-256 for every trusted schema. Trusted schemas include
 workspace binding, canonical handoffs, responsibility, verification scope,
 code manifests, in-toto statements, code-attestation predicates and
@@ -13,6 +13,8 @@ attestation verification results, canonical handoff acceptance and advisory
 context capability metadata. Provenance generation recursively includes
 safe local `$ref` dependencies, rejects remote or escaping references and
 keeps the external Sigstore bundle outside the ForgeLoop schema boundary.
+ForgeLoop 1.12.0 keeps the trusted schema bytes at Schema v1; its new Flutter
+specialist is a routing capability, not a schema or Integration API revision.
 
 Verify the committed trust boundary with:
 

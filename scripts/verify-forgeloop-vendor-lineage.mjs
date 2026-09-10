@@ -3,8 +3,8 @@ import { gunzipSync } from 'node:zlib';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
-const EXPECTED_VERSION = '1.11.1';
-const EXPECTED_COMMIT = '674f12c006b3ace12278f109b7ae24f57012d09c';
+const EXPECTED_VERSION = '1.12.0';
+const EXPECTED_COMMIT = 'ea362768dacfe885b1cc2729dd32ee661d60008f';
 const EXPECTED_PACKAGE_NAME = '@cassiomc1/forgeloop';
 
 function readTarEntry(archivePath, entryName) {
@@ -27,6 +27,29 @@ function readTarEntry(archivePath, entryName) {
 
 function requireIncludes(content, expected, label) {
   if (!content.includes(expected)) throw new Error(`${label} does not contain ${expected}`);
+}
+
+function assertPackagedGuideClosure(archivePath) {
+  const guideRegistry = JSON.parse(readTarEntry(archivePath, 'package/src/config/guides.json'));
+  const requiredEntries = [
+    'package/ENG/flutter-development-eng.md',
+    'package/src/config/guides.json',
+    'package/GUIDE_ROUTER.md',
+  ];
+  for (const entryName of requiredEntries) readTarEntry(archivePath, entryName);
+
+  if (!guideRegistry.flutter || guideRegistry.flutter.path !== 'ENG/flutter-development-eng.md' || guideRegistry.flutter.install !== true) {
+    throw new Error('Tarball guide registry does not contain the canonical installable flutter guide');
+  }
+
+  for (const [guideId, guide] of Object.entries(guideRegistry)) {
+    if (guide?.install !== true) continue;
+    if (typeof guide.path !== 'string' || !guide.path || guide.path.startsWith('/') || guide.path.includes('..')) {
+      throw new Error(`Tarball guide registry has an unsafe install path for ${guideId}`);
+    }
+    readTarEntry(archivePath, `package/${guide.path}`);
+  }
+  return Object.keys(guideRegistry).length;
 }
 
 function main() {
@@ -66,6 +89,7 @@ function main() {
   if (archivePackage.name !== EXPECTED_PACKAGE_NAME || archivePackage.version !== EXPECTED_VERSION) {
     throw new Error(`Tarball package identity is ${archivePackage.name}@${archivePackage.version}, expected ${EXPECTED_PACKAGE_NAME}@${EXPECTED_VERSION}`);
   }
+  const guideCount = assertPackagedGuideClosure(archivePath);
 
   const vendorReadme = readFileSync(join(repoRoot, 'vendor', 'README.md'), 'utf8');
   const readme = readFileSync(join(repoRoot, 'README.md'), 'utf8');
@@ -82,7 +106,7 @@ function main() {
     .filter((name) => /^cassiomc1-forgeloop-.*\.tgz$/u.test(name) && name !== archiveName);
   if (staleArchives.length > 0) throw new Error(`Unexpected extra ForgeLoop archives: ${staleArchives.join(', ')}`);
 
-  console.log(`ForgeLoop vendor lineage verified: ${EXPECTED_PACKAGE_NAME}@${EXPECTED_VERSION} ${EXPECTED_COMMIT} sha256=${archiveSha256}`);
+  console.log(`ForgeLoop vendor lineage verified: ${EXPECTED_PACKAGE_NAME}@${EXPECTED_VERSION} ${EXPECTED_COMMIT} sha256=${archiveSha256} packagedGuides=${guideCount}`);
 }
 
 main();
