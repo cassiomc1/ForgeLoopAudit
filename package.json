@@ -68,7 +68,7 @@
     "ajv-formats": "^3.0.1",
     "chokidar": "^5.0.0",
     "clsx": "^2.1.1",
-    "lucide-react": "^0.447.0",
+    "lucide-react": "^1.42.0",
     "tailwind-merge": "^3.6.0",
     "zod": "^4.5.4",
     "react": "^19.2.8",
