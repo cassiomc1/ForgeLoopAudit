@@ -107,17 +107,19 @@ npm run demo:verify
 The images below are captured from the production renderer through the local
 web server at 1440 × 900 in the default dark theme.
 
-| Audit Summary | Findings |
+| Audit Summary | Project Timeline |
 |---|---|
-| ![ForgeShop audit summary](./screen/audit-summary.png) | ![ForgeShop findings](./screen/findings.png) |
-| Tasks | Evidence |
-| ![ForgeShop tasks](./screen/task-audit.png) | ![ForgeShop evidence](./screen/evidence.png) |
-| Quality | Policy & Trust |
-| ![ForgeShop quality](./screen/quality.png) | ![ForgeShop policy and trust](./screen/policy-trust.png) |
-| Audit History | Reports |
-| ![ForgeShop audit history](./screen/history-diff.png) | ![ForgeShop reports](./screen/report.png) |
-| Diagnostics | Settings |
-| ![ForgeShop diagnostics](./screen/diagnostics.png) | ![ForgeLoopAudit settings](./screen/settings.png) |
+| ![ForgeShop audit summary](./screen/audit-summary.png) | ![ForgeShop project timeline](./screen/timeline.png) |
+| Findings | Tasks |
+| ![ForgeShop findings](./screen/findings.png) | ![ForgeShop tasks](./screen/task-audit.png) |
+| Evidence | Quality |
+| ![ForgeShop evidence](./screen/evidence.png) | ![ForgeShop quality](./screen/quality.png) |
+| Policy & Trust | Audit History |
+| ![ForgeShop policy and trust](./screen/policy-trust.png) | ![ForgeShop audit history](./screen/history-diff.png) |
+| Reports | Diagnostics |
+| ![ForgeShop reports](./screen/report.png) | ![ForgeShop diagnostics](./screen/diagnostics.png) |
+| Settings | — |
+| ![ForgeLoopAudit settings](./screen/settings.png) | — |
 
 Regenerate and check the set with:
 
