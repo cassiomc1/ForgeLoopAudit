@@ -21,6 +21,12 @@
       "scenario": "Project integrity, completion readiness, quality, trust and coverage"
     },
     {
+      "file": "timeline.png",
+      "page": "Project Timeline",
+      "taskId": null,
+      "scenario": "Git-backed project evolution, current architecture and bounded evidence"
+    },
+    {
       "file": "findings.png",
       "page": "Findings",
       "taskId": null,
