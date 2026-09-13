@@ -69,15 +69,16 @@
     "chokidar": "^5.0.0",
     "clsx": "^2.1.1",
     "lucide-react": "^0.447.0",
-    "tailwind-merge": "^3.6.0",
-    "zod": "^4.5.4",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "tailwind-merge": "^3.6.0",
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
     "@eslint/js": "^9.39.5",
     "@playwright/test": "^1.47.2",
+    "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^22.7.5",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.5",

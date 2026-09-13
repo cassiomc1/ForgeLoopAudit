@@ -1,6 +1,5 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../../../tailwind.config.js";
 
 @layer base {
   :root {
@@ -81,7 +80,8 @@
   }
 
   body {
-    @apply forge-background text-forge-text-primary min-h-screen;
+    background-color: rgb(var(--color-background));
+    @apply text-forge-text-primary min-h-screen;
     background-image: radial-gradient(circle at top right, rgb(var(--color-accent) / 0.06), transparent 32rem);
     transition: background-color 180ms ease, color 180ms ease;
   }
@@ -116,31 +116,31 @@
 }
 
 @layer components {
-  .btn {
+  .btn, .btn-primary, .btn-secondary, .btn-ghost, .btn-danger {
     @apply inline-flex items-center justify-center gap-2 px-3 py-1.5 text-sm font-medium rounded-8 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forge-accent focus-visible:ring-offset-2 focus-visible:ring-offset-forge-background disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-primary {
-    @apply btn bg-forge-accent text-forge-background hover:bg-forge-accent-hover;
+    @apply bg-forge-accent text-forge-background hover:bg-forge-accent-hover;
   }
 
   .btn-secondary {
-    @apply btn bg-forge-secondary-surface text-forge-text-primary hover:bg-forge-hover-surface;
+    @apply bg-forge-secondary-surface text-forge-text-primary hover:bg-forge-hover-surface;
   }
 
   .btn-ghost {
-    @apply btn bg-transparent text-forge-text-secondary hover:bg-forge-hover-surface hover:text-forge-text-primary;
+    @apply bg-transparent text-forge-text-secondary hover:bg-forge-hover-surface hover:text-forge-text-primary;
   }
 
   .btn-danger {
-    @apply btn bg-forge-danger/10 text-forge-danger hover:bg-forge-danger/20;
+    @apply bg-forge-danger/10 text-forge-danger hover:bg-forge-danger/20;
   }
 
   .input {
     @apply w-full px-3 py-2 text-sm bg-forge-secondary-surface border border-forge-border-subtle rounded-8 text-forge-text-primary placeholder-forge-text-muted focus:border-forge-accent focus:ring-1 focus:ring-forge-accent focus:outline-none transition-colors duration-150;
   }
 
-  .card {
+  .card, .metric-card {
     @apply bg-forge-primary-surface border border-forge-border-subtle rounded-10;
   }
 
@@ -156,52 +156,52 @@
     @apply bg-forge-accent/10 text-forge-accent;
   }
 
-  .status-badge {
+  .status-badge, .status-badge-success, .status-badge-warning, .status-badge-danger, .status-badge-info, .status-badge-neutral {
     @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium rounded-6;
   }
 
   .status-badge-success {
-    @apply status-badge bg-forge-success/10 text-forge-success;
+    @apply bg-forge-success/10 text-forge-success;
   }
 
   .status-badge-warning {
-    @apply status-badge bg-forge-warning/10 text-forge-warning;
+    @apply bg-forge-warning/10 text-forge-warning;
   }
 
   .status-badge-danger {
-    @apply status-badge bg-forge-danger/10 text-forge-danger;
+    @apply bg-forge-danger/10 text-forge-danger;
   }
 
   .status-badge-info {
-    @apply status-badge bg-forge-info/10 text-forge-info;
+    @apply bg-forge-info/10 text-forge-info;
   }
 
   .status-badge-neutral {
-    @apply status-badge bg-forge-border-subtle text-forge-text-secondary;
+    @apply bg-forge-border-subtle text-forge-text-secondary;
   }
 
-  .phase-badge {
+  .phase-badge, .phase-badge-completed, .phase-badge-current, .phase-badge-pending, .phase-badge-blocked, .phase-badge-failed {
     @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium rounded-6;
   }
 
   .phase-badge-completed {
-    @apply phase-badge bg-forge-success/10 text-forge-success;
+    @apply bg-forge-success/10 text-forge-success;
   }
 
   .phase-badge-current {
-    @apply phase-badge bg-forge-accent/10 text-forge-accent ring-1 ring-forge-accent/20;
+    @apply bg-forge-accent/10 text-forge-accent ring-1 ring-forge-accent/20;
   }
 
   .phase-badge-pending {
-    @apply phase-badge bg-forge-border-subtle text-forge-text-muted;
+    @apply bg-forge-border-subtle text-forge-text-muted;
   }
 
   .phase-badge-blocked {
-    @apply phase-badge bg-forge-danger/10 text-forge-danger;
+    @apply bg-forge-danger/10 text-forge-danger;
   }
 
   .phase-badge-failed {
-    @apply phase-badge bg-forge-warning/10 text-forge-warning;
+    @apply bg-forge-warning/10 text-forge-warning;
   }
 
   .inspector-panel {
@@ -253,7 +253,7 @@
   }
 
   .metric-card {
-    @apply card p-4;
+    @apply p-4;
   }
 
   .metric-value {
