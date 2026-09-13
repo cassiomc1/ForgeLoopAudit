@@ -2,11 +2,11 @@
 
 This index separates current product guidance from historical records. The
 current product is ForgeLoopAudit `0.3.0-rc.2`, a local-first web auditor
-aligned to ForgeLoop `1.12.0` at immutable commit
-`ea362768dacfe885b1cc2729dd32ee661d60008f` with protocol v1, schema v1 and
+aligned to ForgeLoop `1.13.0` at immutable commit
+`4fbc9f1463c66f0250f46cb76bc4d0c389c8c83c` with protocol v1, schema v1 and
 Integration API v1. ForgeLoop remains the protocol authority.
 
-ForgeLoop `1.12.0` adds canonical Flutter project detection and the `flutter`
+ForgeLoop `1.13.0` adds canonical multi-language project detection and the `flutter`
 specialist guide. ForgeLoopAudit reads canonical selected guides without
 classifying projects or treating guide selection as evidence.
 

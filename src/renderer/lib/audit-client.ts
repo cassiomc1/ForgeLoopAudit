@@ -22,6 +22,7 @@ import type {
   PolicySummary,
   ProjectDetectionResult,
   ProjectSnapshot,
+  ProjectTimeline,
   ProjectUpdate,
   RawArtifactRequest,
   RawCollectionArtifactRequest,
@@ -136,6 +137,10 @@ class HttpAuditClient implements ForgeLoopAuditAPI {
 
   getProjectSnapshot(): Promise<ProjectSnapshot> {
     return this.request('/api/v1/project/snapshot');
+  }
+
+  getProjectTimeline(): Promise<ProjectTimeline> {
+    return this.request('/api/v1/project/timeline');
   }
 
   getTask(taskId: string): Promise<TaskSnapshot> {

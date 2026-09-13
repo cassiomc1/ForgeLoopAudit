@@ -1,7 +1,7 @@
 # Quality gates
 
 The current release is ForgeLoopAudit `0.3.0-rc.2` with vendored ForgeLoop
-`1.12.0` at `ea362768dacfe885b1cc2729dd32ee661d60008f` (protocol v1, schema v1,
+`1.13.0` at `4fbc9f1463c66f0250f46cb76bc4d0c389c8c83c` (protocol v1, schema v1,
 Integration API v1). `npm run verify:full` is the shared fail-fast contract.
 
 ## Local contract

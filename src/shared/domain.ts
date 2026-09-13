@@ -990,6 +990,68 @@ export interface ProjectSnapshot {
   updatedAt: string;
 }
 
+export type ProjectTimelineEventType =
+  | 'project'
+  | 'language'
+  | 'framework'
+  | 'module'
+  | 'dependency'
+  | 'architecture'
+  | 'git'
+  | 'release'
+  | 'analysis';
+
+export type TimelineConfidence = 'high' | 'medium' | 'low';
+
+export interface TimelineEvidence {
+  type: 'git' | 'file' | 'package' | 'forgeloop';
+  source: string;
+  commit?: string;
+}
+
+export interface ProjectTimelineEvent {
+  id: string;
+  type: ProjectTimelineEventType;
+  timestamp?: string;
+  order: number;
+  title: string;
+  description?: string;
+  source?: string;
+  confidence: TimelineConfidence;
+  evidence: TimelineEvidence[];
+  metadata?: Record<string, unknown>;
+  current?: boolean;
+}
+
+export interface ProjectTimelineGitSummary {
+  available: boolean;
+  head: string | null;
+  shallow: boolean;
+  commitCount: number | null;
+  tagCount: number;
+}
+
+export interface ProjectTimelineAnalysisSummary {
+  generatedAt: string | null;
+  forgeLoopVersion: string | null;
+  projectCount: number;
+  languages: string[];
+  frameworks: string[];
+  modules: string[];
+  relationships: number | null;
+  architecture: string | null;
+}
+
+export interface ProjectTimeline {
+  schemaVersion: 1;
+  timelineSchemaVersion: 1;
+  project: ProjectSummary;
+  git: ProjectTimelineGitSummary;
+  analysis: ProjectTimelineAnalysisSummary;
+  events: ProjectTimelineEvent[];
+  warnings: string[];
+}
+
 export interface EventRecord {
   seq: number;
   schemaVersion: number;
@@ -1164,6 +1226,7 @@ export interface ForgeLoopAuditAPI {
   exportAuditReport(options: AuditExportOptions): Promise<AuditExportResult>;
   getProjectState(): Promise<{ detection: ProjectDetectionResult; snapshot: ProjectSnapshot } | null>;
   getProjectSnapshot(): Promise<ProjectSnapshot>;
+  getProjectTimeline(): Promise<ProjectTimeline>;
   getTask(taskId: string): Promise<TaskSnapshot>;
   getTaskEvents(taskId: string, cursor?: string, limit?: number): Promise<EventPage>;
   validateEventLedger(taskId: string): Promise<NonNullable<EventPage['validation']>>;

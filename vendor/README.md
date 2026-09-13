@@ -1,15 +1,15 @@
 # Vendored ForgeLoop runtime dependency
 
-`cassiomc1-forgeloop-1.12.0-ea36276.tgz` is the packed ForgeLoop `1.12.0` runtime used
+`cassiomc1-forgeloop-1.13.0-4fbc9f1.tgz` is the packed ForgeLoop `1.13.0` runtime used
 by ForgeLoopAudit through the public `@cassiomc1/forgeloop/integration`
 subpath.
 
 - Source repository: `cassiomc1/forgeloop`
-- Pinned commit: `ea362768dacfe885b1cc2729dd32ee661d60008f`
-- Package version: `1.12.0`
-- SHA-256: `b36b03bdbc79537af25e5d633962839c2e00cac3d9416cd014758852e31bcde1`
+- Pinned commit: `4fbc9f1463c66f0250f46cb76bc4d0c389c8c83c`
+- Package version: `1.13.0`
+- SHA-256: `1bd0be0339596eaf2ced4e210002374c7c9009c462c4dd29beb254ba1b0c078d`
 
-The archive is packed from the peeled immutable `v1.12.0` release commit. Its
+The archive is packed from the peeled immutable `v1.13.0` release commit. Its
 package-boundary verifier confirms the canonical `flutter` guide and the
 complete installable-guide file closure without making ForgeLoopAudit a guide
 registry owner.

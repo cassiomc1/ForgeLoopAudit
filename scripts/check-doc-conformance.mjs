@@ -148,7 +148,7 @@ function validateCurrentFacts(root, packageJson, provenance, archiveName, archiv
   const currentText = Object.values(current).join('\n');
 
   assertCondition(packageJson.version === '0.3.0-rc.2', `package.json version must remain 0.3.0-rc.2, got ${packageJson.version}`);
-  assertCondition(version === '1.12.0', `schema provenance must pin ForgeLoop 1.12.0, got ${version}`);
+  assertCondition(version === '1.13.0', `schema provenance must pin ForgeLoop 1.13.0, got ${version}`);
   assertCondition(typeof commit === 'string' && /^[a-f0-9]{40}$/u.test(commit), 'schema provenance must contain a 40-character ForgeLoop commit');
   assertCondition(provenance.protocolVersion === 1, 'schema provenance must pin protocol v1');
   assertCondition(!STALE_ACTIVE_RELEASE.test(currentText), 'current documentation contains a stale active RC number');
@@ -198,13 +198,13 @@ function validateCurrentFacts(root, packageJson, provenance, archiveName, archiv
       'selectedGuideIds',
       'not evidence',
     ],
-    'docs/RELEASE_MODEL.md': ['unsigned preview', 'release-matrix.json', 'SBOM-cyclonedx.json', 'tag-triggered workflow', '1.12.0', 'Flutter'],
-    'docs/QUALITY_GATES.md': ['npm run verify:full', 'Ubuntu', 'macOS', 'Windows', 'CodeQL', '1.12.0'],
+    'docs/RELEASE_MODEL.md': ['unsigned preview', 'release-matrix.json', 'SBOM-cyclonedx.json', 'tag-triggered workflow', '1.13.0', 'Flutter'],
+    'docs/QUALITY_GATES.md': ['npm run verify:full', 'Ubuntu', 'macOS', 'Windows', 'CodeQL', '1.13.0'],
     'docs/IMPLEMENTATION_CHECKLIST.md': ['Current Implementation and Verification Matrix', '[x]', '[~]', '[-]', 'TASK-006', 'flutter'],
-    'docs/README.md': ['Current documentation owners', 'Historical records', 'Trust boundary', '1.12.0', 'flutter'],
+    'docs/README.md': ['Current documentation owners', 'Historical records', 'Trust boundary', '1.13.0', 'flutter'],
     'schemas/README.md': [`ForgeLoop \`${version}\``, commit, 'protocol v1', 'npm run protocol:schemas:verify', 'Schema v1'],
     'vendor/README.md': [archiveName, commit, archiveSha256, 'npm run verify:forgeloop-lineage', 'flutter'],
-    'screen/README.md': ['npm run screenshots:readme', 'npm run screenshots:check', 'ForgeShop', '1440 × 900', '1.12.0'],
+    'screen/README.md': ['npm run screenshots:readme', 'npm run screenshots:check', 'ForgeShop', '1440 × 900', '1.13.0'],
     'demo/README.md': ['ForgeShop', 'TASK-001', 'TASK-006', 'npm run demo:verify'],
     'docs/UI_DESIGN_DIRECTION.md': ['Current navigation and trust surfaces', 'Task Boundaries', 'Verification Scope', 'Attestation'],
     'docs/TROUBLESHOOTING.md': ['INTEGRATION_V1', 'COMMIT_UNKNOWN', 'UNAVAILABLE', 'Workspace binding'],

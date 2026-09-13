@@ -142,6 +142,7 @@ export class AuditWebServer {
       if (method === 'GET' && path === '/api/v1/app') return this.sendJson(response, 200, { ok: true, data: { version: this.runtime.getAppVersion() } });
       if (method === 'GET' && path === '/api/v1/project') return this.sendJson(response, 200, { ok: true, data: await this.runtime.getProjectState() });
       if (method === 'GET' && path === '/api/v1/project/snapshot') return this.sendJson(response, 200, { ok: true, data: await this.runtime.getProjectSnapshot() });
+      if (method === 'GET' && path === '/api/v1/project/timeline') return this.sendJson(response, 200, { ok: true, data: await this.runtime.getProjectTimeline() });
       if (method === 'POST' && path === '/api/v1/project/demo') { await this.runtime.openDemoProject(); return this.sendJson(response, 200, { ok: true, data: await this.runtime.getProjectState() }); }
       if (method === 'POST' && path === '/api/v1/project/recent') { const body = await readJson(request); await this.runtime.openRecentProject(readString(body, 'path')); return this.sendJson(response, 200, { ok: true, data: await this.runtime.getProjectState() }); }
       if (method === 'POST' && path === '/api/v1/project/close') { await this.runtime.closeProject(); return this.sendJson(response, 200, { ok: true, data: null }); }

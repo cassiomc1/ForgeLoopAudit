@@ -9,12 +9,12 @@ authority and `.forgeloop/` remains the source of truth.
 
 ## Current release
 
-The current release candidate is `v0.3.0-rc.2`, aligned to vendored ForgeLoop `1.12.0` at immutable source commit
-`ea362768dacfe885b1cc2729dd32ee661d60008f` (protocol v1, schema v1 and
+The current release candidate is `v0.3.0-rc.2`, aligned to vendored ForgeLoop `1.13.0` at immutable source commit
+`4fbc9f1463c66f0250f46cb76bc4d0c389c8c83c` (protocol v1, schema v1 and
 Integration API v1). The vendored archive and schema provenance are checked by
 `npm run verify:forgeloop-lineage` and `npm run protocol:schemas:verify`.
 
-ForgeLoop `1.12.0` adds deterministic structural Flutter project detection and
+ForgeLoop `1.13.0` adds deterministic multi-language and nested-project detection and
 the canonical `flutter` specialist guide. ForgeLoopAudit reads and preserves
 canonical selected guide IDs in route/context, but does not classify Flutter projects,
 select guides, or treat guide selection as evidence, authority or completion.
