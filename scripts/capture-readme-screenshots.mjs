@@ -110,6 +110,13 @@ try {
     await expect(page.getByText(/Audit score|Score unavailable/)).toBeVisible();
   });
 
+  await openSurface(page, 'Project Timeline', 'demo Timeline');
+  await capture(page, 'timeline.png', async () => {
+    await expect(page.getByRole('heading', { name: 'Current architecture', exact: true })).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Timeline filters', exact: true })).toBeVisible();
+    await expect(page.getByText('Evidence and details', { exact: true }).first()).toBeVisible();
+  });
+
   await openSurface(page, 'Findings', 'Findings');
   await capture(page, 'findings.png', async () => {
     await expect(page.getByText('Canonical ForgeLoop results and explicitly labelled auditor observations.', { exact: true })).toBeVisible();
