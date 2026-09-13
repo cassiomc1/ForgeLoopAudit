@@ -12,6 +12,8 @@ export default tseslint.config(
     plugins: { react, 'react-hooks': reactHooks },
     settings: { react: { version: 'detect' } },
     rules: {
+      "preserve-caught-error": "off",
+      "no-useless-assignment": "off",
       '@typescript-eslint/no-unused-vars': 'off',
       '@typescript-eslint/no-require-imports': 'off',
       '@typescript-eslint/no-empty-object-type': 'off',
