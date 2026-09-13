@@ -23,6 +23,7 @@ import type {
   ForgeLoopCompatibilityMode,
   ForgeLoopFeatureSupport,
   ProjectDetectionResult,
+  ProjectTimeline,
   ProjectKind,
   ProjectSnapshot,
   ProjectUpdate,
@@ -80,6 +81,7 @@ import { buildAuditReport } from '@main/core/audit/audit-report';
 import { createProjectFingerprint } from '@main/core/audit/audit-fingerprint';
 import { validateAuditExportPath } from '@main/core/audit/audit-export-path';
 import { RecentProjectsStore } from '../storage/app-data';
+import { deriveProjectTimeline } from '@main/core/timeline/project-timeline';
 
 const TaskIdSchema = z.string().min(1).max(200);
 const EventQuerySchema = z.object({ taskId: TaskIdSchema, cursor: z.string().max(256).optional(), limit: z.number().int().min(1).max(500).optional() });
@@ -162,6 +164,7 @@ export class AuditRuntime {
   private currentStructuralQualityService: StructuralQualityAuditService | null = null;
   private currentAuditHistoryStore: AuditSnapshotStore | null = null;
   private currentAuditSnapshot: ProjectAuditSnapshot | null = null;
+  private currentTimelineCache: { key: string; value: ProjectTimeline } | null = null;
   private currentDetection: ProjectDetectionResult | null = null;
   private snapshotRefreshScheduled = false;
   private snapshotRefreshTimer: ReturnType<typeof setTimeout> | null = null;
@@ -239,6 +242,7 @@ export class AuditRuntime {
     this.currentStructuralQualityService = null;
     this.currentAuditHistoryStore = null;
     this.currentAuditSnapshot = null;
+    this.currentTimelineCache = null;
     this.currentDetection = null;
     this.snapshotGeneration = 0;
   }
@@ -258,6 +262,32 @@ export class AuditRuntime {
     const audit = await this.currentProjectAuditService.auditProject();
     this.currentAuditSnapshot = audit;
     return audit;
+  }
+
+  async getProjectTimeline(): Promise<ProjectTimeline> {
+    if (!this.currentSnapshotBuilder || !this.getCurrentProjectRoot()) throw ForgeLoopAuditError.unknown('No project open');
+    const snapshot = await this.currentSnapshotBuilder.build();
+    const forgeLoopVersion = this.currentIntegration?.getPackageVersion() ?? snapshot.protocol.packageVersion ?? null;
+    let audit = this.currentAuditSnapshot;
+    if (!audit && this.currentProjectAuditService) {
+      try {
+        audit = await this.currentProjectAuditService.auditProject();
+        this.currentAuditSnapshot = audit;
+      } catch {
+        // The timeline remains useful from bounded project/Git signals when a
+        // partial project cannot produce a complete audit snapshot.
+      }
+    }
+    const key = `${this.getCurrentProjectRoot()}:${snapshot.project.head ?? 'no-head'}:${forgeLoopVersion ?? 'unknown'}:${audit?.generatedAt ?? 'no-audit'}`;
+    if (this.currentTimelineCache?.key === key) return this.currentTimelineCache.value;
+    const timeline = await deriveProjectTimeline({
+      projectRoot: this.getCurrentProjectRoot()!,
+      snapshot,
+      audit,
+      forgeLoopVersion,
+    });
+    this.currentTimelineCache = { key, value: timeline };
+    return timeline;
   }
 
   async getTaskAudit(taskId: string): Promise<TaskAuditSnapshot> {
@@ -563,7 +593,7 @@ export class AuditRuntime {
 
   async getRepositoryIndexStatus(): Promise<RepositoryIndexProjection> {
     if (!this.currentIntegration || !this.currentFeatureSupport?.repositoryIndex || !this.getCurrentProjectRoot()) {
-      return unavailableRepositoryIndex('ForgeLoop 1.12.0 Repository Index is not available for this project.');
+      return unavailableRepositoryIndex('ForgeLoop 1.13.0 Repository Index is not available for this project.');
     }
     if (!this.currentIntegration.getRepositoryIndexStatus) return unavailableRepositoryIndex('The installed ForgeLoop Integration API does not expose Repository Index status.');
     return this.currentIntegration.getRepositoryIndexStatus(this.getCurrentProjectRoot()!);
@@ -690,6 +720,7 @@ export class AuditRuntime {
       projectFingerprint: createProjectFingerprint(projectRoot),
     });
     this.currentAuditSnapshot = null;
+    this.currentTimelineCache = null;
     this.currentWatcher = createProjectWatcher(pathBoundary, this.handleWatcherEvent, this.handleWatcherError, this.handleWatcherStatusChange);
     this.currentWatcher.start();
 

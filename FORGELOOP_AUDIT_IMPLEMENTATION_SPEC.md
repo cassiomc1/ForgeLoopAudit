@@ -2,11 +2,11 @@
 
 This document describes the shipped web implementation. It is the current
 implementation and design reference for ForgeLoopAudit `0.3.0-rc.2`, aligned to
-ForgeLoop `1.12.0` at immutable commit
-`ea362768dacfe885b1cc2729dd32ee661d60008f` with protocol v1, schema v1 and
+ForgeLoop `1.13.0` at immutable commit
+`4fbc9f1463c66f0250f46cb76bc4d0c389c8c83c` with protocol v1, schema v1 and
 Integration API v1.
 
-ForgeLoop `1.12.0` owns deterministic Flutter project detection, monorepo scope
+ForgeLoop `1.13.0` owns deterministic multi-language and nested-project detection, monorepo scope
 matching and canonical guide routing. ForgeLoopAudit consumes the resulting
 bounded route/context projection, preserves guide IDs such as `flutter`, and
 does not reimplement detection or promote selected guides to evidence,
@@ -62,6 +62,24 @@ React/Vite renderer
   ├─ shadcn-style code-owned UI primitives
   └─ dark/light/system theme provider
 ```
+
+The Project Timeline follows a separate read-only projection within the same
+boundary:
+
+```text
+current project root
+  ├─ ForgeLoop Integration API v1 → latest audit/provenance context
+  ├─ bounded manifest/source scan → languages, frameworks, project roots, modules
+  └─ bounded Git queries → first commit, source introductions and release tags
+        ↓
+  normalized ProjectTimeline
+        ↓
+  Project Timeline renderer page
+```
+
+The timeline never treats filenames as a code graph and never invents dates.
+ForgeLoop’s public Integration API does not expose graph relationships, so that
+field remains explicitly unavailable rather than being inferred.
 
 There is no Electron host, preload bridge, renderer IPC channel or native folder
 picker in the current product. The browser is an unprivileged same-origin

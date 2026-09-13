@@ -2,8 +2,8 @@
 
 ForgeLoopAudit supports protocol v1, schema v1 and Integration API v1 from
 the pinned ForgeLoop source revision recorded in `schemas/provenance.json`
-(ForgeLoop **1.12.0**, commit
-`ea362768dacfe885b1cc2729dd32ee661d60008f`). The runtime artifact registry
+(ForgeLoop **1.13.0**, commit
+`4fbc9f1463c66f0250f46cb76bc4d0c389c8c83c`). The runtime artifact registry
 and `SUPPORTED_PROTOCOL.requiredSchemas` are contract-tested to remain
 identical. See the [trusted schema boundary](../schemas/README.md) and
 [vendored runtime lineage](../vendor/README.md) for their verification
@@ -13,7 +13,7 @@ procedures.
 
 | Project / Build | Integration API | Result |
 |---|---|---|
-| Pinned ForgeLoop build (`1.12.0 @ ea36276...`) | Integration API v1 valid (`INTEGRATION_V1`) | Full tested ForgeLoopAudit capability set, including canonical handoffs v2 with exactly-once ledger-backed acceptance, advisory context providers v1, Repository Index/Search and canonical Flutter route/context consumption; protocol/schema/API remain v1 |
+| Pinned ForgeLoop build (`1.13.0 @ 4fbc9f1...`) | Integration API v1 valid (`INTEGRATION_V1`) | Full tested ForgeLoopAudit capability set, including canonical handoffs v2 with exactly-once ledger-backed acceptance, advisory context providers v1, Repository Index/Search and multi-language/nested-project routing context; protocol/schema/API remain v1 |
 | Other protocol-v1 / Integration API v1 build | Required core capabilities present; optional capability absent | Core support remains `INTEGRATION_V1`; optional panels and verification-execution provenance are enabled only when their individual capability contracts are advertised; the affected feature is unavailable |
 | Any protocol-v1 build | Missing CORE required resources or capability drift | Rejected with `INCOMPATIBLE` (fails closed; missing core resources, unsupported recovery contract, or broken executor parity) |
 | Protocol-v1 project | Integration API unavailable | Degraded mode (`ARTIFACT_ONLY`): visual reading + schema validation; canonical ownership and optional canonical projections are unavailable |
@@ -29,7 +29,7 @@ ForgeLoopAudit explicitly distinguishes core compatibility from additive optiona
 - **Missing CORE required resources or contract drift &rarr; `INCOMPATIBLE`**: Core resources (`protocol/info`, `project/tasks`, `task/status`, `task/ownership`, `task/contract`, `task/continuity`), Integration API version mismatch, broken executor parity, or incomplete `taskClaimRecovery` fail closed to `INCOMPATIBLE`.
 - **Missing OPTIONAL resources or feature contracts &rarr; Affected feature unavailable**: Optional resources (`task/actions`, `task/action`, `task/approvals`, `task/metrics`, `task/evaluations`, `project/capability-policy`, `task/workspace-binding`, `task/handoffs`, `task/responsibility`, `task/verification-scope`, `task/attestation`) or observability command restrictions degrade individual panels/views gracefully without compromising core protocol compatibility.
 
-ForgeLoop 1.12.0 retains the Repository Index/Search architecture introduced
+ForgeLoop 1.13.0 retains the Repository Index/Search architecture introduced
 in the prior capability line, together with the canonical handoff acceptance
 and advisory context capability contracts and the additive workspace binding,
 responsibility, differential verification scope and code attestation resources.
@@ -42,7 +42,7 @@ attesting isolation environments.
 
 ### Flutter routing boundary
 
-ForgeLoop 1.12.0 owns structured `pubspec.yaml` Flutter project detection,
+ForgeLoop 1.13.0 owns structured multi-language project detection,
 monorepo scope matching and selection of the canonical `flutter` specialist.
 ForgeLoopAudit accepts string-valued `guides` and `selectedGuideIds` such as
 `["flutter", "clean", "test"]`, preserves their canonical order, and leaves
@@ -134,8 +134,8 @@ Refresh the trusted schema set only from a controlled ForgeLoop checkout:
 ```bash
 node scripts/generate-schema-provenance.mjs \
   --source ../forgeloop \
-  --commit ea362768dacfe885b1cc2729dd32ee661d60008f \
-  --package-version 1.12.0
+  --commit 4fbc9f1463c66f0250f46cb76bc4d0c389c8c83c \
+  --package-version 1.13.0
 npm run protocol:schemas:verify
 ```
 

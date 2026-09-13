@@ -23,6 +23,7 @@ import { AuditHistory } from './pages/AuditHistory';
 import { Reports } from './pages/Reports';
 import { Repository } from './pages/Repository';
 import { TaskAudit } from './pages/TaskAudit';
+import { Timeline } from './pages/Timeline';
 import { EmptyState } from './components/ui/EmptyState';
 import { LoadingState } from './components/ui/LoadingState';
 import {
@@ -35,6 +36,7 @@ import { getAuditClient } from './lib/audit-client';
 
 export const NAV_ITEMS = [
   { id: 'audit-summary', label: 'Audit Summary', icon: 'layout-dashboard' },
+  { id: 'timeline', label: 'Project Timeline', icon: 'timeline' },
   { id: 'findings', label: 'Findings', icon: 'clipboard-check' },
   { id: 'tasks', label: 'Tasks', icon: 'list-check' },
   { id: 'evidence', label: 'Evidence', icon: 'clipboard-check' },
@@ -61,11 +63,16 @@ export const TASK_DETAIL_ITEMS = [
 
 export type NavItemId = typeof NAV_ITEMS[number]['id'] | typeof TASK_DETAIL_ITEMS[number]['id'] | 'policy';
 
+function initialNav(): NavItemId {
+  const value = window.location.hash.replace(/^#/u, '');
+  return (NAV_ITEMS.some((item) => item.id === value) ? value : 'audit-summary') as NavItemId;
+}
+
 export function App() {
   const [detectionResult, setDetectionResult] = useState<ProjectDetectionResult | null>(null);
   const [snapshot, setSnapshot] = useState<ProjectSnapshot | null>(null);
   const [audit, setAudit] = useState<ProjectAuditSnapshot | null>(null);
-  const [activeNav, setActiveNav] = useState<NavItemId>('audit-summary');
+  const [activeNav, setActiveNav] = useState<NavItemId>(initialNav);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
   const [error, setError] = useState<AuditAppError | null>(null);
@@ -76,6 +83,17 @@ export function App() {
   const latestSnapshotGeneration = useRef(0);
 
   const api: ForgeLoopAuditAPI = getAuditClient();
+
+  useEffect(() => {
+    const handleHashChange = () => setActiveNav(initialNav());
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  useEffect(() => {
+    const hash = activeNav === 'audit-summary' ? '' : `#${activeNav}`;
+    if (window.location.hash !== hash) window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}${hash}`);
+  }, [activeNav]);
 
   const loadRecentProjects = useCallback(async () => {
     try {
@@ -235,6 +253,8 @@ export function App() {
     switch (activeNav) {
       case 'audit-summary':
         return <AuditSummary audit={audit} snapshot={snapshot} detection={detectionResult} onRefresh={refreshAudit} onTaskSelect={(taskId) => { setSelectedTaskId(taskId); setActiveNav('findings'); }} onViewFindings={() => setActiveNav('findings')} />;
+      case 'timeline':
+        return <Timeline />;
       case 'findings':
         return <Findings audit={audit} onTaskSelect={(taskId) => { setSelectedTaskId(taskId); setActiveNav('tasks'); }} />;
       case 'task-audit':

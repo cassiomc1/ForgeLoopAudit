@@ -24,7 +24,7 @@ test('local web host bootstraps a same-origin session and renders the demo', asy
   const projectResponse = await page.request.get(`${serverInfo().origin}/api/v1/project`);
   expect(projectResponse.ok()).toBeTruthy();
   const projectPayload = await projectResponse.json() as { data?: { detection?: { forgeLoopVersion?: string } } };
-  expect(projectPayload.data?.detection?.forgeLoopVersion).toBe('1.12.0');
+  expect(projectPayload.data?.detection?.forgeLoopVersion).toBe('1.13.0');
 });
 
 test('light and dark themes switch through the shadcn-style theme control', async ({ page }) => {
@@ -41,10 +41,13 @@ test('web UI preserves the audit navigation and live watcher update', async ({ p
   try {
     await page.goto(serverInfo().bootstrapUrl);
     await expect(page.getByRole('heading', { name: 'Audit Summary' })).toBeVisible();
-    for (const name of ['Tasks', 'Findings', 'Evidence', 'Quality', 'Policy & Trust', 'Audit History', 'Reports', 'Repository Search', 'Diagnostics', 'Settings']) {
+    for (const name of ['Project Timeline', 'Tasks', 'Findings', 'Evidence', 'Quality', 'Policy & Trust', 'Audit History', 'Reports', 'Repository Search', 'Diagnostics', 'Settings']) {
       await page.getByLabel('Main navigation').getByRole('button', { name, exact: true }).click();
       await expect(page.locator('h1'), `Expected a page heading after opening ${name}`).toBeVisible();
     }
+    await page.getByLabel('Main navigation').getByRole('button', { name: 'Project Timeline', exact: true }).click();
+    await expect(page.getByRole('heading', { name: /Timeline/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Current Architecture', exact: true })).toBeVisible();
     await page.getByLabel('Main navigation').getByRole('button', { name: 'Tasks', exact: true }).click();
     await expect(page.getByText(SMOKE_TASK_ID, { exact: true }).first()).toBeVisible();
     await page.getByText(SMOKE_TASK_ID, { exact: true }).first().click();
