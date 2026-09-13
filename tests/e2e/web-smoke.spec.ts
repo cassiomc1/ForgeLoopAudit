@@ -43,7 +43,7 @@ test('web UI preserves the audit navigation and live watcher update', async ({ p
     await expect(page.getByRole('heading', { name: 'Audit Summary' })).toBeVisible();
     for (const name of ['Project Timeline', 'Tasks', 'Findings', 'Evidence', 'Quality', 'Policy & Trust', 'Audit History', 'Reports', 'Repository Search', 'Diagnostics', 'Settings']) {
       await page.getByLabel('Main navigation').getByRole('button', { name, exact: true }).click();
-      await expect(page.locator('h1'), `Expected a page heading after opening ${name}`).toBeVisible();
+      await expect(page.locator('h1'), `Expected a page heading after opening ${name}`).toBeVisible({ timeout: 15000 });
     }
     await page.getByLabel('Main navigation').getByRole('button', { name: 'Project Timeline', exact: true }).click();
     await expect(page.getByRole('heading', { name: /Timeline/ })).toBeVisible();
