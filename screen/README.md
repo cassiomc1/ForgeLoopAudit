@@ -31,6 +31,7 @@ orphaned screenshot files.
 | File | Surface | Selected task | Scenario |
 |---|---|---|---|
 | `audit-summary.png` | Audit Summary | — | Separate integrity, completion, quality, trust and coverage verdicts |
+| `timeline.png` | Project Timeline | — | Git-backed project evolution, current architecture and bounded evidence |
 | `findings.png` | Findings | — | Canonical and derived findings with provenance |
 | `task-audit.png` | Tasks | — | Six tasks with canonical audit state and finding counts |
 | `evidence.png` | Evidence | `TASK-002` | Evidence coverage, `AUTO` → `CHANGED` verification scope and attestation boundary |
