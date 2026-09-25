@@ -25,7 +25,10 @@ const CURRENT_DOCS = [
 const HISTORICAL_DIRS = ['docs/superpowers', 'docs/verification'];
 const STALE_ACTIVE_RELEASE = /\bRC[0-9]+\b/iu;
 const STALE_FORGELOOP_FACTS = /\b1\.6\.1\b|f331100cff[a-f0-9]*/iu;
-const STALE_ACTIVE_FORGELOOP_BASELINE = /\b1\.11\.1\b|674f12c006b3ace12278f109b7ae24f57012d09c/iu;
+// Retired ForgeLoop baselines must never reappear in current documentation.
+// Historical records (docs/superpowers, docs/verification) are excluded and
+// must carry the explicit "Historical record." marker.
+const STALE_ACTIVE_FORGELOOP_BASELINE = /\b1\.11\.1\b|674f12c006b3ace12278f109b7ae24f57012d09c|\b1\.13\.0\b|4fbc9f1463c66f0250f46cb76bc4d0c389c8c83c/iu;
 
 function fail(message) {
   throw new Error(`Documentation conformance failed: ${message}`);
@@ -147,8 +150,8 @@ function validateCurrentFacts(root, packageJson, provenance, archiveName, archiv
   const current = Object.fromEntries(CURRENT_DOCS.map((file) => [file, readText(root, file)]));
   const currentText = Object.values(current).join('\n');
 
-  assertCondition(packageJson.version === '0.3.0-rc.2', `package.json version must remain 0.3.0-rc.2, got ${packageJson.version}`);
-  assertCondition(version === '1.13.0', `schema provenance must pin ForgeLoop 1.13.0, got ${version}`);
+  assertCondition(packageJson.version === '0.3.0-rc.3', `package.json version must remain 0.3.0-rc.3, got ${packageJson.version}`);
+  assertCondition(version === '1.14.0', `schema provenance must pin ForgeLoop 1.14.0, got ${version}`);
   assertCondition(typeof commit === 'string' && /^[a-f0-9]{40}$/u.test(commit), 'schema provenance must contain a 40-character ForgeLoop commit');
   assertCondition(provenance.protocolVersion === 1, 'schema provenance must pin protocol v1');
   assertCondition(!STALE_ACTIVE_RELEASE.test(currentText), 'current documentation contains a stale active RC number');
@@ -198,18 +201,18 @@ function validateCurrentFacts(root, packageJson, provenance, archiveName, archiv
       'selectedGuideIds',
       'not evidence',
     ],
-    'docs/RELEASE_MODEL.md': ['unsigned preview', 'release-matrix.json', 'SBOM-cyclonedx.json', 'tag-triggered workflow', '1.13.0', 'Flutter'],
-    'docs/QUALITY_GATES.md': ['npm run verify:full', 'Ubuntu', 'macOS', 'Windows', 'CodeQL', '1.13.0'],
+    'docs/RELEASE_MODEL.md': ['unsigned preview', 'release-matrix.json', 'SBOM-cyclonedx.json', 'tag-triggered workflow', '1.14.0', 'Flutter'],
+    'docs/QUALITY_GATES.md': ['npm run verify:full', 'Ubuntu', 'macOS', 'Windows', 'CodeQL', '1.14.0'],
     'docs/IMPLEMENTATION_CHECKLIST.md': ['Current Implementation and Verification Matrix', '[x]', '[~]', '[-]', 'TASK-006', 'flutter'],
-    'docs/README.md': ['Current documentation owners', 'Historical records', 'Trust boundary', '1.13.0', 'flutter'],
+    'docs/README.md': ['Current documentation owners', 'Historical records', 'Trust boundary', '1.14.0', 'flutter'],
     'schemas/README.md': [`ForgeLoop \`${version}\``, commit, 'protocol v1', 'npm run protocol:schemas:verify', 'Schema v1'],
     'vendor/README.md': [archiveName, commit, archiveSha256, 'npm run verify:forgeloop-lineage', 'flutter'],
-    'screen/README.md': ['npm run screenshots:readme', 'npm run screenshots:check', 'ForgeShop', '1440 × 900', '1.13.0'],
+    'screen/README.md': ['npm run screenshots:readme', 'npm run screenshots:check', 'ForgeShop', '1440 × 900', '1.14.0'],
     'demo/README.md': ['ForgeShop', 'TASK-001', 'TASK-006', 'npm run demo:verify'],
     'docs/UI_DESIGN_DIRECTION.md': ['Current navigation and trust surfaces', 'Task Boundaries', 'Verification Scope', 'Attestation'],
     'docs/TROUBLESHOOTING.md': ['INTEGRATION_V1', 'COMMIT_UNKNOWN', 'UNAVAILABLE', 'Workspace binding'],
     'docs/DEPENDENCY_POLICY.md': ['npm run dependency:policy', 'npm run audit:prod', 'npm run verify:forgeloop-lineage'],
-    'docs/migration/WEB_IMPLEMENTATION_REPORT.md': ['web migration report', '0.3.0-rc.2', '1.12.0', 'flutter', 'loopback', 'Discovery only'],
+    'docs/migration/WEB_IMPLEMENTATION_REPORT.md': ['web migration report', '0.3.0-rc.3', '1.12.0', 'flutter', 'loopback', 'Discovery only'],
   };
   for (const [file, facts] of Object.entries(required)) {
     for (const fact of facts) assertCondition(current[file].includes(fact), `${file} is missing current fact: ${fact}`);
