@@ -125,10 +125,12 @@ try {
 
   await openSurface(page, 'Tasks', 'Tasks');
   await capture(page, 'task-audit.png', async () => {
-    for (const taskId of ['TASK-001', 'TASK-002', 'TASK-003', 'TASK-004', 'TASK-005', 'TASK-006']) {
+    for (const taskId of ['TASK-001', 'TASK-002', 'TASK-003', 'TASK-004', 'TASK-005', 'TASK-006', 'TASK-007', 'TASK-008']) {
       await expect(page.getByText(taskId, { exact: true })).toBeVisible();
     }
-    await expect(page.getByText('Demo scenario', { exact: true })).toHaveCount(6);
+    await expect(page.getByText('Demo scenario', { exact: true })).toHaveCount(8);
+    // Abandonment is rendered as its own label, never as completion.
+    await expect(page.getByText('ABANDONED', { exact: true })).toBeVisible();
     await expect(page.getByText(/Audit (VALID|INCOMPLETE|STALE|INVALID|UNKNOWN)/).first()).toBeVisible();
   });
 
@@ -178,7 +180,7 @@ try {
   await capture(page, 'settings.png', async () => {
     await expect(page.getByText(`ForgeLoopAudit v${packageVersion}`, { exact: true })).toBeVisible();
     const protocolPanel = page.getByRole('heading', { name: 'ForgeLoop protocol', exact: true }).locator('..');
-    await expect(protocolPanel).toContainText('1.13.0');
+    await expect(protocolPanel).toContainText('1.14.0');
     await expect(protocolPanel).toContainText('Advisory context providers');
     await expect(protocolPanel).toContainText('Supported by ForgeLoop');
     await expect(protocolPanel).toContainText('INTEGRATION_V1');
