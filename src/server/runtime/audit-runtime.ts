@@ -176,6 +176,8 @@ export class AuditRuntime {
   private snapshotRefreshTimer: ReturnType<typeof setTimeout> | null = null;
   private snapshotGeneration = 0;
   private readonly workspace: WorkspaceRuntime;
+  /** The deep canonical build produced by the most recent open or background refresh. */
+  private lastDeepSnapshot: ProjectSnapshot | null = null;
 
   constructor(options: AuditRuntimeOptions) {
     this.options = options;
@@ -254,6 +256,7 @@ export class AuditRuntime {
     this.currentAuditSnapshot = null;
     this.currentTimelineCache = null;
     this.currentDetection = null;
+    this.lastDeepSnapshot = null;
     this.snapshotGeneration = 0;
   }
 
@@ -612,10 +615,12 @@ export class AuditRuntime {
 
   async getProjectWorkspace(): Promise<ProjectWorkspace> {
     const workspace = await this.workspace.getWorkspace();
-    // The open project is also read through the deep canonical session, whose
-    // health is authoritative. Prefer it over the lightweight workspace read so
-    // the projects screen never shows UNKNOWN for the project being inspected.
-    const deepSnapshot = this.currentSnapshotBuilder ? await this.currentSnapshotBuilder.build().catch(() => null) : null;
+    // The open project is additionally reported from the deep canonical session,
+    // whose health is authoritative. The cached build is used rather than a
+    // fresh one so a cross-project read never competes with the snapshot the
+    // deep session is building; the event stream always notifies before the
+    // client reads, so the cached build is current.
+    const deepSnapshot = await this.deepSnapshotForWorkspace();
     if (!deepSnapshot) return workspace;
     return {
       ...workspace,
@@ -682,7 +687,7 @@ export class AuditRuntime {
    */
   private async buildKanbanBoard(projectPath: string | null): Promise<KanbanBoard> {
     const workspace = await this.getProjectWorkspace();
-    const deepSnapshot = this.currentSnapshotBuilder ? await this.currentSnapshotBuilder.build().catch(() => null) : null;
+    const deepSnapshot = await this.deepSnapshotForWorkspace();
     const projects = workspace.projects.map((project) => ({
       path: project.path,
       name: project.name,
@@ -690,6 +695,18 @@ export class AuditRuntime {
       snapshot: project.path === deepSnapshot?.project.rootPath ? deepSnapshot : this.workspace.getSnapshot(project.path),
     }));
     return buildKanbanBoard({ projects, filterProjectPath: projectPath, generatedAt: new Date().toISOString() });
+  }
+
+  /**
+   * The canonical snapshot the deep session already built, or a fresh build
+   * only when none exists yet. Cross-project reads intentionally never trigger
+   * a rebuild: they would contend with the snapshot the deep session is
+   * building, and the client always reads after the update was pushed.
+   */
+  private deepSnapshotForWorkspace(): Promise<ProjectSnapshot | null> {
+    if (this.lastDeepSnapshot) return Promise.resolve(this.lastDeepSnapshot);
+    if (!this.currentSnapshotBuilder) return Promise.resolve(null);
+    return this.currentSnapshotBuilder.build().catch(() => null);
   }
 
   async getWorkspaceTimeline(projectPath: string): Promise<ProjectTimeline> {
@@ -865,6 +882,7 @@ export class AuditRuntime {
     await this.workspace.addProject(projectRoot, projectKind, { monitor: false });
     await this.workspace.setActiveProject(projectRoot);
     const initialSnapshot = await this.currentSnapshotBuilder.build();
+    this.lastDeepSnapshot = initialSnapshot;
     this.notify({
       type: 'project-opened',
       detection: this.currentDetection,
@@ -918,6 +936,7 @@ export class AuditRuntime {
         try {
           const snapshot = await builder.build();
           if (this.currentSnapshotBuilder !== builder) return;
+          this.lastDeepSnapshot = snapshot;
           this.notify({ type: 'snapshot-refreshed', snapshot, generation, timestamp: new Date().toISOString() });
         } catch (error) {
           console.error('Failed to refresh project snapshot:', error);
