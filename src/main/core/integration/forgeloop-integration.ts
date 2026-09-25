@@ -95,6 +95,16 @@ export interface ForgeLoopIntegrationAdapter {
   readTaskActions?: (projectRoot: string, taskId: string) => Promise<Record<string, unknown>>;
   readTaskAction?: (projectRoot: string, taskId: string, actionId: string) => Promise<Record<string, unknown>>;
   readTaskApprovals?: (projectRoot: string, taskId: string) => Promise<Record<string, unknown>>;
+  /**
+   * Present when the bounded, read-only Audit UX read model (`task/audit-view`)
+   * is advertised. The projection is canonical presentation context only; it
+   * never carries lifecycle, evidence, ownership, or completion authority.
+   */
+  readTaskAuditView?: (
+    projectRoot: string,
+    taskId: string,
+    options?: { limit?: number; categories?: readonly string[] },
+  ) => Promise<Record<string, unknown>>;
   readTaskMetrics?: (projectRoot: string, taskId: string) => Promise<Record<string, unknown>>;
   readTaskEvaluations?: (projectRoot: string, taskId: string) => Promise<Record<string, unknown>>;
   readCapabilityPolicy?: (projectRoot: string) => Promise<Record<string, unknown> | null>;
@@ -127,6 +137,18 @@ interface ForgeLoopIntegrationModule {
         durableRecoveryState: boolean;
         explicitResume: boolean;
         validatedClaimProjection: boolean;
+      };
+      auditUx?: {
+        version: number;
+        supported: boolean;
+        readOnly: boolean;
+        resource: string;
+        timeline: boolean;
+        lifecycleAuthority: boolean;
+        evidenceAuthority: boolean;
+        completionAuthority: boolean;
+        mutationAuthority: boolean;
+        externalExecution: boolean;
       };
       adaptiveExecutionProfiles?: {
         version: number;
@@ -443,6 +465,7 @@ function buildAdapter(fl: ForgeLoopIntegrationModule): ForgeLoopIntegrationAdapt
       const codeAttestation = raw.features.codeAttestation;
       const structuralQuality = raw.features.structuralQuality;
       const repositoryIndex = raw.features.repositoryIndex;
+      const auditUx = raw.features.auditUx;
       return {
         packageVersion,
         protocolVersion: raw.protocolVersion,
@@ -455,6 +478,20 @@ function buildAdapter(fl: ForgeLoopIntegrationModule): ForgeLoopIntegrationAdapt
             explicitResume: raw.features.taskClaimRecovery.explicitResume === true,
             validatedClaimProjection: raw.features.taskClaimRecovery.validatedClaimProjection === true,
           },
+          ...(auditUx ? {
+            auditUx: {
+              version: finiteNumber(auditUx.version, 0),
+              supported: auditUx.supported === true,
+              readOnly: auditUx.readOnly === true,
+              resource: typeof auditUx.resource === 'string' ? auditUx.resource : '',
+              timeline: auditUx.timeline === true,
+              lifecycleAuthority: auditUx.lifecycleAuthority === true,
+              evidenceAuthority: auditUx.evidenceAuthority === true,
+              completionAuthority: auditUx.completionAuthority === true,
+              mutationAuthority: auditUx.mutationAuthority === true,
+              externalExecution: auditUx.externalExecution === true,
+            },
+          } : {}),
           ...(adaptiveExecutionProfiles ? {
             adaptiveExecutionProfiles: {
               version: finiteNumber(adaptiveExecutionProfiles.version, 0),
@@ -690,6 +727,20 @@ function buildAdapter(fl: ForgeLoopIntegrationModule): ForgeLoopIntegrationAdapt
     async readTaskApprovals(projectRoot: string, taskId: string): Promise<Record<string, unknown>> {
       assertReadProjectRoot(projectRoot);
       return readResource<Record<string, unknown>>(fl, 'task/approvals', { projectPath: projectRoot, taskId });
+    },
+
+    async readTaskAuditView(
+      projectRoot: string,
+      taskId: string,
+      options: { limit?: number; categories?: readonly string[] } = {},
+    ): Promise<Record<string, unknown>> {
+      assertReadProjectRoot(projectRoot);
+      return readResource<Record<string, unknown>>(fl, 'task/audit-view', {
+        projectPath: projectRoot,
+        taskId,
+        ...(typeof options.limit === 'number' ? { limit: options.limit } : {}),
+        ...(options.categories && options.categories.length > 0 ? { categories: [...options.categories] } : {}),
+      });
     },
 
     async readTaskMetrics(projectRoot: string, taskId: string): Promise<Record<string, unknown>> {

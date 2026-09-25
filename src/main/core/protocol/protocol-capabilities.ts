@@ -1,5 +1,6 @@
 import type {
   ForgeLoopCapabilitiesSummary,
+  ForgeLoopProviderExtensionsFeatureSummary,
   ForgeLoopVerificationScopeMode,
   ForgeLoopVerificationIsolationMode,
 } from '@main/core/integration/types';
@@ -17,6 +18,8 @@ export interface CanonicalProtocolInfo {
   protocolVersion: number;
   schemaVersion: number;
   packageVersion: string | null;
+  /** Provider-neutral providerExtensions v1 advertisement, when advertised. */
+  providerExtensions: ForgeLoopProviderExtensionsFeatureSummary | null;
 }
 
 // Compatibility version axes are independent: never compare one axis
@@ -68,6 +71,46 @@ export function normalizeCanonicalProtocolInfo(
     protocolVersion,
     schemaVersion,
     packageVersion: typeof record.packageVersion === 'string' ? record.packageVersion : null,
+    providerExtensions: normalizeProviderExtensions(record.features),
+  };
+}
+
+/**
+ * Normalize the `features.providerExtensions` advertisement defensively.
+ * Unknown future fields are ignored; a malformed or authority-escalating
+ * advertisement degrades to `null` instead of being reinterpreted.
+ */
+function normalizeProviderExtensions(features: unknown): ForgeLoopProviderExtensionsFeatureSummary | null {
+  if (typeof features !== 'object' || features === null) return null;
+  const raw = (features as Record<string, unknown>).providerExtensions;
+  if (typeof raw !== 'object' || raw === null) return null;
+  const record = raw as Record<string, unknown>;
+  if (record.supported !== true || record.providerNeutral !== true) return null;
+  if (
+    record.lifecycleAuthority !== false
+    || record.completionAuthority !== false
+    || record.evidenceAuthority !== false
+    || record.autoInstall !== false
+  ) {
+    return null;
+  }
+  if (typeof record.version !== 'number') return null;
+  return {
+    version: record.version,
+    supported: true,
+    providerNeutral: true,
+    maturity: typeof record.maturity === 'string' ? record.maturity : '',
+    publicRegistryApi: record.publicRegistryApi === true,
+    packageSubpathExported: record.packageSubpathExported === true,
+    autoInstall: false,
+    lifecycleAuthority: false,
+    completionAuthority: false,
+    evidenceAuthority: false,
+    providerKinds: Array.isArray(record.providerKinds)
+      ? record.providerKinds.filter((kind): kind is string => typeof kind === 'string')
+      : [],
+    resultBoundary: typeof record.resultBoundary === 'string' ? record.resultBoundary : '',
+    cancellation: typeof record.cancellation === 'string' ? record.cancellation : '',
   };
 }
 
@@ -103,6 +146,8 @@ const EMPTY_FEATURE_SUPPORT: ForgeLoopFeatureSupport = Object.freeze({
   contextUsageObservability: false,
   structuralQuality: false,
   repositoryIndex: false,
+  auditUx: false,
+  providerExtensions: false,
 });
 
 function hasResource(capabilities: ForgeLoopCapabilitiesSummary, resource: string): boolean {
@@ -265,6 +310,21 @@ export function deriveFeatureSupport(capabilities: ForgeLoopCapabilitiesSummary)
       && repositoryIndex.resource === 'repository/index-status'
       && hasResource(capabilities, 'repository/index-status'),
   );
+  const auditUx = capabilities.features.auditUx;
+  const auditUxSupported = Boolean(
+    auditUx
+      && auditUx.version === 1
+      && auditUx.supported === true
+      && auditUx.readOnly === true
+      && auditUx.resource === 'task/audit-view'
+      && auditUx.timeline === true
+      && auditUx.lifecycleAuthority === false
+      && auditUx.evidenceAuthority === false
+      && auditUx.completionAuthority === false
+      && auditUx.mutationAuthority === false
+      && auditUx.externalExecution === false
+      && hasResource(capabilities, 'task/audit-view'),
+  );
 
   return {
     canonicalOwnership: coreResourcesPresent,
@@ -290,6 +350,7 @@ export function deriveFeatureSupport(capabilities: ForgeLoopCapabilitiesSummary)
     contextUsageObservability: contextUsageObservabilitySupported,
     structuralQuality: structuralQualitySupported,
     repositoryIndex: repositoryIndexSupported,
+    auditUx: auditUxSupported,
   };
 }
 
@@ -339,5 +400,20 @@ export function negotiateCompatibilityMode(input: CapabilityNegotiationInput): C
     return { mode: 'INCOMPATIBLE', reason: 'CAPABILITY_DRIFT', featureSupport: { ...EMPTY_FEATURE_SUPPORT } };
   }
 
-  return { mode: 'INTEGRATION_V1', featureSupport: deriveFeatureSupport(input.capabilities) };
+  const featureSupport = deriveFeatureSupport(input.capabilities);
+  const providerExtensions = input.protocolInfo.providerExtensions;
+  // Always explicit: an absent, malformed, authority-escalating, or
+  // unsupported-version advertisement is reported as `false` rather than
+  // left undefined.
+  featureSupport.providerExtensions = Boolean(
+    providerExtensions
+    && providerExtensions.version === 1
+    && providerExtensions.supported === true
+    && providerExtensions.providerNeutral === true
+    && providerExtensions.lifecycleAuthority === false
+    && providerExtensions.completionAuthority === false
+    && providerExtensions.evidenceAuthority === false
+    && providerExtensions.autoInstall === false,
+  );
+  return { mode: 'INTEGRATION_V1', featureSupport };
 }

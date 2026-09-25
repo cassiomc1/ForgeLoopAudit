@@ -37,6 +37,23 @@ function validProtocolInfo(overrides: Record<string, unknown> = {}) {
     packageVersion: '1.5.0',
     protocolVersion: 1,
     readsProtocol: [1],
+    features: {
+      providerExtensions: {
+        version: 1,
+        supported: true,
+        providerNeutral: true,
+        maturity: 'experimental',
+        publicRegistryApi: false,
+        packageSubpathExported: false,
+        autoInstall: false,
+        lifecycleAuthority: false,
+        completionAuthority: false,
+        evidenceAuthority: false,
+        providerKinds: ['ADVISORY_CONTEXT', 'VERIFICATION_EXECUTION', 'BROWSER_VERIFICATION', 'SECURITY_REVIEW', 'PRESENTATION'],
+        resultBoundary: 'STRICT_JSON_SNAPSHOT',
+        cancellation: 'COOPERATIVE_ABORT_SIGNAL',
+      },
+    },
     compatibility: {
       protocolVersion: 1,
       schemaVersion: 1,
@@ -55,6 +72,18 @@ function currentCapabilities(overrides: Record<string, unknown> = {}): ForgeLoop
         durableRecoveryState: true,
         explicitResume: true,
         validatedClaimProjection: true,
+      },
+      auditUx: {
+        version: 1,
+        supported: true,
+        readOnly: true,
+        resource: 'task/audit-view',
+        timeline: true,
+        lifecycleAuthority: false,
+        evidenceAuthority: false,
+        completionAuthority: false,
+        mutationAuthority: false,
+        externalExecution: false,
       },
       durableActions: {
         version: 1,
@@ -175,6 +204,7 @@ function currentCapabilities(overrides: Record<string, unknown> = {}): ForgeLoop
       'task/verification-scope',
       'task/attestation',
       'task/structural-quality',
+      'task/audit-view',
     ],
     commands: [
       'history', 'trace', 'reflect', 'inspect', 'metrics', 'action-show',
@@ -254,6 +284,8 @@ describe('core/protocol/protocol-capabilities', () => {
         contextUsageObservability: true,
         structuralQuality: true,
         repositoryIndex: false,
+        auditUx: true,
+        providerExtensions: true,
       });
     });
 
