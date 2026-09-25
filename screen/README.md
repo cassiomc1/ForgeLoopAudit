@@ -31,6 +31,8 @@ orphaned screenshot files.
 | File | Surface | Selected task | Scenario |
 |---|---|---|---|
 | `audit-summary.png` | Audit Summary | — | Separate integrity, completion, quality, trust and coverage verdicts |
+| `projects.png` | Projects | — | Two registered ForgeLoop projects with task counts, health and live-watch status |
+| `kanban.png` | Task Board | — | Cross-project task board, one column per canonical status, with a project filter |
 | `timeline.png` | Project Timeline | — | Git-backed project evolution, current architecture and bounded evidence |
 | `findings.png` | Findings | — | Canonical and derived findings with provenance |
 | `task-audit.png` | Tasks | — | Six tasks with canonical audit state and finding counts |

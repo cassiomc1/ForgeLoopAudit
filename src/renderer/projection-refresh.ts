@@ -102,6 +102,7 @@ export function reduceProjectionRefresh(current: ProjectionRefreshEpochs, update
     case 'attestation-changed':
       return bumpTaskProjection(current, 'attestation', update.taskId);
     case 'watcher-status':
+    case 'workspace-changed':
     case 'error':
       return current;
   }

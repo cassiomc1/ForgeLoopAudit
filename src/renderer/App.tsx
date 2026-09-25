@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { ProjectDetectionResult, ProjectSnapshot, ProjectUpdate, WatcherStatus, AuditAppError, RecentProject, ForgeLoopAuditAPI } from '@shared/domain';
+import type { ProjectDetectionResult, ProjectSnapshot, ProjectUpdate, WatcherStatus, AuditAppError, ForgeLoopAuditAPI } from '@shared/domain';
 import type { ProjectAuditSnapshot } from '@shared/audit';
 import { AppShell } from './components/app-shell/AppShell';
-import { ProjectPicker } from './pages/ProjectPicker';
+import { ThemeToggle } from './components/ui/theme-toggle';
 import { Overview } from './pages/Overview';
 import { Tasks } from './pages/Tasks';
 import { Flow } from './pages/Flow';
@@ -24,6 +24,8 @@ import { Reports } from './pages/Reports';
 import { Repository } from './pages/Repository';
 import { TaskAudit } from './pages/TaskAudit';
 import { Timeline } from './pages/Timeline';
+import { Projects } from './pages/Projects';
+import { Kanban } from './pages/Kanban';
 import { EmptyState } from './components/ui/EmptyState';
 import { LoadingState } from './components/ui/LoadingState';
 import {
@@ -36,6 +38,8 @@ import { getAuditClient } from './lib/audit-client';
 
 export const NAV_ITEMS = [
   { id: 'audit-summary', label: 'Audit Summary', icon: 'layout-dashboard' },
+  { id: 'projects', label: 'Projects', icon: 'folder' },
+  { id: 'kanban', label: 'Task Board', icon: 'kanban' },
   { id: 'timeline', label: 'Project Timeline', icon: 'timeline' },
   { id: 'findings', label: 'Findings', icon: 'clipboard-check' },
   { id: 'tasks', label: 'Tasks', icon: 'list-check' },
@@ -74,13 +78,15 @@ export function App() {
   const [audit, setAudit] = useState<ProjectAuditSnapshot | null>(null);
   const [activeNav, setActiveNav] = useState<NavItemId>(initialNav);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
   const [error, setError] = useState<AuditAppError | null>(null);
   const [watcherStatus, setWatcherStatus] = useState<WatcherStatus>({ active: false });
   const [isLoading, setIsLoading] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [projectionRefreshEpochs, setProjectionRefreshEpochs] = useState(createProjectionRefreshEpochs);
+  const [workspaceRefreshToken, setWorkspaceRefreshToken] = useState(0);
+  const [projectRefreshToken, setProjectRefreshToken] = useState(0);
   const latestSnapshotGeneration = useRef(0);
+  const detectionPathRef = useRef<string | null>(null);
 
   const api: ForgeLoopAuditAPI = getAuditClient();
 
@@ -94,15 +100,6 @@ export function App() {
     const hash = activeNav === 'audit-summary' ? '' : `#${activeNav}`;
     if (window.location.hash !== hash) window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}${hash}`);
   }, [activeNav]);
-
-  const loadRecentProjects = useCallback(async () => {
-    try {
-      const projects = await api.getRecentProjects();
-      setRecentProjects(projects);
-    } catch (err) {
-      console.error('Failed to load recent projects:', err);
-    }
-  }, [api]);
 
   const refreshAudit = useCallback(async () => {
     try {
@@ -126,17 +123,29 @@ export function App() {
 
     setProjectionRefreshEpochs((current) => reduceProjectionRefresh(current, update));
     switch (update.type) {
+      case 'workspace-changed':
+        // A change in any registered project refreshes the cross-project views
+        // and, when it is the open project, its derived surfaces too.
+        setWorkspaceRefreshToken((token) => token + 1);
+        if (update.projectPath && update.projectPath === detectionPathRef.current) {
+          setProjectRefreshToken((token) => token + 1);
+        }
+        break;
       case 'project-opened':
         if (update.detection) setDetectionResult(update.detection);
         if (update.snapshot) setSnapshot(update.snapshot);
+        detectionPathRef.current = update.detection?.projectRoot ?? null;
         setSelectedTaskId(null);
         setAudit(null);
+        setWorkspaceRefreshToken((token) => token + 1);
+        setProjectRefreshToken((token) => token + 1);
         setActiveNav('audit-summary');
         break;
       case 'snapshot-refreshed':
         if (update.snapshot) {
           setSnapshot(update.snapshot);
           setAudit(null);
+          setProjectRefreshToken((token) => token + 1);
           setSelectedTaskId((current) => current && update.snapshot?.tasks.some((task) => task.taskId === current) ? current : null);
         }
         break;
@@ -159,37 +168,18 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    void loadRecentProjects();
     const unsubscribe = api.subscribeProjectUpdates(handleProjectUpdate);
     void api.getProjectState().then((state) => {
       if (!state) return;
       setDetectionResult(state.detection);
       setSnapshot(state.snapshot);
+      detectionPathRef.current = state.detection.projectRoot;
       setActiveNav('audit-summary');
       void refreshAudit();
     }).catch((err) => console.error('Failed to load the current local project:', err));
     void api.notifyRendererReady().catch((err) => console.error('Failed to notify renderer readiness:', err));
     return unsubscribe;
-  }, [api, handleProjectUpdate, loadRecentProjects, refreshAudit]);
-
-  const handleOpenRecentProject = async (path: string) => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const result = await api.openRecentProject(path);
-      setDetectionResult(result);
-      setActiveNav('audit-summary');
-      setSnapshot(await api.getProjectSnapshot());
-      await refreshAudit();
-    } catch (err) {
-      const auditError: AuditAppError = err instanceof Error
-        ? { code: 'UNKNOWN_ERROR', message: err.message, recoverable: true }
-        : { code: 'UNKNOWN_ERROR', message: 'Failed to open project', recoverable: true };
-      setError(auditError);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [api, handleProjectUpdate, refreshAudit]);
 
   const handleOpenDemoProject = async () => {
     try {
@@ -226,15 +216,44 @@ export function App() {
     }
   };
 
+  const handleOpenProject = async (path: string) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      await api.addWorkspaceProject(path);
+      detectionPathRef.current = path;
+      setActiveNav('audit-summary');
+      await refreshAudit();
+    } catch (err) {
+      const auditError: AuditAppError = err instanceof Error
+        ? { code: 'UNKNOWN_ERROR', message: err.message, recoverable: true }
+        : { code: 'UNKNOWN_ERROR', message: 'Failed to open project', recoverable: true };
+      setError(auditError);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   if (!detectionResult) {
+    // Without an open project the workspace screen is the entry point: it can
+    // register several projects before any of them is opened for deep audit.
     return (
-      <ProjectPicker
-        onOpenDemoProject={handleOpenDemoProject}
-        onOpenRecentProject={handleOpenRecentProject}
-        recentProjects={recentProjects}
-        isLoading={isLoading}
-        error={error}
-      />
+      <div className="h-screen w-full overflow-auto forge-background">
+        <header className="flex h-12 shrink-0 items-center justify-between border-b forge-border-subtle forge-primary-surface px-4">
+          <span className="text-sm font-semibold text-forge-text-primary">ForgeLoopAudit</span>
+          <ThemeToggle />
+        </header>
+        <main className="mx-auto max-w-5xl px-4 py-8 md:px-8">
+          {error && (
+            <div className="mb-4 rounded-8 bg-forge-danger/10 p-3 text-sm text-forge-danger" role="alert">{error.message}</div>
+          )}
+          <Projects
+            refreshToken={workspaceRefreshToken}
+            onOpenProject={(path) => { void handleOpenProject(path); }}
+            onOpenDemoProject={() => { void handleOpenDemoProject(); }}
+          />
+        </main>
+      </div>
     );
   }
 
@@ -253,8 +272,23 @@ export function App() {
     switch (activeNav) {
       case 'audit-summary':
         return <AuditSummary audit={audit} snapshot={snapshot} detection={detectionResult} onRefresh={refreshAudit} onTaskSelect={(taskId) => { setSelectedTaskId(taskId); setActiveNav('findings'); }} onViewFindings={() => setActiveNav('findings')} />;
+      case 'projects':
+        return (
+          <Projects
+            refreshToken={workspaceRefreshToken}
+            onOpenProject={(path) => { void handleOpenProject(path); }}
+            onOpenDemoProject={() => { void handleOpenDemoProject(); }}
+          />
+        );
+      case 'kanban':
+        return (
+          <Kanban
+            refreshToken={workspaceRefreshToken}
+            onOpenTask={(card) => { setSelectedTaskId(card.taskId); setActiveNav('task-audit'); }}
+          />
+        );
       case 'timeline':
-        return <Timeline />;
+        return <Timeline refreshToken={projectRefreshToken} />;
       case 'findings':
         return <Findings audit={audit} onTaskSelect={(taskId) => { setSelectedTaskId(taskId); setActiveNav('tasks'); }} />;
       case 'task-audit':

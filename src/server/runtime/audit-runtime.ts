@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
-import { basename, dirname } from 'node:path';
+import { basename, dirname, resolve } from 'node:path';
 import { z } from 'zod';
 import { PathBoundary } from '@main/security/path-boundary';
 import { ForgeLoopAuditError } from '@shared/errors';
@@ -22,11 +22,13 @@ import type {
   ExecutionPage,
   ForgeLoopCompatibilityMode,
   ForgeLoopFeatureSupport,
+  KanbanBoard,
   ProjectDetectionResult,
   ProjectTimeline,
   ProjectKind,
   ProjectSnapshot,
   ProjectUpdate,
+  ProjectWorkspace,
   RecentProject,
   RepositoryIndexProjection,
   RepositorySearchRequest,
@@ -53,6 +55,8 @@ import type {
   RawCollectionArtifactRequest,
 } from '@shared/domain';
 import { resolveRecentProjectKind } from './project-kind';
+import { buildKanbanBoard } from '@shared/kanban';
+import { WorkspaceRuntime, resolveWorkspaceProjectPath, type WorkspaceRuntimeOptions } from './workspace-runtime';
 import { createProjectSnapshotBuilder, normalizePolicyStatus, type ProjectSnapshotBuilder, type ProjectCompatibilityContext } from '@main/core/project/project-snapshot';
 import { createProjectDetector, createProjectReader, type ProjectReader } from '@main/core/project/project-reader';
 import { ForgeCli } from '@main/core/cli/forge-cli';
@@ -121,7 +125,7 @@ export interface AuditProjectState {
   snapshot: ProjectSnapshot;
 }
 
-export interface AuditRuntimeOptions {
+export interface AuditRuntimeOptions extends WorkspaceRuntimeOptions {
   auditVersion: string;
   applicationDataRoot: string;
   schemaDirectory?: string;
@@ -171,10 +175,16 @@ export class AuditRuntime {
   private snapshotRefreshScheduled = false;
   private snapshotRefreshTimer: ReturnType<typeof setTimeout> | null = null;
   private snapshotGeneration = 0;
+  private readonly workspace: WorkspaceRuntime;
+  /** The deep canonical build produced by the most recent open or background refresh. */
+  private lastDeepSnapshot: ProjectSnapshot | null = null;
 
   constructor(options: AuditRuntimeOptions) {
     this.options = options;
     this.recentProjects = new RecentProjectsStore({ applicationDataRoot: options.applicationDataRoot });
+    // Workspace updates and the deep project session share one update stream so
+    // cross-project views refresh in the same tick as the active project.
+    this.workspace = new WorkspaceRuntime({ ...options, onUpdate: (update) => this.notify(update) });
     if (options.onUpdate) this.listeners.add(options.onUpdate);
   }
 
@@ -246,11 +256,13 @@ export class AuditRuntime {
     this.currentAuditSnapshot = null;
     this.currentTimelineCache = null;
     this.currentDetection = null;
+    this.lastDeepSnapshot = null;
     this.snapshotGeneration = 0;
   }
 
   async shutdown(): Promise<void> {
     await this.closeProject();
+    await this.workspace.close();
     this.listeners.clear();
   }
 
@@ -601,6 +613,106 @@ export class AuditRuntime {
     await this.recentProjects.remove(z.string().min(1).max(4096).parse(path));
   }
 
+  async getProjectWorkspace(): Promise<ProjectWorkspace> {
+    const workspace = await this.workspace.getWorkspace();
+    // The open project is additionally reported from the deep canonical session,
+    // whose health is authoritative. The cached build is used rather than a
+    // fresh one so a cross-project read never competes with the snapshot the
+    // deep session is building; the event stream always notifies before the
+    // client reads, so the cached build is current.
+    const deepSnapshot = await this.deepSnapshotForWorkspace();
+    if (!deepSnapshot) return workspace;
+    return {
+      ...workspace,
+      projects: workspace.projects.map((project) => project.path === deepSnapshot.project.rootPath
+        ? {
+          ...project,
+          name: deepSnapshot.project.name,
+          health: deepSnapshot.health.status,
+          taskCount: deepSnapshot.tasks.length,
+          blockedCount: deepSnapshot.tasks.filter((task) => task.phase === 'BLOCKED').length,
+          completeCount: deepSnapshot.tasks.filter((task) => task.phase === 'COMPLETE').length,
+          inProgressCount: deepSnapshot.tasks.filter((task) => task.phase === 'EXECUTING' || task.phase === 'VERIFYING').length,
+          branch: deepSnapshot.project.branch,
+          head: deepSnapshot.project.head,
+          available: true,
+          error: undefined,
+        }
+        : project),
+    };
+  }
+
+  /**
+   * Register a project in the workspace and make it the active project. This is
+   * the "open" path: the project is persisted and opened for deep inspection.
+   */
+  async openWorkspaceProject(projectPath: string, kind: ProjectKind = 'PROJECT'): Promise<ProjectWorkspace> {
+    const resolved = await resolveWorkspaceProjectPath(projectPath);
+    // `openProject` registers the project in the workspace as part of opening it.
+    await this.openProject(resolved, kind);
+    return this.getProjectWorkspace();
+  }
+
+  /**
+   * Save a project to the workspace without switching to it. The project keeps a
+   * live session so its board and status stay current, but the open project and
+   * every task-detail surface stay untouched.
+   */
+  async saveWorkspaceProject(projectPath: string, kind: ProjectKind = 'PROJECT'): Promise<ProjectWorkspace> {
+    const resolved = await resolveWorkspaceProjectPath(projectPath);
+    await this.workspace.addProject(resolved, kind);
+    return this.getProjectWorkspace();
+  }
+
+  async removeWorkspaceProject(projectPath: string): Promise<ProjectWorkspace> {
+    const resolved = z.string().min(1).max(4096).parse(projectPath);
+    if (this.getCurrentProjectRoot() === resolve(resolved)) await this.closeProject();
+    await this.workspace.removeProject(resolved);
+    return this.getProjectWorkspace();
+  }
+
+  async refreshWorkspaceProject(projectPath: string): Promise<ProjectWorkspace> {
+    await this.workspace.refreshProject(projectPath);
+    return this.getProjectWorkspace();
+  }
+
+  async getKanbanBoard(projectPath?: string | null): Promise<KanbanBoard> {
+    return this.buildKanbanBoard(projectPath ?? null);
+  }
+
+  /**
+   * The board prefers the deep snapshot for the open project so its cards match
+   * the canonical task detail, and the lightweight session for every other
+   * registered project.
+   */
+  private async buildKanbanBoard(projectPath: string | null): Promise<KanbanBoard> {
+    const workspace = await this.getProjectWorkspace();
+    const deepSnapshot = await this.deepSnapshotForWorkspace();
+    const projects = workspace.projects.map((project) => ({
+      path: project.path,
+      name: project.name,
+      kind: project.kind,
+      snapshot: project.path === deepSnapshot?.project.rootPath ? deepSnapshot : this.workspace.getSnapshot(project.path),
+    }));
+    return buildKanbanBoard({ projects, filterProjectPath: projectPath, generatedAt: new Date().toISOString() });
+  }
+
+  /**
+   * The canonical snapshot the deep session already built, or a fresh build
+   * only when none exists yet. Cross-project reads intentionally never trigger
+   * a rebuild: they would contend with the snapshot the deep session is
+   * building, and the client always reads after the update was pushed.
+   */
+  private deepSnapshotForWorkspace(): Promise<ProjectSnapshot | null> {
+    if (this.lastDeepSnapshot) return Promise.resolve(this.lastDeepSnapshot);
+    if (!this.currentSnapshotBuilder) return Promise.resolve(null);
+    return this.currentSnapshotBuilder.build().catch(() => null);
+  }
+
+  async getWorkspaceTimeline(projectPath: string): Promise<ProjectTimeline> {
+    return this.workspace.getTimeline(projectPath);
+  }
+
   async notifyRendererReady(): Promise<void> {
     const environment = this.options.environment ?? process.env;
     if (!this.options.fixtureMode && resolveFixtureProjectMode(false, environment)) {
@@ -763,7 +875,14 @@ export class AuditRuntime {
     };
     await this.recentProjects.add(recentProject);
     this.currentDetection = classifyDetection(detectionResult, projectKind);
+    // Opening a project also registers it in the workspace so it stays tracked
+    // and live even after the user switches to another project. It is registered
+    // without a second watcher or snapshot build: this runtime already watches
+    // and builds it, and the workspace reports it from the deep snapshot.
+    await this.workspace.addProject(projectRoot, projectKind, { monitor: false });
+    await this.workspace.setActiveProject(projectRoot);
     const initialSnapshot = await this.currentSnapshotBuilder.build();
+    this.lastDeepSnapshot = initialSnapshot;
     this.notify({
       type: 'project-opened',
       detection: this.currentDetection,
@@ -817,6 +936,7 @@ export class AuditRuntime {
         try {
           const snapshot = await builder.build();
           if (this.currentSnapshotBuilder !== builder) return;
+          this.lastDeepSnapshot = snapshot;
           this.notify({ type: 'snapshot-refreshed', snapshot, generation, timestamp: new Date().toISOString() });
         } catch (error) {
           console.error('Failed to refresh project snapshot:', error);

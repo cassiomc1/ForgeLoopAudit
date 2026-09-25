@@ -98,6 +98,18 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
       <path strokeLinecap="round" strokeWidth={2} d="m20 20-4-4" />
     </svg>
   ),
+  'folder': (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+    </svg>
+  ),
+  'kanban': (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="3" y="4" width="5" height="16" rx="1" strokeWidth={2} />
+      <rect x="10" y="4" width="5" height="10" rx="1" strokeWidth={2} />
+      <rect x="17" y="4" width="4" height="13" rx="1" strokeWidth={2} />
+    </svg>
+  ),
 };
 
 export function AppShell({

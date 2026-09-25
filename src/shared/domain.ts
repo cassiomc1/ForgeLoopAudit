@@ -1166,6 +1166,82 @@ export interface RecentProject {
   kind?: ProjectKind;
 }
 
+/**
+ * A project registered in the local workspace. The workspace owns every
+ * project the auditor tracks, not only the one currently open for deep
+ * canonical inspection, so cross-project views stay live.
+ */
+export interface WorkspaceProjectSummary {
+  path: string;
+  /** Home-relative rendering of `path`; never used as a filesystem input. */
+  displayPath: string;
+  name: string;
+  kind: ProjectKind;
+  addedAt: string;
+  lastOpenedAt: string;
+  active: boolean;
+  available: boolean;
+  health: ForgeLoopHealthStatus;
+  taskCount: number;
+  blockedCount: number;
+  completeCount: number;
+  inProgressCount: number;
+  branch?: string;
+  head?: string;
+  protocolVersion: number;
+  forgeLoopVersion?: string;
+  /** Present when the project cannot currently be read; never a silent pass. */
+  error?: string;
+  lastChangeAt?: string;
+}
+
+export interface ProjectWorkspace {
+  projects: WorkspaceProjectSummary[];
+  activeProjectPath: string | null;
+  watching: number;
+  updatedAt: string;
+}
+
+export type KanbanColumnId =
+  | 'backlog'
+  | 'ready'
+  | 'in-progress'
+  | 'review'
+  | 'blocked'
+  | 'complete';
+
+export interface KanbanCard {
+  taskId: string;
+  projectPath: string;
+  projectName: string;
+  projectKind: ProjectKind;
+  objective?: string;
+  phase: ForgeLoopPhase;
+  column: KanbanColumnId;
+  /** Canonical coverage percentage reported by ForgeLoop, never an auditor estimate. */
+  evidenceCoveragePercent: number;
+  /** Observed artifact/gate validation errors; an observation, not a verdict. */
+  validationErrors: number;
+  canonicalStatus?: string;
+  lastUpdated?: string;
+  isActive: boolean;
+}
+
+export interface KanbanColumn {
+  id: KanbanColumnId;
+  label: string;
+  description: string;
+  cards: KanbanCard[];
+}
+
+export interface KanbanBoard {
+  columns: KanbanColumn[];
+  projects: Array<{ path: string; name: string; kind: ProjectKind; taskCount: number }>;
+  filterProjectPath: string | null;
+  totalTasks: number;
+  generatedAt: string;
+}
+
 export type AllowedArtifact =
   | 'contract.json'
   | 'routing-result.json'
@@ -1301,16 +1377,28 @@ export interface ForgeLoopAuditAPI {
   getRecentProjects(): Promise<RecentProject[]>;
   addRecentProject(project: RecentProject): Promise<void>;
   removeRecentProject(path: string): Promise<void>;
+  getProjectWorkspace(): Promise<ProjectWorkspace>;
+  /** Register a project and make it the open project. */
+  addWorkspaceProject(path: string): Promise<ProjectWorkspace>;
+  /** Register a project and keep tracking it live without switching to it. */
+  saveWorkspaceProject(path: string): Promise<ProjectWorkspace>;
+  removeWorkspaceProject(path: string): Promise<ProjectWorkspace>;
+  setActiveWorkspaceProject(path: string | null): Promise<ProjectWorkspace>;
+  refreshWorkspaceProject(path: string): Promise<ProjectWorkspace>;
+  getKanbanBoard(projectPath?: string | null): Promise<KanbanBoard>;
+  getWorkspaceTimeline(path: string): Promise<ProjectTimeline>;
   notifyRendererReady(): Promise<void>;
   subscribeProjectUpdates(listener: (update: ProjectUpdate) => void): () => void;
 }
 
 export interface ProjectUpdate {
-  type: 'task-added' | 'task-updated' | 'task-removed' | 'project-health-changed' | 'policy-changed' | 'session-changed' | 'action-changed' | 'approval-changed' | 'evaluation-changed' | 'capability-policy-changed' | 'workspace-binding-changed' | 'handoff-changed' | 'responsibility-changed' | 'verification-scope-changed' | 'attestation-changed' | 'audit-invalidated' | 'audit-refreshed' | 'finding-changed' | 'snapshot-refreshed' | 'project-opened' | 'watcher-status' | 'error';
+  type: 'task-added' | 'task-updated' | 'task-removed' | 'project-health-changed' | 'policy-changed' | 'session-changed' | 'action-changed' | 'approval-changed' | 'evaluation-changed' | 'capability-policy-changed' | 'workspace-binding-changed' | 'handoff-changed' | 'responsibility-changed' | 'verification-scope-changed' | 'attestation-changed' | 'audit-invalidated' | 'audit-refreshed' | 'finding-changed' | 'snapshot-refreshed' | 'project-opened' | 'watcher-status' | 'workspace-changed' | 'error';
   taskId?: string;
   snapshot?: ProjectSnapshot;
   detection?: ProjectDetectionResult;
   data?: unknown;
   timestamp: string;
   generation?: number;
+  /** Identifies which registered project produced the update in multi-project workspaces. */
+  projectPath?: string;
 }

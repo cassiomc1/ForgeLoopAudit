@@ -149,6 +149,13 @@ export class AuditWebServer {
       if (method === 'GET' && path === '/api/v1/recent-projects') return this.sendJson(response, 200, { ok: true, data: await this.runtime.getRecentProjects() });
       if (method === 'POST' && path === '/api/v1/recent-projects') { await this.runtime.addRecentProject(await readJson(request) as never); return this.sendJson(response, 200, { ok: true, data: null }); }
       if (method === 'DELETE' && path === '/api/v1/recent-projects') { await this.runtime.removeRecentProject(requiredQuery(url, 'path')); return this.sendJson(response, 200, { ok: true, data: null }); }
+      if (method === 'GET' && path === '/api/v1/workspace') return this.sendJson(response, 200, { ok: true, data: await this.runtime.getProjectWorkspace() });
+      if (method === 'POST' && path === '/api/v1/workspace/projects') { const body = await readJson(request); return this.sendJson(response, 200, { ok: true, data: await this.runtime.openWorkspaceProject(readString(body, 'path')) }); }
+      if (method === 'POST' && path === '/api/v1/workspace/projects/save') { const body = await readJson(request); return this.sendJson(response, 200, { ok: true, data: await this.runtime.saveWorkspaceProject(readString(body, 'path')) }); }
+      if (method === 'DELETE' && path === '/api/v1/workspace/projects') return this.sendJson(response, 200, { ok: true, data: await this.runtime.removeWorkspaceProject(requiredQuery(url, 'path')) });
+      if (method === 'POST' && path === '/api/v1/workspace/projects/refresh') return this.sendJson(response, 200, { ok: true, data: await this.runtime.refreshWorkspaceProject(requiredQuery(url, 'path')) });
+      if (method === 'GET' && path === '/api/v1/workspace/timeline') return this.sendJson(response, 200, { ok: true, data: await this.runtime.getWorkspaceTimeline(requiredQuery(url, 'path')) });
+      if (method === 'GET' && path === '/api/v1/kanban') return this.sendJson(response, 200, { ok: true, data: await this.runtime.getKanbanBoard(url.searchParams.get('project')) });
       if (method === 'POST' && path === '/api/v1/renderer-ready') { await this.runtime.notifyRendererReady(); return this.sendJson(response, 200, { ok: true, data: null }); }
       if (method === 'GET' && path === '/api/v1/diagnostics') return this.sendJson(response, 200, { ok: true, data: this.runtime.getDiagnostics() });
 

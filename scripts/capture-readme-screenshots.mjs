@@ -1,6 +1,6 @@
 import { chromium } from 'playwright';
 import { expect } from '@playwright/test';
-import { readFileSync, existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { readFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, cpSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -108,6 +108,33 @@ try {
     await expect(page.getByText('Completion readiness', { exact: true })).toBeVisible();
     await expect(page.getByText('Audit coverage', { exact: true })).toBeVisible();
     await expect(page.getByText(/Audit score|Score unavailable/)).toBeVisible();
+  });
+
+  // Register a second, independent copy of the fixture so the workspace and the
+  // cross-project board are captured with more than one project. The demo project
+  // stays open, so the demo banner and every later capture are unchanged.
+  const secondProject = join(tempRoot, 'forgeloop-demo-2');
+  cpSync(join(root, 'demo'), secondProject, { recursive: true });
+  const saved = await page.request.post(`${server.origin}/api/v1/workspace/projects/save`, { data: { path: secondProject } });
+  assertCondition(saved.ok(), 'The second demo project could not be registered in the workspace');
+
+  await openSurface(page, 'Projects', 'Projects');
+  await capture(page, 'projects.png', async () => {
+    await expect(page.getByText('Open and save', { exact: true })).toBeVisible();
+    await expect(page.getByText('Save only', { exact: true })).toBeVisible();
+    await expect(page.getByText('Available', { exact: true }).first()).toBeVisible();
+    await expect(page.getByText('Active', { exact: true }).first()).toBeVisible();
+    await expect(page.getByText('Demo', { exact: true })).toBeVisible();
+  });
+
+  await openSurface(page, 'Task Board', 'Task Board');
+  await capture(page, 'kanban.png', async () => {
+    for (const column of ['Backlog', 'Ready', 'In Progress', 'Review', 'Blocked', 'Complete']) {
+      await expect(page.getByRole('region', { name: `${column} column` })).toBeVisible();
+    }
+    await expect(page.getByRole('group', { name: 'Project filter', exact: true })).toBeVisible();
+    await expect(page.getByText('All projects', { exact: true })).toBeVisible();
+    await expect(page.getByText('Read-only', { exact: true })).toBeVisible();
   });
 
   await openSurface(page, 'Project Timeline', 'demo Timeline');
