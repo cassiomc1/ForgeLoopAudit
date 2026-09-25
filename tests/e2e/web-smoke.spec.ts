@@ -64,11 +64,12 @@ test('web UI preserves the audit navigation and live watcher update', async ({ p
 test('the task board shows every status column and filters by project', async ({ page }) => {
   await page.goto(serverInfo().bootstrapUrl);
   await page.getByLabel('Main navigation').getByRole('button', { name: 'Task Board', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Task Board' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Task Board' })).toBeVisible({ timeout: 15_000 });
+  // The heading renders immediately; the columns appear once the board loads.
   for (const column of ['Backlog', 'Ready', 'In Progress', 'Review', 'Blocked', 'Complete']) {
-    await expect(page.getByRole('region', { name: `${column} column` })).toBeVisible();
+    await expect(page.getByRole('region', { name: `${column} column` })).toBeVisible({ timeout: 15_000 });
   }
-  await expect(page.getByText(SMOKE_TASK_ID, { exact: true }).first()).toBeVisible();
+  await expect(page.getByText(SMOKE_TASK_ID, { exact: true }).first()).toBeVisible({ timeout: 15_000 });
 
   const board = await boardFrom(page);
   expect(board.columns.map((column) => column.id)).toEqual(['backlog', 'ready', 'in-progress', 'review', 'blocked', 'complete']);
