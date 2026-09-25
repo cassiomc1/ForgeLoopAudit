@@ -19,11 +19,13 @@ import type {
   ExecutionPage,
   ExecutionProfileContextView,
   ForgeLoopAuditAPI,
+  KanbanBoard,
   PolicySummary,
   ProjectDetectionResult,
   ProjectSnapshot,
   ProjectTimeline,
   ProjectUpdate,
+  ProjectWorkspace,
   RawArtifactRequest,
   RawCollectionArtifactRequest,
   RecentProject,
@@ -201,6 +203,14 @@ class HttpAuditClient implements ForgeLoopAuditAPI {
   searchRepository(request: RepositorySearchRequest): Promise<RepositorySearchResult> { return this.request('/api/v1/repository/search', { method: 'POST', body: request }); }
   minimizeWindow(): Promise<void> { return Promise.resolve(); }
   toggleMaximizeWindow(): Promise<boolean> { return Promise.resolve(false); }
+  getProjectWorkspace(): Promise<ProjectWorkspace> { return this.request('/api/v1/workspace'); }
+  addWorkspaceProject(path: string): Promise<ProjectWorkspace> { return this.request('/api/v1/workspace/projects', { method: 'POST', body: { path } }); }
+  saveWorkspaceProject(path: string): Promise<ProjectWorkspace> { return this.request('/api/v1/workspace/projects/save', { method: 'POST', body: { path } }); }
+  removeWorkspaceProject(path: string): Promise<ProjectWorkspace> { return this.request(`/api/v1/workspace/projects?path=${encodeURIComponent(path)}`, { method: 'DELETE' }); }
+  setActiveWorkspaceProject(path: string | null): Promise<ProjectWorkspace> { return this.request('/api/v1/workspace/active', { method: 'POST', body: { path } }); }
+  refreshWorkspaceProject(path: string): Promise<ProjectWorkspace> { return this.request(`/api/v1/workspace/projects/refresh?path=${encodeURIComponent(path)}`, { method: 'POST' }); }
+  getKanbanBoard(projectPath?: string | null): Promise<KanbanBoard> { return this.request(projectPath ? `/api/v1/kanban?project=${encodeURIComponent(projectPath)}` : '/api/v1/kanban'); }
+  getWorkspaceTimeline(path: string): Promise<ProjectTimeline> { return this.request(`/api/v1/workspace/timeline?path=${encodeURIComponent(path)}`); }
 
   subscribeProjectUpdates(listener: (update: ProjectUpdate) => void): () => void {
     let source: EventSource | null = null;

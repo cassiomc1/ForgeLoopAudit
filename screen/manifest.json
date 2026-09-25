@@ -21,6 +21,18 @@
       "scenario": "Project integrity, completion readiness, quality, trust and coverage"
     },
     {
+      "file": "projects.png",
+      "page": "Projects",
+      "taskId": null,
+      "scenario": "Several registered ForgeLoop projects with per-project task, health and live-watch status"
+    },
+    {
+      "file": "kanban.png",
+      "page": "Task Board",
+      "taskId": null,
+      "scenario": "Cross-project task board with one column per canonical status and a project filter"
+    },
+    {
       "file": "timeline.png",
       "page": "Project Timeline",
       "taskId": null,

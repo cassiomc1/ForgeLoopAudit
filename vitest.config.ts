@@ -30,6 +30,7 @@ export default defineConfig({
         '**/src/server/runtime/audit-runtime.ts',
         '**/src/server/runtime/fixture-mode.ts',
         '**/src/server/runtime/project-kind.ts',
+        '**/src/server/runtime/workspace-runtime.ts',
         '**/src/server/storage/app-data.ts',
         '**/src/main/core/diagnostics/diagnostics.ts',
         '**/src/main/core/events/ledger-reader.ts',

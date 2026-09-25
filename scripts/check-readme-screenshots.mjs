@@ -4,6 +4,8 @@ import { join, resolve } from 'node:path';
 
 const REQUIRED_FILES = [
   'audit-summary.png',
+  'projects.png',
+  'kanban.png',
   'timeline.png',
   'findings.png',
   'task-audit.png',

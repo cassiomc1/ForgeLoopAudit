@@ -45,7 +45,16 @@ const ICONS: Record<ProjectTimelineEventType, LucideIcon> = {
 
 const LOADING_MESSAGES = ['Reading project history…', 'Analyzing architectural milestones…', 'Building timeline…'];
 
-export function Timeline() {
+
+interface TimelineProps {
+  /**
+   * Increments when the open project changes on disk. Without it the timeline
+   * would be a one-shot capture of the project at page load.
+   */
+  refreshToken: number;
+}
+
+export function Timeline({ refreshToken }: TimelineProps) {
   const [timeline, setTimeline] = useState<ProjectTimeline | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<TimelineFilter>('all');
@@ -65,7 +74,7 @@ export function Timeline() {
       active = false;
       window.clearInterval(timer);
     };
-  }, []);
+  }, [refreshToken]);
 
   const events = useMemo(() => {
     if (!timeline) return [];

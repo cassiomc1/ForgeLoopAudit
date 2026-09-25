@@ -132,9 +132,11 @@ npm run demo:verify
 The images below are captured from the production renderer through the local
 web server at 1440 × 900 in the default dark theme.
 
-| Audit Summary | Project Timeline |
+| Audit Summary | Projects |
 |---|---|
-| ![ForgeShop audit summary](./screen/audit-summary.png) | ![ForgeShop project timeline](./screen/timeline.png) |
+| ![ForgeShop audit summary](./screen/audit-summary.png) | ![ForgeLoopAudit projects workspace](./screen/projects.png) |
+| Task Board | Project Timeline |
+| ![ForgeLoopAudit cross-project task board](./screen/kanban.png) | ![ForgeShop project timeline](./screen/timeline.png) |
 | Findings | Tasks |
 | ![ForgeShop findings](./screen/findings.png) | ![ForgeShop tasks](./screen/task-audit.png) |
 | Evidence | Quality |

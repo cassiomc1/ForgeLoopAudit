@@ -1,7 +1,9 @@
 import { test, expect } from '@playwright/test';
+import type { APIRequestContext } from '@playwright/test';
 import { createHash } from 'node:crypto';
-import { appendFileSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { appendFileSync, cpSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 
 const SERVER_INFO = join(process.cwd(), 'test-results', 'web-server.json');
 const SMOKE_TASK_ID = 'TASK-001';
@@ -38,29 +40,177 @@ test('light and dark themes switch through the shadcn-style theme control', asyn
 
 test('web UI preserves the audit navigation and live watcher update', async ({ page }) => {
   const fixture = serverInfo().projectPath;
+  await page.goto(serverInfo().bootstrapUrl);
+  await expect(page.getByRole('heading', { name: 'Audit Summary' })).toBeVisible();
+  for (const name of ['Projects', 'Task Board', 'Project Timeline', 'Tasks', 'Findings', 'Evidence', 'Quality', 'Policy & Trust', 'Audit History', 'Reports', 'Repository Search', 'Diagnostics', 'Settings']) {
+    await page.getByLabel('Main navigation').getByRole('button', { name, exact: true }).click();
+    await expect(page.locator('h1'), `Expected a page heading after opening ${name}`).toBeVisible({ timeout: 15000 });
+  }
+  await page.getByLabel('Main navigation').getByRole('button', { name: 'Project Timeline', exact: true }).click();
+  await expect(page.getByRole('heading', { name: /Timeline/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Current Architecture', exact: true })).toBeVisible();
+  await page.getByLabel('Main navigation').getByRole('button', { name: 'Tasks', exact: true }).click();
+  await expect(page.getByText(SMOKE_TASK_ID, { exact: true }).first()).toBeVisible();
+  await page.getByText(SMOKE_TASK_ID, { exact: true }).first().click();
+  await page.getByLabel('Task detail navigation').getByRole('button', { name: 'Events', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Event Ledger' })).toBeVisible();
+  await page.getByRole('button', { name: 'Validate ledger', exact: true }).click();
+  await expect(page.getByText('Page schema: VALID')).toBeVisible();
+  appendLiveEvent(fixture, SMOKE_TASK_ID, 'WEB_SMOKE_UPDATE');
+  await expect(page.getByText('WEB_SMOKE_UPDATE')).toBeVisible({ timeout: 10_000 });
+  // The webServer fixture owns and removes this temporary copy.
+});
+
+test('the task board shows every status column and filters by project', async ({ page }) => {
+  await page.goto(serverInfo().bootstrapUrl);
+  await page.getByLabel('Main navigation').getByRole('button', { name: 'Task Board', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Task Board' })).toBeVisible();
+  for (const column of ['Backlog', 'Ready', 'In Progress', 'Review', 'Blocked', 'Complete']) {
+    await expect(page.getByRole('region', { name: `${column} column` })).toBeVisible();
+  }
+  await expect(page.getByText(SMOKE_TASK_ID, { exact: true }).first()).toBeVisible();
+
+  const board = await boardFrom(page);
+  expect(board.columns.map((column) => column.id)).toEqual(['backlog', 'ready', 'in-progress', 'review', 'blocked', 'complete']);
+  expect(board.totalTasks).toBeGreaterThan(0);
+
+  // Filtering to a single project must strictly reduce the board to that project.
+  const onlyProject = board.projects[0].path;
+  const filtered = await boardFrom(page, onlyProject);
+  expect(filtered.filterProjectPath).toBe(onlyProject);
+  expect(filtered.totalTasks).toBe(board.totalTasks);
+  expect(filtered.columns.flatMap((column) => column.cards).every((card) => card.projectPath === onlyProject)).toBe(true);
+});
+
+test('a second project can be registered and a non-ForgeLoop path is refused', async ({ page }) => {
+  const second = await createSecondProject();
   try {
     await page.goto(serverInfo().bootstrapUrl);
-    await expect(page.getByRole('heading', { name: 'Audit Summary' })).toBeVisible();
-    for (const name of ['Project Timeline', 'Tasks', 'Findings', 'Evidence', 'Quality', 'Policy & Trust', 'Audit History', 'Reports', 'Repository Search', 'Diagnostics', 'Settings']) {
-      await page.getByLabel('Main navigation').getByRole('button', { name, exact: true }).click();
-      await expect(page.locator('h1'), `Expected a page heading after opening ${name}`).toBeVisible({ timeout: 15000 });
-    }
-    await page.getByLabel('Main navigation').getByRole('button', { name: 'Project Timeline', exact: true }).click();
-    await expect(page.getByRole('heading', { name: /Timeline/ })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Current Architecture', exact: true })).toBeVisible();
-    await page.getByLabel('Main navigation').getByRole('button', { name: 'Tasks', exact: true }).click();
-    await expect(page.getByText(SMOKE_TASK_ID, { exact: true }).first()).toBeVisible();
-    await page.getByText(SMOKE_TASK_ID, { exact: true }).first().click();
-    await page.getByLabel('Task detail navigation').getByRole('button', { name: 'Events', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Event Ledger' })).toBeVisible();
-    await page.getByRole('button', { name: 'Validate ledger', exact: true }).click();
-    await expect(page.getByText('Page schema: VALID')).toBeVisible();
-    appendLiveEvent(fixture, SMOKE_TASK_ID, 'WEB_SMOKE_UPDATE');
-    await expect(page.getByText('WEB_SMOKE_UPDATE')).toBeVisible({ timeout: 10_000 });
+    await page.getByLabel('Main navigation').getByRole('button', { name: 'Projects', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Projects' })).toBeVisible();
+
+    await page.getByLabel('Project path').fill(second);
+    await page.getByRole('button', { name: 'Open and save', exact: true }).click();
+    // Opening a registered project switches the shell to its audit summary.
+    await expect(page.getByRole('heading', { name: 'Audit Summary' })).toBeVisible({ timeout: 30_000 });
+
+    const workspace = await requireWorkspace(page);
+    expect(workspace.projects.map((project) => project.path)).toContain(second);
+    expect(workspace.projects.find((project) => project.path === second)?.active).toBe(true);
+    expect(workspace.watching).toBeGreaterThanOrEqual(2);
+
+    // A directory without ForgeLoop state must be refused, never registered.
+    const bare = dirname(second);
+    const rejected = await page.request.post(`${serverInfo().origin}/api/v1/workspace/projects`, { data: { path: bare } });
+    expect((await rejected.json()).ok).toBe(false);
+    expect((await requireWorkspace(page)).projects.map((project) => project.path)).not.toContain(bare);
   } finally {
-    // The webServer fixture owns and removes this temporary copy.
+    // Unregister before deleting, so the shared host does not keep a dead path.
+    await page.request.delete(`${serverInfo().origin}/api/v1/workspace/projects?path=${encodeURIComponent(second)}`).catch(() => undefined);
+    rmSync(dirname(second), { recursive: true, force: true });
   }
 });
+
+test('a change in a background project is pushed live to the open session', async ({ page }) => {
+  const second = await createSecondProject();
+  try {
+    // Wait for the same-origin session before using the API: the host is
+    // session-scoped and the app establishes the cookie asynchronously.
+    await page.goto(serverInfo().bootstrapUrl);
+    await expect.poll(() => workspaceFrom(page), { timeout: 20_000 }).toBeTruthy();
+    await page.request.post(`${serverInfo().origin}/api/v1/workspace/projects`, { data: { path: second } });
+
+    const board = await boardFrom(page);
+    expect(board.projects.some((project) => project.path === second)).toBe(true);
+    expect(board.totalTasks).toBeGreaterThanOrEqual(board.projects[0].taskCount);
+
+    // Record the live update stream, then touch the background project only.
+    await startEventStream(page);
+    await page.waitForTimeout(500);
+    appendLiveEvent(second, SMOKE_TASK_ID, 'BACKGROUND_PROJECT_UPDATE');
+
+    // The background change must reach the browser without reopening anything,
+    // and it must be attributed to the project that produced it.
+    await expect.poll(() => readEventStream(page), { timeout: 20_000 }).toContain('workspace-changed');
+    const stream = await readEventStream(page);
+    expect(stream).toContain(second);
+    expect(stream).toContain('event-appended');
+
+    // The cross-project board keeps every registered project listed throughout.
+    expect((await boardFrom(page)).projects.some((project) => project.path === second)).toBe(true);
+
+    await page.request.delete(`${serverInfo().origin}/api/v1/workspace/projects?path=${encodeURIComponent(second)}`);
+  } finally {
+    rmSync(dirname(second), { recursive: true, force: true });
+  }
+});
+
+interface Page {
+  request: APIRequestContext;
+  evaluate: (fn: () => unknown) => Promise<unknown>;
+}
+
+/** Subscribe to the host's server-sent update stream from inside the page. */
+async function startEventStream(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const target = window as unknown as { __flaStream: string };
+    target.__flaStream = '';
+    void (async () => {
+      const response = await fetch('/api/v1/events');
+      const reader = response.body?.getReader();
+      if (!reader) return;
+      const decoder = new TextDecoder();
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) return;
+        target.__flaStream += decoder.decode(value, { stream: true });
+      }
+    })();
+  });
+}
+
+async function readEventStream(page: Page): Promise<string> {
+  return page.evaluate(() => (window as unknown as { __flaStream: string }).__flaStream) as Promise<string>;
+}
+
+interface KanbanResponse {
+  columns: Array<{ id: string; cards: Array<{ projectPath: string }> }>;
+  projects: Array<{ path: string; name: string; taskCount: number }>;
+  filterProjectPath: string | null;
+  totalTasks: number;
+}
+
+/** API helpers reuse the browser context so they share the session cookie. */
+async function boardFrom(page: Page, project?: string): Promise<KanbanResponse> {
+  const query = project ? `?project=${encodeURIComponent(project)}` : '';
+  const response = await page.request.get(`${serverInfo().origin}/api/v1/kanban${query}`);
+  const payload = await response.json() as { ok: boolean; data: KanbanResponse };
+  expect(payload.ok).toBe(true);
+  return payload.data;
+}
+
+/**
+ * Read the workspace through the page context so the request shares the
+ * browser's session cookie. Returns `null` until the session is established.
+ */
+async function workspaceFrom(page: Page): Promise<WorkspaceResponse | null> {
+  const response = await page.request.get(`${serverInfo().origin}/api/v1/workspace`);
+  const payload = await response.json() as { ok: boolean; data?: WorkspaceResponse };
+  return payload.ok && payload.data ? payload.data : null;
+}
+
+async function requireWorkspace(page: Page): Promise<WorkspaceResponse> {
+  const workspace = await workspaceFrom(page);
+  if (!workspace) throw new Error('The project workspace is unavailable.');
+  return workspace;
+}
+
+/** A second, independent copy of the demo fixture to prove cross-project views. */
+function createSecondProject(): string {
+  const target = join(mkdtempSync(join(tmpdir(), 'forgeloop-audit-second-')), 'proj-2');
+  cpSync('demo', target, { recursive: true });
+  return target;
+}
 
 function appendLiveEvent(projectRoot: string, taskId: string, eventName: string): void {
   const eventPath = join(projectRoot, '.forgeloop', 'task-state', createHash('sha256').update(taskId).digest('hex'), 'events.ndjson');

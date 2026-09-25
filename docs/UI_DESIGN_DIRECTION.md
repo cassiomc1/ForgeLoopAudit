@@ -34,10 +34,19 @@ alignment carry hierarchy instead of decorative effects.
 
 ## Current navigation and trust surfaces
 
-The main navigation is Audit Summary, Project Timeline, Findings, Tasks, Evidence, Quality,
-Policy & Trust, Audit History, Reports, Repository Search, Diagnostics and
-Settings. Selected-task detail includes Contract, Lifecycle, Events,
-Executions, Continuity, Actions and Task Boundaries.
+The main navigation is Audit Summary, Projects, Task Board, Project Timeline,
+Findings, Tasks, Evidence, Quality, Policy & Trust, Audit History, Reports,
+Repository Search, Diagnostics and Settings. Selected-task detail includes
+Contract, Lifecycle, Events, Executions, Continuity, Actions and Task
+Boundaries.
+
+The Projects screen owns the multi-project workspace: a project is registered by
+an absolute path, is either opened for deep canonical inspection or saved while
+staying tracked, and every registered project keeps a live, read-only session so
+its status stays current while another project is open. The Task Board is a
+read-only projection of canonical ForgeLoop phases: one column per status, one
+card per task, filtered by a single project or shown across all of them. Neither
+surface writes lifecycle state, and neither accepts a drop.
 
 Trust surfaces keep these concepts separate:
 
