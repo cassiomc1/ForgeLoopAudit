@@ -9,15 +9,29 @@ authority and `.forgeloop/` remains the source of truth.
 
 ## Current release
 
-The current release candidate is `v0.3.0-rc.2`, aligned to vendored ForgeLoop `1.13.0` at immutable source commit
-`4fbc9f1463c66f0250f46cb76bc4d0c389c8c83c` (protocol v1, schema v1 and
+The current release candidate is `v0.3.0-rc.3`, aligned to vendored ForgeLoop `1.14.0` at immutable source commit
+`6daf42e69b41b32546dba8cc28ff18b4691f7b83` (protocol v1, schema v1 and
 Integration API v1). The vendored archive and schema provenance are checked by
 `npm run verify:forgeloop-lineage` and `npm run protocol:schemas:verify`.
 
-ForgeLoop `1.13.0` adds deterministic multi-language and nested-project detection and
-the canonical `flutter` specialist guide. ForgeLoopAudit reads and preserves
-canonical selected guide IDs in route/context, but does not classify Flutter projects,
-select guides, or treat guide selection as evidence, authority or completion.
+ForgeLoop `1.14.0` adds a provider-neutral `providerExtensions` architecture, a
+bounded read-only **Audit UX read model** (`task/audit-view`), explicit
+`task-abandon`, canonical pre-execution `contract-revise`, repository-only
+`checkpoint-revalidate`, a `REVIEWING` reconciliation bootstrap path, the
+optional advisory OpenSrc context, host-injected Browser Verification, Security
+Review and Emulated Services provider boundaries, and first-class specialist
+guides for C, C++, Java, SQL, Go, TypeScript, PHP, Swift, Node.js, Rust, Flutter
+and .NET. ForgeLoopAudit consumes the canonical Audit UX projection for task
+presentation where it is advertised, preserves canonical selected guide IDs
+without reclassifying projects, and treats every provider surface as
+observation-only metadata. It never invokes providers, installs them, or turns
+their output into lifecycle state, ownership, claims, evidence or completion.
+
+ForgeLoop's package metadata is `license: UNLICENSED` with
+`publishConfig.access: restricted`. The vendored archive is a controlled local
+runtime copy of the public Integration API; ForgeLoopAudit never claims ForgeLoop
+is publicly licensed, publicly published, or freely redistributable, and it
+never copies ForgeLoop-owned license files.
 
 The release is an unsigned preview. Checksums, the lockfile SBOM and exact
 source lineage are verification artifacts; none of them implies signing,
@@ -36,10 +50,18 @@ than being inferred.
 
 Canonical ForgeLoop results, deterministic ForgeLoopAudit-derived findings and
 local application observations are labelled separately. The optional advisory context
-capability is host-provided metadata only; the auditor does not load memory or invoke
-recall, and it remains non-authoritative.
+capability — including the OpenSrc adapter — is host-provided metadata only; the auditor
+does not load memory or invoke recall, and it remains non-authoritative.
 Repository Index/Search is an engineering discovery surface only, never audit
 evidence or lifecycle authority.
+
+Task lifecycle presentation comes from canonical ForgeLoop projections. An
+abandoned task is shown as **ABANDONED**: abandonment releases claims through the
+canonical recovery ownership model and is never rendered as completion,
+publication, or evidence. Contract revisions and checkpoint revalidations are
+rendered as provenance refreshes, never as new execution or completion, and
+artifacts invalidated by a revision are never shown as current authoritative
+state.
 
 ## Run the web interface
 
@@ -81,10 +103,11 @@ chosen destination.
 ## Demo project
 
 The generated [`demo/`](./demo) directory is the schema-valid ForgeShop fixture
-used by screenshots and browser smoke tests. It contains six intentional
-scenarios: complete, verifying, executing, blocked/recovery, planned and
-security-policy work. Real schema, artifact, gate, integrity and policy errors
-remain real failures.
+used by screenshots and browser smoke tests. It contains eight intentional
+scenarios, including complete, verifying, executing, blocked/recovery, planned,
+security-policy, caller-abandoned and contract-revision/checkpoint-revalidation
+work. Real schema, artifact, gate, integrity and policy errors remain real
+failures.
 
 | Task | Demonstrates |
 |---|---|
@@ -94,6 +117,8 @@ remain real failures.
 | TASK-004 | Recovery, continuity and canonical handoff receipt |
 | TASK-005 | Planned performance work |
 | TASK-006 | Security policy and successful completion |
+| TASK-007 | Caller abandonment rendered distinctly, never as completion |
+| TASK-008 | Pre-execution contract revision and checkpoint revalidation |
 
 Regenerate and verify the fixture with:
 

@@ -33,6 +33,7 @@ import type {
   ResponsibilityView,
   TaskActionsView,
   TaskAttestationView,
+  TaskAuditViewProjection,
   TaskHandoffsView,
   TaskHistoryView,
   TaskInspectionView,
@@ -187,6 +188,7 @@ class HttpAuditClient implements ForgeLoopAuditAPI {
   getTaskVerificationScope(taskId: string): Promise<VerificationScopeView> { return this.request(`/api/v1/tasks/verification-scope/${encodeURIComponent(taskId)}`); }
   getTaskAttestation(taskId: string): Promise<TaskAttestationView> { return this.request(`/api/v1/tasks/attestation/${encodeURIComponent(taskId)}`); }
   getTaskExecutionProfileContext(taskId: string): Promise<ExecutionProfileContextView> { return this.request(`/api/v1/tasks/execution-profile/${encodeURIComponent(taskId)}`); }
+  getTaskAuditView(taskId: string): Promise<TaskAuditViewProjection> { return this.request(`/api/v1/tasks/audit-view/${encodeURIComponent(taskId)}`); }
   getTaskExecutions(taskId: string, limit?: number): Promise<ExecutionPage> { return this.request(`/api/v1/tasks/executions/${encodeURIComponent(taskId)}${limit === undefined ? '' : `?limit=${limit}`}`); }
 
   getRecentProjects(): Promise<RecentProject[]> { return this.request('/api/v1/recent-projects'); }

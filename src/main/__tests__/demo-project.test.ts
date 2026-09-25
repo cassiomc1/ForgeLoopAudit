@@ -20,7 +20,7 @@ describe('bundled demo project', () => {
     expect(detection.warnings).toEqual([]);
   });
 
-  it('loads all six tasks through the real readers with valid lifecycle phases', () => {
+  it('loads all eight tasks through the real readers with valid lifecycle phases', () => {
     const boundary = new PathBoundary(DEMO_ROOT);
     const schemaDir = resolveTrustedSchemaDirectory({ allowEnvironmentOverride: true, cwd: process.cwd() });
     const validator = new SchemaValidator(schemaDir);
@@ -31,7 +31,7 @@ describe('bundled demo project', () => {
 
     const indexer = createTaskIndexer(boundary, reader);
     const tasks = indexer.listTasks();
-    expect(tasks).toHaveLength(6);
+    expect(tasks).toHaveLength(8);
 
     const summaries = tasks.map((task) => {
       const artifacts = reader.readTaskSummaryArtifacts(task.taskKey) as unknown as RawTaskArtifacts;
@@ -40,10 +40,72 @@ describe('bundled demo project', () => {
     });
 
     const phases = summaries.map((summary) => summary.phase).sort();
-    expect(phases).toEqual(['BLOCKED', 'COMPLETE', 'COMPLETE', 'EXECUTING', 'PLANNED', 'VERIFYING']);
+    expect(phases).toEqual(['BLOCKED', 'COMPLETE', 'COMPLETE', 'EXECUTING', 'PLANNED', 'PLANNED', 'ROUTED', 'VERIFYING']);
 
     const taskIds = summaries.map((summary) => summary.taskId).sort();
-    expect(taskIds).toEqual(['TASK-001', 'TASK-002', 'TASK-003', 'TASK-004', 'TASK-005', 'TASK-006']);
+    expect(taskIds).toEqual(['TASK-001', 'TASK-002', 'TASK-003', 'TASK-004', 'TASK-005', 'TASK-006', 'TASK-007', 'TASK-008']);
+  });
+
+  it('keeps an abandoned task distinguishable from completion', () => {
+    const boundary = new PathBoundary(DEMO_ROOT);
+    const validator = new SchemaValidator(resolveTrustedSchemaDirectory({ allowEnvironmentOverride: true, cwd: process.cwd() }));
+    const reader = createProjectReader(boundary, validator);
+    const indexer = createTaskIndexer(boundary, reader);
+    const snapshotBuilder = createTaskSnapshotBuilder(
+      boundary,
+      createEventLedgerReader(boundary, validator),
+      createGateReader(boundary, validator),
+    );
+
+    const abandoned = indexer.listTasks().find((task) => task.taskId === 'TASK-007');
+    expect(abandoned).toBeDefined();
+    if (!abandoned) return;
+
+    const artifacts = reader.readTaskSummaryArtifacts(abandoned.taskKey) as unknown as RawTaskArtifacts;
+    const { summary, events } = snapshotBuilder.buildSnapshot(abandoned.taskKey, artifacts);
+
+    // Abandonment keeps the last canonical phase and is never completion.
+    expect(summary.phase).toBe('PLANNED');
+    expect(summary.publicationStatus).not.toBe('pushed');
+    const recovery = artifacts['recovery.json'] as Record<string, unknown>;
+    expect(recovery.classificationAtRecovery).toBe('ABANDONED');
+    expect(recovery.status).toBe('RECOVERED');
+    expect(recovery.authority).toEqual({ kind: 'CALLER_ACKNOWLEDGED' });
+    expect(events.some((event) => event.event === 'TASK_COMPLETED')).toBe(false);
+    expect(events.some((event) => event.event === 'COMPLETION_VALIDATED')).toBe(false);
+
+    const abandonment = events.find((event) => event.event === 'TASK_ABANDONED');
+    expect(abandonment).toBeDefined();
+    expect(abandonment?.details?.classification).toBe('ABANDONED');
+    expect(abandonment?.details?.reasonCodes).toEqual(['CALLER_ABANDONED']);
+    expect(abandonment?.details?.authorityKind).toBe('CALLER_ACKNOWLEDGED');
+  });
+
+  it('surfaces contract revision and checkpoint revalidation as provenance boundaries', () => {
+    const boundary = new PathBoundary(DEMO_ROOT);
+    const validator = new SchemaValidator(resolveTrustedSchemaDirectory({ allowEnvironmentOverride: true, cwd: process.cwd() }));
+    const reader = createProjectReader(boundary, validator);
+    const indexer = createTaskIndexer(boundary, reader);
+    const eventReader = createEventLedgerReader(boundary, validator);
+
+    const revised = indexer.listTasks().find((task) => task.taskId === 'TASK-008');
+    expect(revised).toBeDefined();
+    if (!revised) return;
+
+    const events = eventReader.readEvents(revised.taskKey);
+    const revision = events.find((event) => event.event === 'CONTRACT_REVISED');
+    expect(revision?.details?.previousPhase).toBe('PLANNED');
+    expect(revision?.details?.phase).toBe('ROUTED');
+    expect(revision?.details?.contractFingerprint).not.toBe(revision?.details?.previousContractFingerprint);
+
+    const revalidation = events.find((event) => event.event === 'CHECKPOINT_REVALIDATED');
+    expect(revalidation).toBeDefined();
+    expect(revalidation?.details?.phase).toBe('ROUTED');
+    expect(revalidation?.details?.revalidatedStateRevision).toBe((revalidation?.details?.previousStateRevision as number) + 1);
+
+    // Revalidation and revision are not execution and not completion.
+    expect(events.some((event) => event.event === 'EXECUTION_STARTED')).toBe(false);
+    expect(events.some((event) => event.event === 'TASK_COMPLETED')).toBe(false);
   });
 
   it('exposes the blocked TASK-004 recovery and cross-harness continuity state', () => {

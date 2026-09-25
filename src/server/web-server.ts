@@ -187,6 +187,7 @@ export class AuditWebServer {
       if (method === 'GET' && segments[0] === 'tasks' && segments[1] === 'verification-scope' && segments.length === 3) return this.sendJson(response, 200, { ok: true, data: await this.runtime.getTaskVerificationScope(decodeURIComponent(segments[2])) });
       if (method === 'GET' && segments[0] === 'tasks' && segments[1] === 'attestation' && segments.length === 3) return this.sendJson(response, 200, { ok: true, data: await this.runtime.getTaskAttestation(decodeURIComponent(segments[2])) });
       if (method === 'GET' && segments[0] === 'tasks' && segments[1] === 'execution-profile' && segments.length === 3) return this.sendJson(response, 200, { ok: true, data: await this.runtime.getTaskExecutionProfileContext(decodeURIComponent(segments[2])) });
+      if (method === 'GET' && segments[0] === 'tasks' && segments[1] === 'audit-view' && segments.length === 3) return this.sendJson(response, 200, { ok: true, data: await this.runtime.getTaskAuditView(decodeURIComponent(segments[2])) });
       if (method === 'GET' && segments[0] === 'tasks' && segments[1] === 'executions' && segments.length === 3) return this.sendJson(response, 200, { ok: true, data: await this.runtime.getTaskExecutions(decodeURIComponent(segments[2]), optionalInteger(url, 'limit')) });
 
       if (method === 'GET' && path === '/api/v1/repository/index-status') return this.sendJson(response, 200, { ok: true, data: await this.runtime.getRepositoryIndexStatus() });

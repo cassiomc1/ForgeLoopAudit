@@ -18,6 +18,7 @@ export function TaskRow({ task, auditSummary, isActive, isDemoProject, onClick }
   const demoScenario = isDemoProject
     ? classifyDemoScenario(task)
     : ({ kind: 'unknown' } as const);
+  const abandoned = task.recovery?.classificationAtRecovery === 'ABANDONED';
   const getPhaseIcon = (phase: ForgeLoopPhase) => {
     switch (phase) {
       case 'COMPLETE':
@@ -62,6 +63,14 @@ export function TaskRow({ task, auditSummary, isActive, isDemoProject, onClick }
         })}>
           {task.phase}
         </span>
+
+        {/* Abandonment is a distinct terminal-for-the-task outcome: it is never
+            completion, publication, or evidence. Render it as its own label. */}
+        {abandoned && (
+          <span className="phase-badge phase-badge-failed" title="ForgeLoop TASK_ABANDONED — not completed, claims released by recovery" aria-label="Abandoned task">
+            ABANDONED
+          </span>
+        )}
 
         <OwnershipBadge state={task.operationalState} />
 

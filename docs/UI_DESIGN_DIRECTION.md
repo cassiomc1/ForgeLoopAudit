@@ -3,9 +3,9 @@
 ## Goal
 
 Make ForgeLoop state readable at a glance in a calm, precise local web
-interface. The current implementation is ForgeLoopAudit `0.3.0-rc.2` aligned to
-ForgeLoop `1.13.0` at
-`4fbc9f1463c66f0250f46cb76bc4d0c389c8c83c` (protocol v1, schema v1, Integration
+interface. The current implementation is ForgeLoopAudit `0.3.0-rc.3` aligned to
+ForgeLoop `1.14.0` at
+`6daf42e69b41b32546dba8cc28ff18b4691f7b83` (protocol v1, schema v1, Integration
 API v1).
 
 ## Visual language

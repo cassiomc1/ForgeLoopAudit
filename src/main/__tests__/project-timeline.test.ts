@@ -15,7 +15,7 @@ afterEach(() => {
 function makeSnapshot(root: string): ProjectSnapshot {
   return {
     project: { name: 'Fixture', rootPath: root },
-    protocol: { protocolVersion: 1, schemaVersion: 1, packageVersion: '1.13.0', compatible: true },
+    protocol: { protocolVersion: 1, schemaVersion: 1, packageVersion: '1.14.0', compatible: true },
     health: { status: 'UNKNOWN', source: 'UNKNOWN' },
     observations: {
       taskCount: 0,
@@ -42,7 +42,7 @@ describe('project timeline derivation', () => {
     writeFileSync(join(root, 'package.json'), JSON.stringify({ dependencies: { react: '^19.0.0' } }));
     writeFileSync(join(root, 'src', 'main.tsx'), 'export const app = true;');
 
-    const timeline = await deriveProjectTimeline({ projectRoot: root, snapshot: makeSnapshot(root), audit: null, forgeLoopVersion: '1.13.0' });
+    const timeline = await deriveProjectTimeline({ projectRoot: root, snapshot: makeSnapshot(root), audit: null, forgeLoopVersion: '1.14.0' });
 
     expect(timeline.git.available).toBe(false);
     expect(timeline.events.some((event) => event.title === 'TypeScript detected' && !event.timestamp)).toBe(true);
@@ -67,7 +67,7 @@ describe('project timeline derivation', () => {
     git(root, ['add', '.']);
     git(root, ['commit', '-q', '-m', 'add worker project']);
 
-    const timeline = await deriveProjectTimeline({ projectRoot: root, snapshot: makeSnapshot(root), audit: { generatedAt: '2026-09-13T12:00:00.000Z' } as never, forgeLoopVersion: '1.13.0' });
+    const timeline = await deriveProjectTimeline({ projectRoot: root, snapshot: makeSnapshot(root), audit: { generatedAt: '2026-09-13T12:00:00.000Z' } as never, forgeLoopVersion: '1.14.0' });
 
     expect(timeline.git.available).toBe(true);
     expect(timeline.git.commitCount).toBe(2);

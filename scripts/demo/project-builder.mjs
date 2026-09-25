@@ -617,6 +617,18 @@ const TASKS = {
     startAt: '2026-08-07T14:00:00.000Z',
     phase: 'COMPLETE',
   },
+  abandoned: {
+    id: 'TASK-007',
+    title: 'Explore server-side rendering migration',
+    startAt: '2026-08-08T09:00:00.000Z',
+    phase: 'PLANNED',
+  },
+  revision: {
+    id: 'TASK-008',
+    title: 'Rework checkout contract after the retry policy change',
+    startAt: '2026-08-08T13:00:00.000Z',
+    phase: 'ROUTED',
+  },
 };
 
 function buildCatalogTask() {
@@ -1247,6 +1259,201 @@ function buildSecurityTask() {
   return { taskId, ledger, artifacts, executions };
 }
 
+function buildAbandonedTask() {
+  const t = TASKS.abandoned;
+  const taskId = t.id;
+  const releasedClaims = ['worker-implementer-3'];
+  const ledger = new EventLedgerBuilder(taskId, { startAt: t.startAt });
+  ledger.append('TASK_CREATED', { title: t.title });
+  ledger.append('CONTRACT_VALIDATED', { objective: t.title });
+  ledger.append('ROUTE_VALIDATED', { primary: 'research' });
+  ledger.append('PLAN_CREATED', { steps: ['measure hydration cost', 'prototype streaming render'] });
+  // Canonical ForgeLoop task-abandon boundary: the caller explicitly abandoned
+  // the task. This is not completion, not publication, and not evidence; the
+  // ledger records the exact abandonment details and releases claims.
+  const abandoned = ledger.append('TASK_ABANDONED', {
+    recoveryId: 'recovery-ssr-exploration-abandoned',
+    classification: 'ABANDONED',
+    reasonCodes: ['CALLER_ABANDONED'],
+    previousPhase: 'PLANNED',
+    previousRevision: 1,
+    previousHead: HEAD,
+    previousBranch: BRANCH,
+    currentHead: HEAD,
+    currentBranch: BRANCH,
+    releasedClaims,
+    authorityKind: 'CALLER_ACKNOWLEDGED',
+  });
+
+  const coverage = [
+    cov('Streaming render removes the hydration cliff on the catalog route'),
+    cov('No layout shift above 0.1 CLS after the migration'),
+  ];
+  const artifacts = {};
+  artifacts['task.json'] = taskDescriptor(taskId, t.startAt, '2026-08-08T09:40:00.000Z', releasedClaims);
+  artifacts['contract.json'] = contract(taskId, {
+    objective: 'Explore a server-side rendering migration for the storefront without shipping a partial cutover.',
+    deliverables: ['Rendering cost baseline', 'Prototype streaming render', 'Rollout and rollback plan'],
+    constraints: ['No breaking changes to existing client routes', 'Must preserve current SEO metadata'],
+    risks: ['Streaming could complicate the cart hydration boundary'],
+    verification: ['Prototype keeps LCP under 2 seconds', 'Cart hydration remains functional'],
+    successCriteria: ['A measured decision on whether to adopt server-side rendering'],
+    stopConditions: ['Abort the exploration if hydration cost cannot be reduced measurably'],
+    unresolvedDecisions: ['Renderer vendor choice'],
+    sourceRefs: ['src/app.ts'],
+  });
+  artifacts['routing-result.json'] = routingResult(taskId, 'planning', ['design', 'performance'], { planning: ['Read-only exploration before any cutover decision'] });
+  artifacts['preflight.json'] = preflight(taskId, { requiredGates: ['unit-tests'], satisfiedGates: [] });
+  artifacts['recovery.json'] = {
+    schemaVersion: 1,
+    protocolVersion: 1,
+    taskId,
+    status: 'RECOVERED',
+    recoveredAt: abandoned.at,
+    recoveryId: abandoned.details.recoveryId,
+    recoveryEventSeq: abandoned.seq,
+    classificationAtRecovery: abandoned.details.classification,
+    reasonCodes: abandoned.details.reasonCodes,
+    releasedClaims,
+    previousPhase: abandoned.details.previousPhase,
+    previousRevision: abandoned.details.previousRevision,
+    repositoryFingerprint: repositoryFingerprint(),
+    authority: { kind: abandoned.details.authorityKind },
+  };
+  artifacts['work-state.json'] = workState(taskId, {
+    phase: 'PLANNED',
+    previousPhase: 'ROUTED',
+    selectedGuides: ['design', 'performance'],
+    requiredGates: ['unit-tests'],
+    satisfiedGates: [],
+    completedSteps: ['Hydration cost baseline'],
+    pendingSteps: ['Prototype streaming render', 'Rollout decision'],
+    checks: [],
+    evidenceCoverage: coverage,
+    revision: 1,
+    lastUpdated: '2026-08-08T09:40:00.000Z',
+  });
+  artifacts['continuity.json'] = continuity(taskId, 'PLANNED', '2026-08-08T09:45:00.000Z', {
+    remainingWork: [{ id: 'ssr-prototype', summary: 'Prototype the streaming render before revisiting the decision' }],
+    knownIssues: [],
+    changedAreas: [],
+    inspectFirst: ['src/app.ts'],
+    resumeNote: 'Abandoned by the caller: keep the baseline, do not resume without an explicit new task.',
+  });
+  return { taskId, ledger, artifacts };
+}
+
+function buildRevisionTask() {
+  const t = TASKS.revision;
+  const taskId = t.id;
+  const revisedHead = 'b7c4e0d92a1f5b3c8e6d0a24f91b7c3d5e8f0a12';
+  const coverage = [
+    cov('Checkout tests pass against the revised contract'),
+    cov('Idempotency key is verified in tests'),
+  ];
+
+  // The pre-revision contract identity is the fingerprint of the contract that
+  // ForgeLoop validated before the revision, exactly like a real ledger.
+  const originalContract = contract(taskId, {
+    objective: 'Improve checkout error mapping and retry behaviour.',
+    deliverables: ['Error mapping', 'Retry policy'],
+    constraints: ['No contract change after execution starts'],
+    risks: ['Retries can duplicate orders without an idempotency key'],
+    verification: ['Checkout tests pass'],
+    successCriteria: ['Retry policy is covered by tests'],
+    stopConditions: ['Any execution start freezes the contract'],
+    unresolvedDecisions: [],
+    sourceRefs: ['src/checkout.ts'],
+  });
+  const previousContractFingerprint = canonicalFingerprint(originalContract);
+  const revisedContract = contract(taskId, {
+    objective: 'Rework the checkout contract so the retry policy and idempotency key are part of the agreed scope.',
+    deliverables: ['Revised checkout contract', 'Idempotency key requirement', 'Revised verification plan'],
+    constraints: ['Revision must stay pre-execution', 'No client code changes in this task'],
+    risks: ['Downstream planning artifacts are invalidated by the revision'],
+    verification: ['Checkout tests pass against the revised contract', 'Idempotency key is verified in tests'],
+    successCriteria: ['Revised contract is routed with fresh plan and preflight evidence'],
+    stopConditions: ['Any execution-start before the revision blocks the task'],
+    unresolvedDecisions: [],
+    sourceRefs: ['src/checkout.ts'],
+  });
+  const revisedContractFingerprint = canonicalFingerprint(revisedContract);
+  const revisedRoute = routingResult(taskId, 'implementation', ['typescript', 'test'], { implementation: ['Revised scope needs a fresh route and plan'] });
+  revisedRoute.contractFingerprint = revisedContractFingerprint;
+  const routeFingerprint = canonicalFingerprint(revisedRoute);
+  const finalWorkState = workState(taskId, {
+    phase: 'ROUTED',
+    selectedGuides: ['typescript', 'test'],
+    requiredGates: ['unit-tests'],
+    satisfiedGates: [],
+    completedSteps: ['Retry policy decision', 'Revised checkout contract'],
+    pendingSteps: ['Implement revised checkout client', 'Re-run checkout tests'],
+    checks: [],
+    evidenceCoverage: coverage,
+    revision: 2,
+    lastUpdated: '2026-08-08T14:05:00.000Z',
+    routeFingerprint,
+  });
+  // The revalidated checkpoint binds the current work-state, exactly like
+  // ForgeLoop's own checkpoint-revalidate command.
+  finalWorkState.contractFingerprint = revisedContractFingerprint;
+  finalWorkState.repositoryFingerprint = { branch: BRANCH, head: revisedHead };
+  const revalidatedStateFingerprint = canonicalFingerprint(finalWorkState);
+
+  const ledger = new EventLedgerBuilder(taskId, { startAt: t.startAt });
+  ledger.append('TASK_CREATED', { title: t.title });
+  ledger.append('CONTRACT_VALIDATED', { objective: 'Improve checkout error mapping and retry behaviour.' }, previousContractFingerprint);
+  ledger.append('ROUTE_VALIDATED', { primary: 'implementation' }, routeFingerprint);
+  ledger.append('PLAN_CREATED', { steps: ['idempotency key', 'retry policy client'] });
+  // Canonical pre-execution contract revision: the revision event carries the
+  // PLANNED -> ROUTED rewind proof and invalidates dependent artifacts.
+  ledger.append('CONTRACT_REVISED', {
+    previousContractFingerprint,
+    contractFingerprint: revisedContractFingerprint,
+    previousPhase: 'PLANNED',
+    phase: 'ROUTED',
+    previousStateRevision: 0,
+    revisedStateRevision: 1,
+    previousStateFingerprint: fingerprint(`work-state:${taskId}:pre-revision`),
+    revisedStateFingerprint: fingerprint(`work-state:${taskId}:post-revision`),
+    previousRouteFingerprint: routeFingerprint,
+  });
+  ledger.append('TRANSACTION_COMMITTED', { transactionId: 'txn-revise-checkout-contract', operation: 'contract-revise' });
+  // Canonical checkpoint revalidation for safe repository-only drift. It
+  // refreshes the checkpoint; it is not new execution and not completion.
+  ledger.append('CHECKPOINT_REVALIDATED', {
+    phase: 'ROUTED',
+    previousRepositoryFingerprint: { branch: BRANCH, head: HEAD },
+    repositoryFingerprint: { branch: BRANCH, head: revisedHead },
+    contractFingerprint: revisedContractFingerprint,
+    routeFingerprint,
+    previousStateRevision: 1,
+    revalidatedStateRevision: 2,
+    previousStateFingerprint: fingerprint(`work-state:${taskId}:post-revision`),
+    revalidatedStateFingerprint,
+  });
+  ledger.append('TRANSACTION_COMMITTED', { transactionId: 'txn-revalidate-checkout-checkpoint', operation: 'checkpoint-revalidate' });
+
+  const artifacts = {};
+  artifacts['task.json'] = taskDescriptor(taskId, t.startAt, '2026-08-08T14:05:00.000Z', []);
+  artifacts['contract.json'] = revisedContract;
+  artifacts['routing-result.json'] = revisedRoute;
+  const revisionPreflight = preflight(taskId, { requiredGates: ['unit-tests'], satisfiedGates: [] });
+  revisionPreflight.contract.fingerprint = revisedContractFingerprint;
+  artifacts['preflight.json'] = revisionPreflight;
+  artifacts['work-state.json'] = finalWorkState;
+  artifacts['continuity.json'] = continuity(taskId, 'ROUTED', '2026-08-08T14:10:00.000Z', {
+    remainingWork: [{ id: 'checkout-client', summary: 'Implement the revised checkout client against the revised contract' }],
+    knownIssues: [],
+    changedAreas: [],
+    inspectFirst: ['src/checkout.ts'],
+    resumeNote: 'Contract revised and checkpoint revalidated; earlier plan artifacts were invalidated by the revision.',
+  });
+  artifacts['continuity.json'].contractFingerprint = revisedContractFingerprint;
+  artifacts['continuity.json'].repositoryFingerprint = { branch: BRANCH, head: revisedHead };
+  return { taskId, ledger, artifacts };
+}
+
 function buildPolicyFiles() {
   const rules = {
     schemaVersion: 1,
@@ -1443,7 +1650,7 @@ export function buildForgeShopProject() {
   put('.forgeloop/policy/policy.lock', policy.lock, 'policy/policy.lock');
   put('.forgeloop/policy/capabilities.json', policy.capabilities, 'policy/capabilities.json');
 
-  const builders = [buildCatalogTask, buildCartTask, buildCheckoutTask, buildA11yTask, buildPerfTask, buildSecurityTask];
+  const builders = [buildCatalogTask, buildCartTask, buildCheckoutTask, buildA11yTask, buildPerfTask, buildSecurityTask, buildAbandonedTask, buildRevisionTask];
   let eventCount = 0;
   for (const build of builders) {
     const { taskId, ledger, artifacts: rawArtifacts, executions = [] } = build();

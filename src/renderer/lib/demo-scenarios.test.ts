@@ -8,10 +8,12 @@ const EXPECTED_SCENARIOS: Array<[string, string]> = [
   ['TASK-004', 'BLOCKED'],
   ['TASK-005', 'PLANNED'],
   ['TASK-006', 'COMPLETE'],
+  ['TASK-007', 'PLANNED'],
+  ['TASK-008', 'ROUTED'],
 ];
 
 describe('DEMO_SCENARIOS registry', () => {
-  it('contains exactly the six documented demo scenarios', () => {
+  it('contains exactly the eight documented demo scenarios', () => {
     expect(DEMO_SCENARIOS.map((s) => [s.taskId, s.expectedPhase])).toEqual(EXPECTED_SCENARIOS);
   });
 });

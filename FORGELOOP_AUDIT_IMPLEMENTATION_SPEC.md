@@ -1,16 +1,32 @@
 # ForgeLoopAudit — Current implementation and design reference
 
 This document describes the shipped web implementation. It is the current
-implementation and design reference for ForgeLoopAudit `0.3.0-rc.2`, aligned to
-ForgeLoop `1.13.0` at immutable commit
-`4fbc9f1463c66f0250f46cb76bc4d0c389c8c83c` with protocol v1, schema v1 and
+implementation and design reference for ForgeLoopAudit `0.3.0-rc.3`, aligned to
+ForgeLoop `1.14.0` at immutable commit
+`6daf42e69b41b32546dba8cc28ff18b4691f7b83` with protocol v1, schema v1 and
 Integration API v1.
 
-ForgeLoop `1.13.0` owns deterministic multi-language and nested-project detection, monorepo scope
+ForgeLoop `1.14.0` owns deterministic multi-language and nested-project detection, monorepo scope
 matching and canonical guide routing. ForgeLoopAudit consumes the resulting
 bounded route/context projection, preserves guide IDs such as `flutter`, and
 does not reimplement detection or promote selected guides to evidence,
 authority or completion.
+
+ForgeLoop `1.14.0` additionally publishes a bounded, read-only Audit UX read
+model (`task/audit-view`) and a provider-neutral, experimental
+`providerExtensions` capability. ForgeLoopAudit consumes the Audit UX projection
+for task presentation when the complete contract is advertised and displays
+provider extensions as observation metadata only. It never executes provider
+code, installs providers, or converts provider output into lifecycle,
+ownership, evidence or completion state.
+
+ForgeLoop `1.14.0` also makes task abandonment, pre-execution contract
+revision, repository-only checkpoint revalidation and the `REVIEWING`
+reconciliation bootstrap explicit canonical events. ForgeLoopAudit renders
+abandonment distinctly from completion, renders contract revisions and
+checkpoint revalidations as provenance refreshes rather than execution, and
+never shows artifacts invalidated by a contract revision as current
+authoritative state.
 
 ## Product boundary
 
@@ -38,30 +54,38 @@ discovery context only and never evidence or lifecycle authority.
 ## Runtime architecture
 
 ```text
-CLI: node dist/server/cli.mjs
-        │ loopback HTTP + one-time bootstrap token
+ForgeLoop project / .forgeloop  (canonical source of truth)
+        │
         ▼
-Local web server
+ForgeLoop public Integration API  (protocol authority)
+  ├─ canonical lifecycle / ownership / status / contract / continuity
+  ├─ canonical Audit UX read model (task/audit-view, bounded, read-only)
+  ├─ canonical observability: history / trace / reflect / inspect
+  └─ Repository Index/Search  (discovery only)
+        │
+        │  optional observation providers — OUTSIDE the authority path
+        │  (providerExtensions, advisory context, browser verification,
+        │   security review, emulated services: never invoked, never evidence)
+        ▼
+Local read-only web server (loopback)
   ├─ session/origin/host checks, CSP and static-file containment
   ├─ explicit /api/v1 routes with typed JSON envelopes
-  ├─ managed report exports in application data
+  ├─ trusted schema validation and bounded artifact readers
+  ├─ derived (clearly labelled) auditor findings and reports
   └─ SSE project-update stream with sanitized paths
         │
         ▼
-AuditRuntime
-  ├─ project detection and PathBoundary
-  ├─ trusted schema validation and bounded artifact readers
-  ├─ ForgeLoop Integration API v1 adapter
-  ├─ Chokidar watcher and snapshot refresh
-  ├─ audit/history/report services
-  └─ Repository Index/Search projection
-        │
-        ▼
-React/Vite renderer
-  ├─ typed HTTP client and EventSource subscription
-  ├─ shadcn-style code-owned UI primitives
-  └─ dark/light/system theme provider
+Browser UI on loopback
+  ├─ Audit Summary, Timeline, Findings, Tasks, Evidence, Quality
+  ├─ Policy & Trust, Audit History, Reports, Diagnostics, Settings
+  └─ canonical vs derived vs application-observation labels preserved
 ```
+
+The authority boundary is one-way and read-only: ForgeLoop owns protocol,
+lifecycle, ownership, evidence, completion, routing and mutation; the auditor
+owns presentation, validation, derived findings and reports. Provider
+observations and repository search are rendered next to canonical state but are
+never promoted into it, and `.forgeloop/` is never written by the auditor.
 
 The Project Timeline follows a separate read-only projection within the same
 boundary:

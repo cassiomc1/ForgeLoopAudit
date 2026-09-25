@@ -47,6 +47,7 @@ import type {
   ResponsibilityView,
   VerificationScopeView,
   ExecutionProfileContextView,
+  TaskAuditViewProjection,
   PolicySummary,
   RawArtifactRequest,
   RawCollectionArtifactRequest,
@@ -62,6 +63,7 @@ import { createEventLedgerReader, type EventLedgerReader } from '@main/core/even
 import { createForgeLoopIntegration, type ForgeLoopIntegrationAdapter } from '@main/core/integration/forgeloop-integration';
 import { normalizeCanonicalProtocolInfo, negotiateCompatibilityMode } from '@main/core/protocol/protocol-capabilities';
 import { runAuditReadCommand } from '@main/core/integration/audit-read-commands';
+import { projectAuditView } from '@main/core/integration/audit-ux-projection';
 import { createCanonicalObservabilityService, type CanonicalObservabilityService } from '@main/core/integration/canonical-observability';
 import { createCanonicalActionsService, type CanonicalActionsService } from '@main/core/integration/canonical-actions';
 import { createCanonicalTrajectoryService, type CanonicalTrajectoryService } from '@main/core/integration/canonical-trajectory';
@@ -550,6 +552,35 @@ export class AuditRuntime {
     return this.currentExecutionProfileContext.getContext(this.getCurrentProjectRoot()!, safeTaskId);
   }
 
+  /**
+   * Read the canonical, bounded Audit UX projection (`task/audit-view`) for one
+   * task when the capability is advertised. The result is read-only canonical
+   * presentation context; ForgeLoopAudit never derives or overrides lifecycle,
+   * evidence, ownership, or completion state from it.
+   */
+  async getTaskAuditView(taskId: string): Promise<TaskAuditViewProjection> {
+    const safeTaskId = TaskIdSchema.parse(taskId);
+    const projectRoot = this.getCurrentProjectRoot();
+    if (!this.currentIntegration || !projectRoot) throw ForgeLoopAuditError.unknown('No project open');
+    if (!this.currentIntegration.readTaskAuditView || this.currentFeatureSupport?.auditUx !== true) {
+      return {
+        available: false,
+        authority: 'UNAVAILABLE',
+        reason: 'The Audit UX read model is not advertised by this ForgeLoop capability set.',
+      };
+    }
+    try {
+      const raw = await this.currentIntegration.readTaskAuditView(projectRoot, safeTaskId, { limit: 50 });
+      return projectAuditView(raw);
+    } catch (error) {
+      return {
+        available: false,
+        authority: 'UNAVAILABLE',
+        reason: error instanceof Error ? error.message : 'Audit UX projection is unavailable for this task.',
+      };
+    }
+  }
+
   async getTaskExecutions(taskId: string, limit?: number): Promise<ExecutionPage> {
     const query = ExecutionQuerySchema.parse({ taskId, limit });
     if (!this.currentTaskIndexer || !this.currentExecutionReader) throw ForgeLoopAuditError.unknown('No project open');
@@ -593,7 +624,7 @@ export class AuditRuntime {
 
   async getRepositoryIndexStatus(): Promise<RepositoryIndexProjection> {
     if (!this.currentIntegration || !this.currentFeatureSupport?.repositoryIndex || !this.getCurrentProjectRoot()) {
-      return unavailableRepositoryIndex('ForgeLoop 1.13.0 Repository Index is not available for this project.');
+      return unavailableRepositoryIndex('ForgeLoop Repository Index is not available for this project.');
     }
     if (!this.currentIntegration.getRepositoryIndexStatus) return unavailableRepositoryIndex('The installed ForgeLoop Integration API does not expose Repository Index status.');
     return this.currentIntegration.getRepositoryIndexStatus(this.getCurrentProjectRoot()!);

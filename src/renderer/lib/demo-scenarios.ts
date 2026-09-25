@@ -57,6 +57,18 @@ export const DEMO_SCENARIOS: readonly DemoScenario[] = [
     label: 'Security lifecycle',
     summary: 'Reference scenario showing successful security-policy gates and completion.',
   },
+  {
+    taskId: 'TASK-007',
+    expectedPhase: 'PLANNED',
+    label: 'Abandoned task',
+    summary: 'Intentionally abandoned by the caller: renders TASK_ABANDONED distinctly, never as completion, publication, or evidence, with claims released by canonical recovery.',
+  },
+  {
+    taskId: 'TASK-008',
+    expectedPhase: 'ROUTED',
+    label: 'Contract revision and checkpoint revalidation',
+    summary: 'Intentionally shows a pre-execution contract revision (PLANNED to ROUTED) followed by a repository-drift checkpoint revalidation, both rendered as provenance refreshes rather than execution or completion.',
+  },
 ];
 
 const DEMO_SCENARIOS_BY_TASK = new Map(

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import type { ProjectSnapshot, TaskSummary, EventRecord, EventPage } from '@shared/domain';
 import { NoEventsState } from '../components/ui/EmptyState';
 import { cn, formatDate, shortHash } from '../lib/utils';
+import { EVENT_FILTERS, EVENT_TONE_CLASS, eventTone, matchesEventFilter } from '../lib/event-presentation';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { auditApi } from '../lib/audit-client';
 
@@ -91,27 +92,9 @@ export function Events({ snapshot, selectedTaskId, eventsRefreshToken = 0, onSel
     catch { setValidation({ schema: 'INVALID', chain: 'INVALID', scope: 'LEDGER', errors: ['Ledger validation failed'] }); }
   };
 
-  const filteredEvents = events.filter((event) => {
-    if (filter === 'all') return true;
-    if (filter === 'verification') return event.event.includes('VERIFICATION');
-    if (filter === 'lifecycle') return event.event.includes('STARTED') || event.event.includes('COMPLETED') || event.event.includes('VALIDATED');
-    if (filter === 'policy') return event.event.includes('POLICY') || event.event.includes('GATE');
-    if (filter === 'diagnosis') return event.event.includes('DIAGNOSTIC') || event.event.includes('HYPOTHESIS') || event.event.includes('INTERVENTION') || event.event.includes('REFLECTION');
-    if (filter === 'actions') return event.event.includes('ACTION');
-    if (filter === 'approvals') return event.event.includes('APPROVAL');
-    if (filter === 'trajectory') return event.event.includes('TRAJECTORY') || event.event.includes('EVALUATION') || event.event.includes('CYCLE');
-    if (filter === 'continuity') return event.event.includes('CONTINUITY') || event.event.includes('RECOVERY') || event.event.includes('SESSION');
-    if (filter === 'errors') return event.event.includes('REJECTED') || event.event.includes('BLOCKED') || event.event.includes('FAILED');
-    return true;
-  });
+  const filteredEvents = events.filter((event) => matchesEventFilter(event.event, filter));
 
-  const getEventColor = (event: string) => {
-    if (event.includes('REJECTED') || event.includes('BLOCKED') || event.includes('FAILED') || event.includes('COMMIT_UNKNOWN')) return 'text-forge-danger';
-    if (event.includes('COMPLETED') || event.includes('VALIDATED') || event.includes('SATISFIED')) return 'text-forge-success';
-    if (event.includes('ACTION') || event.includes('APPROVAL')) return 'text-forge-warning';
-    if (event.includes('STARTED') || event.includes('RECORDED')) return 'text-forge-accent';
-    return 'text-forge-text-secondary';
-  };
+  const getEventColor = (event: string) => EVENT_TONE_CLASS[eventTone(event)];
 
   if (snapshot.tasks.length === 0) {
     return <NoEventsState />;
@@ -145,7 +128,7 @@ export function Events({ snapshot, selectedTaskId, eventsRefreshToken = 0, onSel
             </select>
             <button className="btn-secondary text-xs" onClick={() => void validateLedger()}>Validate ledger</button>
           <div className="flex items-center gap-1 bg-forge-secondary-surface rounded-6 p-0.5">
-            {['all', 'verification', 'lifecycle', 'diagnosis', 'actions', 'approvals', 'trajectory', 'continuity', 'policy', 'errors'].map((f) => (
+            {EVENT_FILTERS.map((f) => (
               <button
                 key={f}
                 className={cn(

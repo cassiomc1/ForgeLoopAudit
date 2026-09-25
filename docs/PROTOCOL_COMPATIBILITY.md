@@ -2,8 +2,8 @@
 
 ForgeLoopAudit supports protocol v1, schema v1 and Integration API v1 from
 the pinned ForgeLoop source revision recorded in `schemas/provenance.json`
-(ForgeLoop **1.13.0**, commit
-`4fbc9f1463c66f0250f46cb76bc4d0c389c8c83c`). The runtime artifact registry
+(ForgeLoop **1.14.0**, commit
+`6daf42e69b41b32546dba8cc28ff18b4691f7b83`). The runtime artifact registry
 and `SUPPORTED_PROTOCOL.requiredSchemas` are contract-tested to remain
 identical. See the [trusted schema boundary](../schemas/README.md) and
 [vendored runtime lineage](../vendor/README.md) for their verification
@@ -11,9 +11,26 @@ procedures.
 
 ## Compatibility matrix
 
+| Surface | ForgeLoop | ForgeLoopAudit handling |
+|---|---|---|
+| Protocol | v1 | Read-only supported |
+| Schema | v1 | Validated/read-only |
+| Integration API | v1 | Supported |
+| Audit UX read model (`task/audit-view`) | Current (`auditUx` v1) | Canonical projection consumed for task presentation when advertised; bounded, redacted, and never an authority |
+| Provider Extensions (`providerExtensions` v1) | Current, experimental | Observation metadata only; provider-neutral, no public registry API, never invoked or installed by the auditor |
+| Browser Verification | Current, optional host-injected | Capability boundary only; ForgeLoopAudit never launches a browser or runs Agent Browser |
+| OpenSrc advisory context | Optional | Advisory metadata only; no recall execution, no lifecycle effect |
+| Security Review provider | Optional | Findings would be shown with source attribution; the auditor never invokes a provider and never invents results |
+| Emulated Services | Optional | Observation-only display; loopback/temporary-state semantics are ForgeLoop's |
+| Task abandon | Current | History/state display, released claims via canonical recovery, never completion |
+| Contract revise | Current | Historical/current contract display; dependent artifacts invalidated by the revision are never shown as current |
+| Checkpoint revalidate | Current | Timeline/read-model display as a checkpoint refresh, never new execution or completion |
+| Reviewing reconciliation bootstrap | Current | Canonical reconciliation result is displayed; the auditor never infers the bootstrap from file presence |
+| Continuity `NOT_APPLICABLE` | Current | Supported as a canonical continuity state, distinct from invalid continuity |
+
 | Project / Build | Integration API | Result |
 |---|---|---|
-| Pinned ForgeLoop build (`1.13.0 @ 4fbc9f1...`) | Integration API v1 valid (`INTEGRATION_V1`) | Full tested ForgeLoopAudit capability set, including canonical handoffs v2 with exactly-once ledger-backed acceptance, advisory context providers v1, Repository Index/Search and multi-language/nested-project routing context; protocol/schema/API remain v1 |
+| Pinned ForgeLoop build (`1.14.0 @ 6daf42e...`) | Integration API v1 valid (`INTEGRATION_V1`) | Full tested ForgeLoopAudit capability set, including the Audit UX read model, provider-extension boundaries, canonical handoffs v2 with exactly-once ledger-backed acceptance, advisory context providers v1, Repository Index/Search and multi-language/nested-project routing context; protocol/schema/API remain v1 |
 | Other protocol-v1 / Integration API v1 build | Required core capabilities present; optional capability absent | Core support remains `INTEGRATION_V1`; optional panels and verification-execution provenance are enabled only when their individual capability contracts are advertised; the affected feature is unavailable |
 | Any protocol-v1 build | Missing CORE required resources or capability drift | Rejected with `INCOMPATIBLE` (fails closed; missing core resources, unsupported recovery contract, or broken executor parity) |
 | Protocol-v1 project | Integration API unavailable | Degraded mode (`ARTIFACT_ONLY`): visual reading + schema validation; canonical ownership and optional canonical projections are unavailable |
@@ -29,10 +46,13 @@ ForgeLoopAudit explicitly distinguishes core compatibility from additive optiona
 - **Missing CORE required resources or contract drift &rarr; `INCOMPATIBLE`**: Core resources (`protocol/info`, `project/tasks`, `task/status`, `task/ownership`, `task/contract`, `task/continuity`), Integration API version mismatch, broken executor parity, or incomplete `taskClaimRecovery` fail closed to `INCOMPATIBLE`.
 - **Missing OPTIONAL resources or feature contracts &rarr; Affected feature unavailable**: Optional resources (`task/actions`, `task/action`, `task/approvals`, `task/metrics`, `task/evaluations`, `project/capability-policy`, `task/workspace-binding`, `task/handoffs`, `task/responsibility`, `task/verification-scope`, `task/attestation`) or observability command restrictions degrade individual panels/views gracefully without compromising core protocol compatibility.
 
-ForgeLoop 1.13.0 retains the Repository Index/Search architecture introduced
+ForgeLoop 1.14.0 retains the Repository Index/Search architecture introduced
 in the prior capability line, together with the canonical handoff acceptance
 and advisory context capability contracts and the additive workspace binding,
 responsibility, differential verification scope and code attestation resources.
+It adds the Audit UX read model, the provider-extension boundary, the explicit
+abandonment/contract-revision/checkpoint-revalidation lifecycle events, and the
+expanded specialist-guide set.
 ForgeLoopAudit reads these resources through selected-task, read-only adapter methods
 and keeps their failures independent. The additive features are not core
 compatibility gates: when one is missing or incomplete, the project remains
@@ -40,16 +60,33 @@ compatibility gates: when one is missing or incomplete, the project remains
 persisted verification-execution isolation provenance without creating or
 attesting isolation environments.
 
-### Flutter routing boundary
+### Provider extension boundary
 
-ForgeLoop 1.13.0 owns structured multi-language project detection,
-monorepo scope matching and selection of the canonical `flutter` specialist.
+ForgeLoop 1.14.0 advertises `providerExtensions` v1 through `protocol/info` as a
+provider-neutral, experimental capability with kinds such as `ADVISORY_CONTEXT`,
+`VERIFICATION_EXECUTION`, `BROWSER_VERIFICATION`, `SECURITY_REVIEW` and
+`PRESENTATION`. ForgeLoopAudit feature-detects this advertisement defensively
+and displays it as observation metadata only. It does not import private
+ForgeLoop provider modules, does not call `runBrowserVerification`,
+`runSecurityReview` or emulated-services adapters, does not install providers,
+and never promotes provider output to lifecycle state, ownership, claims,
+evidence, publication or completion. Unknown future provider kinds and versions
+degrade to unadvertised rather than being reinterpreted.
+
+### Routing boundary
+
+ForgeLoop 1.14.0 owns structured multi-language project detection,
+monorepo scope matching and selection of the canonical specialist guides,
+including C, C++, Java, SQL, Go, TypeScript, PHP, Swift, Node.js backend, Rust,
+Flutter and .NET/ASP.NET Core routing.
 ForgeLoopAudit accepts string-valued `guides` and `selectedGuideIds` such as
 `["flutter", "clean", "test"]`, preserves their canonical order, and leaves
 unknown additive guide IDs intact when the upstream schema permits them. The
 auditor does not parse `pubspec.yaml`, maintain a guide registry, recompute
 routing, or interpret a selected guide as evidence that tooling ran or that a
-task is complete.
+task is complete. When a route exposes the canonical
+`MANDATORY_SAFETY_GUIDE` reason, the auditor preserves it verbatim and never
+implies that a provider exclusion can override mandatory security guidance.
 
 ## Adaptive execution-profile context and efficiency observability
 
@@ -116,6 +153,7 @@ Semantic facts come exclusively from the bundled `@cassiomc1/forgeloop/integrati
 - `task/status`, `task/ownership`, `task/contract`, `task/continuity` — canonical per-task facts.
 - `task/context` — optional ForgeLoop 1.7.0 execution-profile context; ForgeLoopAudit consumes the bounded canonical projection and never classifies work locally or infers provider usage.
 - `task/workspace-binding`, `task/handoffs`, `task/responsibility`, `task/verification-scope`, `task/attestation` — optional ForgeLoop 1.10.0 boundary resources; ForgeLoopAudit consumes their canonical status without reimplementing workspace identity, handoff validation, responsibility validation, scope resolution or attestation verification.
+- `task/audit-view` — optional ForgeLoop 1.14.0 bounded Audit UX read model (`auditUx` v1); when the complete contract is advertised, ForgeLoopAudit renders the canonical lifecycle, verification, completion, ownership, integrity and timeline context. It is redacted, paginated, and never treated as an authority or a source of locally derived findings.
 - `canonicalHandoffs v2`, `advisoryContextProviders v1` — optional capability contracts; ForgeLoopAudit fails closed on incomplete trust fields and never invokes mutating handoff or recall operations.
 - `executions/exec-*.json` — bounded read-only execution detail artifacts; ForgeLoopAudit validates and displays persisted verification provenance, including recorded isolation metadata when available, without deriving sandbox semantics.
 - `history`, `trace`, `reflect`, `inspect` — canonical read-only observability projections; ForgeLoopAudit does not recompute their semantics.
@@ -134,8 +172,8 @@ Refresh the trusted schema set only from a controlled ForgeLoop checkout:
 ```bash
 node scripts/generate-schema-provenance.mjs \
   --source ../forgeloop \
-  --commit 4fbc9f1463c66f0250f46cb76bc4d0c389c8c83c \
-  --package-version 1.13.0
+  --commit 6daf42e69b41b32546dba8cc28ff18b4691f7b83 \
+  --package-version 1.14.0
 npm run protocol:schemas:verify
 ```
 

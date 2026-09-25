@@ -117,6 +117,46 @@ export interface ForgeLoopFeatureSupport {
   contextUsageObservability?: boolean;
   structuralQuality?: boolean;
   repositoryIndex?: boolean;
+  /** Bounded, read-only Audit UX read model (`task/audit-view`) is advertised. */
+  auditUx?: boolean;
+  /** Provider-neutral providerExtensions v1 advertisement (observation metadata only). */
+  providerExtensions?: boolean;
+}
+
+/** One bounded timeline entry from the canonical Audit UX read model. */
+export interface AuditUxTimelineItemView {
+  id: string;
+  sequence: number;
+  timestamp: string | null;
+  timestampQuality: 'authoritative' | 'unknown';
+  kind: string;
+  phase: string | null;
+  status: string | null;
+  title: string;
+  summary: string;
+  category: string;
+}
+
+/**
+ * Presentation projection of the canonical, bounded `task/audit-view` read
+ * model. Every field is read-only canonical context; nothing here carries
+ * lifecycle, evidence, ownership, completion, or mutation authority.
+ */
+export interface TaskAuditViewProjection {
+  available: boolean;
+  authority: 'CANONICAL_READ_ONLY' | 'UNAVAILABLE';
+  reason?: string;
+  schemaVersion?: number;
+  auditStatus?: string;
+  phase?: string | null;
+  status?: string | null;
+  nextAction?: string | null;
+  terminal?: boolean;
+  completion?: { state: string; valid: boolean };
+  ownership?: { claimState: string | null; mutationAllowed: boolean; ownershipValid: boolean };
+  verification?: { checkCount: number; totalAttempts: number; failedAttempts: number };
+  integrity?: { valid: boolean; reasonCodes: string[] };
+  timeline?: { totalAvailable: number; truncated: boolean; items: AuditUxTimelineItemView[] };
 }
 
 export type RepositoryIndexHealth =
@@ -1250,6 +1290,7 @@ export interface ForgeLoopAuditAPI {
   getTaskAttestation(taskId: string): Promise<TaskAttestationView>;
   getTaskContinuityLint(taskId: string): Promise<ContinuityLintView>;
   getTaskExecutionProfileContext(taskId: string): Promise<ExecutionProfileContextView>;
+  getTaskAuditView(taskId: string): Promise<TaskAuditViewProjection>;
   getTaskExecutions(taskId: string, limit?: number): Promise<ExecutionPage>;
   getDiagnostics(): Promise<AuditRuntimeDiagnostics>;
   getAppVersion(): Promise<string>;

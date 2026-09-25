@@ -2,7 +2,7 @@
 
 ## Scope completed
 
-ForgeLoopAudit `0.3.0-rc.2` now uses a local loopback web host and browser
+ForgeLoopAudit `0.3.0-rc.3` now uses a local loopback web host and browser
 renderer aligned to ForgeLoop `1.12.0` at commit
 `ea362768dacfe885b1cc2729dd32ee661d60008f`. The vendored package is the local
 archive `vendor/cassiomc1-forgeloop-1.12.0-ea36276.tgz`; its SHA-256 is

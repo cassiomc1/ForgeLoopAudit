@@ -133,6 +133,41 @@ export interface ForgeLoopRepositoryIndexFeatureSummary {
   resource: string;
 }
 
+export interface ForgeLoopAuditUxFeatureSummary {
+  version: number;
+  supported: boolean;
+  readOnly: boolean;
+  resource: string;
+  timeline: boolean;
+  lifecycleAuthority: boolean;
+  evidenceAuthority: boolean;
+  completionAuthority: boolean;
+  mutationAuthority: boolean;
+  externalExecution: boolean;
+}
+
+/**
+ * Provider-neutral, experimental `providerExtensions` v1 advertisement from the
+ * canonical `protocol/info` feature block. ForgeLoopAudit only ever displays
+ * this as observation metadata; provider kinds never become lifecycle,
+ * evidence, ownership, or completion authority and are never invoked here.
+ */
+export interface ForgeLoopProviderExtensionsFeatureSummary {
+  version: number;
+  supported: boolean;
+  providerNeutral: boolean;
+  maturity: string;
+  publicRegistryApi: boolean;
+  packageSubpathExported: boolean;
+  autoInstall: boolean;
+  lifecycleAuthority: boolean;
+  completionAuthority: boolean;
+  evidenceAuthority: boolean;
+  providerKinds: string[];
+  resultBoundary: string;
+  cancellation: string;
+}
+
 export interface ForgeLoopCommandCapabilitySummary {
   name: string;
   baseRiskClass?: string;
@@ -161,6 +196,7 @@ export interface ForgeLoopCapabilitiesSummary {
     codeAttestation?: ForgeLoopCodeAttestationFeatureSummary;
     structuralQuality?: ForgeLoopStructuralQualityFeatureSummary;
     repositoryIndex?: ForgeLoopRepositoryIndexFeatureSummary;
+    auditUx?: ForgeLoopAuditUxFeatureSummary;
   };
   resources: string[];
   commands?: ForgeLoopCommandCapabilitySummary[];

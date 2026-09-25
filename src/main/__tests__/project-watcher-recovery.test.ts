@@ -73,10 +73,13 @@ describe('watcher recovery and execution artifacts', () => {
         join(root, '.forgeloop', 'task-state', TASK_KEY, 'executions', 'exec-1.json'),
         JSON.stringify({ schemaVersion: 1 }),
       );
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      expect(events).toEqual(expect.arrayContaining([
-        expect.objectContaining({ type: 'execution-changed', taskKey: TASK_KEY }),
-      ]));
+      // Wait for the canonical event instead of assuming a fixed filesystem
+      // notification latency: chokidar delivery timing varies per platform.
+      await waitForEvent(events, (event) => (
+        typeof event === 'object' && event !== null
+          && (event as { type?: string }).type === 'execution-changed'
+          && (event as { taskKey?: string }).taskKey === TASK_KEY
+      ));
       expect(events).not.toEqual(expect.arrayContaining([
         expect.objectContaining({ type: 'artifact-changed', artifact: 'exec-1.json' }),
       ]));

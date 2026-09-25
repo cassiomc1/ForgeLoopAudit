@@ -23,7 +23,7 @@ const REQUIRED_FILES = [
   'tests/checkout.test.ts',
 ];
 
-const EXPECTED_PHASES = ['COMPLETE', 'VERIFYING', 'EXECUTING', 'BLOCKED', 'PLANNED'];
+const EXPECTED_PHASES = ['COMPLETE', 'VERIFYING', 'EXECUTING', 'BLOCKED', 'PLANNED', 'ROUTED'];
 
 const SCHEMA_BY_FILE = {
   'config.json': 'config.json',
@@ -313,6 +313,8 @@ const EXPECTED_OWNERSHIP = {
   'TASK-004': { phase: 'BLOCKED', claimState: 'RELEASED_BY_RECOVERY', mutationAllowed: false, ownershipValid: true, effectiveClaimsEmpty: true, resumeRequired: true },
   'TASK-005': { phase: 'PLANNED', claimState: 'ACTIVE', mutationAllowed: true, ownershipValid: true },
   'TASK-006': { phase: 'COMPLETE', claimState: 'RELEASED_BY_COMPLETION', mutationAllowed: false, ownershipValid: true, effectiveClaimsEmpty: true },
+  'TASK-007': { phase: 'PLANNED', claimState: 'RELEASED_BY_RECOVERY', mutationAllowed: false, ownershipValid: true, effectiveClaimsEmpty: true, resumeRequired: true },
+  'TASK-008': { phase: 'ROUTED', claimState: 'ACTIVE', mutationAllowed: true, ownershipValid: true },
 };
 
 /**

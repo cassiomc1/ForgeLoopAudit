@@ -1,18 +1,26 @@
 # Vendored ForgeLoop runtime dependency
 
-`cassiomc1-forgeloop-1.13.0-4fbc9f1.tgz` is the packed ForgeLoop `1.13.0` runtime used
+`cassiomc1-forgeloop-1.14.0-6daf42e.tgz` is the packed ForgeLoop `1.14.0` runtime used
 by ForgeLoopAudit through the public `@cassiomc1/forgeloop/integration`
 subpath.
 
 - Source repository: `cassiomc1/forgeloop`
-- Pinned commit: `4fbc9f1463c66f0250f46cb76bc4d0c389c8c83c`
-- Package version: `1.13.0`
-- SHA-256: `1bd0be0339596eaf2ced4e210002374c7c9009c462c4dd29beb254ba1b0c078d`
+- Pinned commit: `6daf42e69b41b32546dba8cc28ff18b4691f7b83`
+- Package version: `1.14.0`
+- SHA-256: `ebfedc8d0e9d51a0ba4fbe846299523d6847c36debfdf0a16b13bb6e83ab6160`
 
-The archive is packed from the peeled immutable `v1.13.0` release commit. Its
+The archive is packed from the pinned immutable ForgeLoop `main` commit above
+(the `1.14.0` package version plus post-release repository fixes). Its
 package-boundary verifier confirms the canonical `flutter` guide and the
 complete installable-guide file closure without making ForgeLoopAudit a guide
 registry owner.
+
+ForgeLoop package metadata declares `license: UNLICENSED` and
+`publishConfig.access: restricted`. The vendored tarball exists solely so
+ForgeLoopAudit can run a local, offline copy of the public Integration API; it
+is not a redistribution of ForgeLoop under any public license, and
+ForgeLoopAudit must never claim ForgeLoop is publicly licensed or published.
+
 ForgeLoopAudit uses its Integration API v1 for canonical audit resources and
 the explicit Repository Index/Search operations. Repository discovery results
 remain engineering navigation data, never lifecycle evidence or authority.
