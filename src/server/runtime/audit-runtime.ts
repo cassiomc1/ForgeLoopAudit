@@ -643,7 +643,7 @@ export class AuditRuntime {
    */
   async openWorkspaceProject(projectPath: string, kind: ProjectKind = 'PROJECT'): Promise<ProjectWorkspace> {
     const resolved = await resolveWorkspaceProjectPath(projectPath);
-    await this.workspace.addProject(resolved, kind);
+    // `openProject` registers the project in the workspace as part of opening it.
     await this.openProject(resolved, kind);
     return this.getProjectWorkspace();
   }
@@ -859,8 +859,10 @@ export class AuditRuntime {
     await this.recentProjects.add(recentProject);
     this.currentDetection = classifyDetection(detectionResult, projectKind);
     // Opening a project also registers it in the workspace so it stays tracked
-    // and live even after the user switches to another project.
-    await this.workspace.addProject(projectRoot, projectKind);
+    // and live even after the user switches to another project. It is registered
+    // without a second watcher or snapshot build: this runtime already watches
+    // and builds it, and the workspace reports it from the deep snapshot.
+    await this.workspace.addProject(projectRoot, projectKind, { monitor: false });
     await this.workspace.setActiveProject(projectRoot);
     const initialSnapshot = await this.currentSnapshotBuilder.build();
     this.notify({

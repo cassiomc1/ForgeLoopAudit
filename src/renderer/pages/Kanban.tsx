@@ -41,26 +41,22 @@ export function Kanban({ refreshToken, scopeProjectPath = null, onOpenTask }: Ka
 
   useEffect(() => { void load(); }, [load, refreshToken]);
 
-  if (error) return <ErrorState message="Kanban board unavailable" details={error} onRetry={() => void load()} />;
-  if (!board && loading) return <LoadingState message="Building the Kanban board…" />;
+  if (!board && loading) {
+    return (
+      <div className="space-y-5 animate-fade-in">
+        <BoardHeading totalCards={0} />
+        <LoadingState message="Building the Kanban board…" />
+      </div>
+    );
+  }
 
   const columns = board?.columns ?? [];
   const totalCards = board?.totalTasks ?? 0;
 
   return (
     <div className="space-y-5 animate-fade-in">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold text-forge-text-primary">Task Board</h1>
-          <p className="mt-1 text-sm text-forge-text-muted">
-            Every task from the registered projects, grouped by its canonical ForgeLoop phase.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <Badge variant="outline">{totalCards} task{totalCards === 1 ? '' : 's'}</Badge>
-          <Badge variant="secondary">Read-only</Badge>
-        </div>
-      </div>
+      <BoardHeading totalCards={totalCards} />
+      {error && <ErrorState message="Kanban board unavailable" details={error} onRetry={() => void load()} />}
 
       <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Project filter">
         <span className="text-xs uppercase tracking-wider text-forge-text-muted">Project</span>
@@ -104,6 +100,23 @@ export function Kanban({ refreshToken, scopeProjectPath = null, onOpenTask }: Ka
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function BoardHeading({ totalCards }: { totalCards: number }) {
+  return (
+    <div className="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <h1 className="text-xl font-semibold text-forge-text-primary">Task Board</h1>
+        <p className="mt-1 text-sm text-forge-text-muted">
+          Every task from the registered projects, grouped by its canonical ForgeLoop phase.
+        </p>
+      </div>
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <Badge variant="outline">{totalCards} task{totalCards === 1 ? '' : 's'}</Badge>
+        <Badge variant="secondary">Read-only</Badge>
+      </div>
     </div>
   );
 }

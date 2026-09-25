@@ -48,6 +48,10 @@ interface WorkspaceSession {
   lastChangeAt?: string;
   refreshTimer: ReturnType<typeof setTimeout> | null;
   refreshing: Promise<ProjectSnapshot | null> | null;
+  /** True when this runtime holds a watcher for the project. */
+  monitored: boolean;
+  /** Whether a missing snapshot should be built on read by this runtime. */
+  buildOnRead: boolean;
 }
 
 /**
@@ -96,14 +100,18 @@ export class WorkspaceRuntime {
     for (const [projectPath, session] of this.sessions) {
       // Await a pending first read so the very first response already carries
       // real task counts instead of a zeroed placeholder.
-      if (!session.snapshot) await this.refreshSession(session);
+      if (!session.snapshot && session.buildOnRead) await this.refreshSession(session);
       projects.push(this.toSummary(projectPath, session));
     }
     projects.sort((a, b) => Number(b.active) - Number(a.active) || b.lastOpenedAt.localeCompare(a.lastOpenedAt));
     return {
       projects,
       activeProjectPath: this.activeProjectPath,
-      watching: [...this.sessions.values()].filter((session) => session.watcher !== null).length,
+      // The open project is watched by the runtime that owns it, so it counts
+      // as watched even though this runtime holds no watcher for it.
+      watching: [...this.sessions.values()].filter((session) => (
+        session.monitored || this.activeProjectPath === session.entry.path
+      )).length,
       updatedAt: this.lastUpdated,
     };
   }
@@ -111,9 +119,15 @@ export class WorkspaceRuntime {
   /**
    * Register a project from a user-supplied path and persist it. The path must
    * resolve to a real directory that contains a `.forgeloop` state tree.
+   *
+   * `monitor: false` registers the project without starting a second watcher or
+   * a second snapshot build. The open project is used that way: `AuditRuntime`
+   * already watches and builds it, so duplicating that work would slow startup
+   * and double the file handles for the same directory.
    */
-  async addProject(projectPath: string, kind: ProjectKind = 'PROJECT'): Promise<void> {
+  async addProject(projectPath: string, kind: ProjectKind = 'PROJECT', options: { monitor?: boolean } = {}): Promise<void> {
     await this.initialize();
+    const monitor = options.monitor ?? true;
     const resolved = await resolveWorkspaceProjectPath(projectPath);
     const timestamp = new Date().toISOString();
     const existing = this.sessions.get(resolved);
@@ -130,7 +144,7 @@ export class WorkspaceRuntime {
       // repaired project recovers without restarting the host.
       await this.detach(existing);
     }
-    await this.attach(entry);
+    await this.attach(entry, monitor);
   }
 
   async removeProject(projectPath: string): Promise<void> {
@@ -148,13 +162,43 @@ export class WorkspaceRuntime {
   async setActiveProject(projectPath: string | null): Promise<void> {
     await this.initialize();
     if (projectPath === null) {
+      // Hand the open project's monitoring back to this runtime.
+      const previous = this.activeProjectPath;
       this.activeProjectPath = null;
+      if (previous) await this.setMonitored(previous, true);
       return;
     }
     const resolved = resolve(ProjectPathSchema.parse(projectPath));
     if (!this.sessions.has(resolved)) throw ForgeLoopAuditError.projectNotForgeLoop(resolved);
     await this.store.touch(resolved, new Date().toISOString());
+    const previous = this.activeProjectPath;
     this.activeProjectPath = resolved;
+    // Exactly one runtime watches each project: the open project is watched by
+    // the runtime that owns it, and the project it replaced is watched here.
+    if (previous && previous !== resolved) await this.setMonitored(previous, true);
+    await this.setMonitored(resolved, false);
+  }
+
+  /** Start or stop this runtime's own watcher and read-through build for a project. */
+  private async setMonitored(projectPath: string, monitor: boolean): Promise<void> {
+    const session = this.sessions.get(projectPath);
+    if (!session || session.monitored === monitor) return;
+    session.monitored = monitor;
+    session.buildOnRead = monitor;
+    if (monitor) {
+      if (session.boundary && !session.watcher) {
+        session.watcher = createProjectWatcher(
+          session.boundary,
+          (event) => this.handleSessionChange(projectPath, event.type),
+          (error) => this.handleSessionError(projectPath, error),
+          () => undefined,
+        );
+        session.watcher.start();
+      }
+      await this.refreshSession(session);
+    } else if (session.watcher) {
+      await this.detach(session);
+    }
   }
 
   /** Rebuild one project from disk on demand, independent of the watcher. */
@@ -204,7 +248,7 @@ export class WorkspaceRuntime {
     return this.sessions.get(projectPath)?.snapshot ?? null;
   }
 
-  private async attach(entry: WorkspaceProjectEntry): Promise<void> {
+  private async attach(entry: WorkspaceProjectEntry, monitor = true): Promise<void> {
     const session: WorkspaceSession = {
       entry,
       boundary: null,
@@ -215,6 +259,10 @@ export class WorkspaceRuntime {
       protocolVersion: 0,
       refreshTimer: null,
       refreshing: null,
+      // A project monitored elsewhere is never built here; its authoritative
+      // snapshot comes from the runtime that owns it.
+      monitored: monitor,
+      buildOnRead: monitor,
     };
     try {
       session.boundary = new PathBoundary(entry.path);
@@ -231,14 +279,16 @@ export class WorkspaceRuntime {
         undefined,
         false,
       );
-      session.watcher = createProjectWatcher(
-        session.boundary,
-        (event) => this.handleSessionChange(entry.path, event.type),
-        (error) => this.handleSessionError(entry.path, error),
-        () => undefined,
-      );
-      session.watcher.start();
-      await this.refreshSession(session, true);
+      if (monitor) {
+        session.watcher = createProjectWatcher(
+          session.boundary,
+          (event) => this.handleSessionChange(entry.path, event.type),
+          (error) => this.handleSessionError(entry.path, error),
+          () => undefined,
+        );
+        session.watcher.start();
+        await this.refreshSession(session, true);
+      }
     } catch (error) {
       // A project that cannot be opened stays listed with an explicit error.
       // It is never rendered as healthy or silently dropped.

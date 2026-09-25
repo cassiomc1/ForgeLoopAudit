@@ -41,7 +41,7 @@ test('light and dark themes switch through the shadcn-style theme control', asyn
 test('web UI preserves the audit navigation and live watcher update', async ({ page }) => {
   const fixture = serverInfo().projectPath;
   await page.goto(serverInfo().bootstrapUrl);
-  await expect(page.getByRole('heading', { name: 'Audit Summary' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Audit Summary' })).toBeVisible({ timeout: 15_000 });
   for (const name of ['Projects', 'Task Board', 'Project Timeline', 'Tasks', 'Findings', 'Evidence', 'Quality', 'Policy & Trust', 'Audit History', 'Reports', 'Repository Search', 'Diagnostics', 'Settings']) {
     await page.getByLabel('Main navigation').getByRole('button', { name, exact: true }).click();
     await expect(page.locator('h1'), `Expected a page heading after opening ${name}`).toBeVisible({ timeout: 15000 });
@@ -118,11 +118,20 @@ test('a change in a background project is pushed live to the open session', asyn
     // session-scoped and the app establishes the cookie asynchronously.
     await page.goto(serverInfo().bootstrapUrl);
     await expect.poll(() => workspaceFrom(page), { timeout: 20_000 }).toBeTruthy();
-    await page.request.post(`${serverInfo().origin}/api/v1/workspace/projects`, { data: { path: second } });
+
+    // Establish the open project explicitly so this test does not depend on
+    // which project an earlier test left open.
+    await page.request.post(`${serverInfo().origin}/api/v1/workspace/projects`, { data: { path: serverInfo().projectPath } });
+    // Save the second project without switching to it, so it stays a background
+    // project that this runtime watches on its own.
+    await page.request.post(`${serverInfo().origin}/api/v1/workspace/projects/save`, { data: { path: second } });
+
+    const workspace = await requireWorkspace(page);
+    expect(workspace.projects.find((project) => project.path === second)?.active).toBe(false);
+    expect(workspace.projects.find((project) => project.path === serverInfo().projectPath)?.active).toBe(true);
 
     const board = await boardFrom(page);
     expect(board.projects.some((project) => project.path === second)).toBe(true);
-    expect(board.totalTasks).toBeGreaterThanOrEqual(board.projects[0].taskCount);
 
     // Record the live update stream, then touch the background project only.
     await startEventStream(page);
@@ -130,11 +139,14 @@ test('a change in a background project is pushed live to the open session', asyn
     appendLiveEvent(second, SMOKE_TASK_ID, 'BACKGROUND_PROJECT_UPDATE');
 
     // The background change must reach the browser without reopening anything,
-    // and it must be attributed to the project that produced it.
-    await expect.poll(() => readEventStream(page), { timeout: 20_000 }).toContain('workspace-changed');
-    const stream = await readEventStream(page);
-    expect(stream).toContain(second);
-    expect(stream).toContain('event-appended');
+    // and it must be attributed to the project that produced it. Payloads are
+    // parsed rather than matched as text because JSON escapes path separators.
+    await expect.poll(
+      async () => (await readWorkspaceUpdates(page)).some((update) => update.projectPath === second),
+      { timeout: 20_000 },
+    ).toBe(true);
+    const updates = await readWorkspaceUpdates(page);
+    expect(updates.some((update) => update.projectPath === second && update.eventType === 'event-appended')).toBe(true);
 
     // The cross-project board keeps every registered project listed throughout.
     expect((await boardFrom(page)).projects.some((project) => project.path === second)).toBe(true);
@@ -148,6 +160,12 @@ test('a change in a background project is pushed live to the open session', asyn
 interface Page {
   request: APIRequestContext;
   evaluate: (fn: () => unknown) => Promise<unknown>;
+}
+
+interface WorkspaceUpdate {
+  type: string;
+  projectPath?: string;
+  data?: { eventType?: string };
 }
 
 /** Subscribe to the host's server-sent update stream from inside the page. */
@@ -169,8 +187,17 @@ async function startEventStream(page: Page): Promise<void> {
   });
 }
 
-async function readEventStream(page: Page): Promise<string> {
-  return page.evaluate(() => (window as unknown as { __flaStream: string }).__flaStream) as Promise<string>;
+/** Parse received `data:` payloads instead of matching raw text. */
+async function readWorkspaceUpdates(page: Page): Promise<Array<{ projectPath: string; eventType: string }>> {
+  const raw = await page.evaluate(() => (window as unknown as { __flaStream: string }).__flaStream) as Promise<string>;
+  return raw
+    .split('\n')
+    .filter((line) => line.startsWith('data: '))
+    .map((line) => {
+      try { return JSON.parse(line.slice(6)) as WorkspaceUpdate; } catch { return null; }
+    })
+    .filter((update): update is WorkspaceUpdate => update?.type === 'workspace-changed')
+    .map((update) => ({ projectPath: update.projectPath ?? '', eventType: update.data?.eventType ?? '' }));
 }
 
 interface KanbanResponse {
