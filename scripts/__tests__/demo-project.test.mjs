@@ -79,9 +79,9 @@ test('committed demo matches generator output exactly', () => {
 test('demo passes full protocol verification', () => {
   const result = verifyDemoProject(DEMO_ROOT);
   assert.deepEqual(result.errors, []);
-  assert.equal(result.stats.tasks, 6);
-  assert.ok(result.stats.events >= 40 && result.stats.events <= 80, `expected 40-80 events, found ${result.stats.events}`);
-  for (const phase of ['COMPLETE', 'VERIFYING', 'EXECUTING', 'BLOCKED', 'PLANNED']) {
+  assert.equal(result.stats.tasks, 8);
+  assert.ok(result.stats.events >= 40 && result.stats.events <= 100, `expected 40-100 events, found ${result.stats.events}`);
+  for (const phase of ['COMPLETE', 'VERIFYING', 'EXECUTING', 'BLOCKED', 'PLANNED', 'ROUTED']) {
     assert.ok(result.stats.phases.includes(phase), `expected phase ${phase} to be represented`);
   }
   assert.equal(result.stats.sessions, 2);
