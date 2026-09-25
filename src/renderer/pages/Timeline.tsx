@@ -99,10 +99,31 @@ export function Timeline({ refreshToken }: TimelineProps) {
     return () => observer.disconnect();
   }, [events]);
 
-  if (error) return <ErrorState message="Project timeline unavailable" details={error} onRetry={() => window.location.reload()} />;
-  if (!timeline) return <LoadingState message={LOADING_MESSAGES[loadingPhase]} />;
+  if (!timeline) {
+    // The heading stays rendered so the page never loses its title while the
+    // project is being re-read.
+    return (
+      <div className="mx-auto max-w-5xl space-y-6 animate-fade-in">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-forge-accent">Project evolution</p>
+          <h1 className="mt-2 text-2xl font-semibold text-forge-text-primary">Project Timeline</h1>
+        </div>
+        {error
+          ? <ErrorState message="Project timeline unavailable" details={error} onRetry={() => window.location.reload()} />
+          : <LoadingState message={LOADING_MESSAGES[loadingPhase]} />}
+      </div>
+    );
+  }
   if (timeline.events.length === 0) {
-    return <EmptyState title="No timeline milestones available" description="ForgeLoopAudit could not derive project or Git milestones from the current project." icon={<GitBranch className="h-12 w-12" />} />;
+    return (
+      <div className="mx-auto max-w-5xl space-y-6 animate-fade-in">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-forge-accent">Project evolution</p>
+          <h1 className="mt-2 text-2xl font-semibold text-forge-text-primary">{timeline.project.name} Timeline</h1>
+        </div>
+        <EmptyState title="No timeline milestones available" description="ForgeLoopAudit could not derive project or Git milestones from the current project." icon={<GitBranch className="h-12 w-12" />} />
+      </div>
+    );
   }
 
   const progress = events.length === 0 ? 0 : events.reduce((latest, event, index) => visibleEvents.has(event.id) ? Math.max(latest, index + 1) : latest, 0) / events.length;
@@ -114,6 +135,7 @@ export function Timeline({ refreshToken }: TimelineProps) {
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-forge-accent">Project evolution</p>
           <h1 className="mt-2 text-2xl font-semibold text-forge-text-primary">{timeline.project.name} Timeline</h1>
           <p className="mt-1 max-w-2xl text-sm text-forge-text-muted">How this project evolved into the architecture ForgeLoopAudit sees today.</p>
+          {error && <p className="mt-2 text-sm text-forge-danger">The latest read failed: {error}</p>}
         </div>
         <div className="flex flex-wrap gap-2 text-xs">
           <Badge variant="outline">{timeline.git.available ? `${timeline.git.commitCount ?? 'Unknown'} commits observed` : 'Git history unavailable'}</Badge>
