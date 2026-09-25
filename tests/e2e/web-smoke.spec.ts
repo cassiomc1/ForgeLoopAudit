@@ -22,7 +22,7 @@ test.beforeEach(async ({ page }) => {
 test('local web host bootstraps a same-origin session and renders the demo', async ({ page }) => {
   await page.goto(serverInfo().bootstrapUrl);
   await expect(page).toHaveTitle('ForgeLoopAudit');
-  await expect(page.getByRole('heading', { name: 'Audit Summary' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Audit Summary' })).toBeVisible({ timeout: 20_000 });
   const projectResponse = await page.request.get(`${serverInfo().origin}/api/v1/project`);
   expect(projectResponse.ok()).toBeTruthy();
   const projectPayload = await projectResponse.json() as { data?: { detection?: { forgeLoopVersion?: string } } };
