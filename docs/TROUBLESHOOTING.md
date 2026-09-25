@@ -102,3 +102,73 @@ npm run screenshots:check
 The screenshot capture uses the same web server and browser session as the
 smoke suite. A local green run still does not prove Windows/Ubuntu CI,
 publication, deployment or signed distribution.
+
+## Vendored ForgeLoop lineage mismatch
+
+`npm run verify:forgeloop-lineage` fails when the vendored archive, lockfile
+entry, schema provenance or documented baseline disagree. The expected archive
+name embeds the ForgeLoop version and the first seven characters of the pinned
+source SHA, for example
+`vendor/cassiomc1-forgeloop-1.14.0-6daf42e.tgz`. Check out the pinned ForgeLoop
+commit, run its `npm pack`, replace the archive, update `vendor/README.md` with
+the new SHA-256, regenerate `schemas/provenance.json`, and rerun both
+`npm run verify:forgeloop-lineage` and `npm run protocol:schemas:verify`. Do not
+edit lockfile integrity hashes by hand.
+
+## Schema provenance mismatch
+
+`npm run protocol:schemas:verify` fails when a trusted schema byte differs from
+its recorded hash, or when the trusted set no longer matches the artifact
+registry. Regenerate provenance only from a controlled ForgeLoop checkout with
+`scripts/generate-schema-provenance.mjs --source <forgeloop> --commit <sha>
+--package-version <version>`.
+
+## Restricted ForgeLoop package access
+
+ForgeLoop is published with `license: UNLICENSED` and
+`publishConfig.access: restricted`. `npm install @cassiomc1/forgeloop` from the
+public registry is not a supported workflow, and a registry authentication
+error is expected outside an authorized account. ForgeLoopAudit always resolves
+ForgeLoop from the controlled `vendor/` tarball; do not add a public registry
+dependency or copy ForgeLoop-owned license files.
+
+## Unsupported or unavailable provider extension
+
+`providerExtensions` is experimental and provider-neutral. When it is not
+advertised — or when a future version, provider kind or authority flag does not
+match the supported v1 contract — ForgeLoopAudit shows the feature as
+`Not advertised` and continues in `INTEGRATION_V1`. ForgeLoopAudit never imports
+private ForgeLoop provider modules, never installs a provider, and never calls
+`runBrowserVerification`, `runSecurityReview` or emulated-services adapters.
+Provider output is observation-only: it is never promoted to evidence,
+ownership, claims, publication or completion.
+
+## Task shows ABANDONED
+
+Abandonment is a canonical ForgeLoop outcome (`TASK_ABANDONED`), not a failure
+of the auditor and not a completion. The task keeps its last phase, canonical
+ownership moves to released-by-recovery, and the claims captured by the
+abandonment boundary are released. Resume requires an explicit ForgeLoop
+recovery/resume command; ForgeLoopAudit never resumes a task on its own.
+
+## Contract revision invalidates derived artifacts
+
+After a canonical `CONTRACT_REVISED` event, plan, preflight, route and gate
+artifacts bound to the previous contract fingerprint are stale. ForgeLoopAudit
+shows the revision boundary in the event history and never presents invalidated
+artifacts as current authoritative state. Re-run the canonical ForgeLoop
+routing/planning commands; do not edit the artifacts by hand.
+
+## Checkpoint revalidation state
+
+A canonical `CHECKPOINT_REVALIDATED` event records repository-only drift and
+refreshes the checkpoint binding. It is a provenance refresh, not new execution
+and not completion. If a task's work-state fingerprint, phase, revision or
+repository fingerprint disagrees with the revalidation, canonical validation
+fails closed; resolve it in ForgeLoop rather than editing `events.ndjson`.
+
+## Continuity NOT_APPLICABLE
+
+`NOT_APPLICABLE` means the optional continuity record is absent, which is valid.
+It is not the same as invalid continuity, which remains a fail-closed condition
+and is surfaced as a finding.
