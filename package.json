@@ -53,7 +53,7 @@
     "local-first"
   ],
   "author": "",
-  "license": "MIT",
+  "license": "PolyForm-Noncommercial-1.0.0",
   "dependencies": {
     "@cassiomc1/forgeloop": "file:vendor/cassiomc1-forgeloop-1.14.0-6daf42e.tgz",
     "@radix-ui/react-dropdown-menu": "^2.1.1",

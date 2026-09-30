@@ -27,7 +27,8 @@ without reclassifying projects, and treats every provider surface as
 observation-only metadata. It never invokes providers, installs them, or turns
 their output into lifecycle state, ownership, claims, evidence or completion.
 
-ForgeLoop's package metadata is `license: UNLICENSED` with
+The pinned ForgeLoop 1.14.0 archive from commit
+`6daf42e69b41b32546dba8cc28ff18b4691f7b83` records package metadata of `license: UNLICENSED` with
 `publishConfig.access: restricted`. The vendored archive is a controlled local
 runtime copy of the public Integration API; ForgeLoopAudit never claims ForgeLoop
 is publicly licensed, publicly published, or freely redistributable, and it
@@ -190,3 +191,10 @@ record and intentionally retains its old Electron-era values.
 ## ForgeLoop
 
 ForgeLoopAudit is a companion project for [ForgeLoop](https://github.com/cassiomc1/forgeloop).
+
+## License
+
+ForgeLoopAudit-owned source and documentation are licensed under the
+[PolyForm Noncommercial License 1.0.0](./LICENSE). Commercial use is not granted
+by this license. Third-party components retain their own licenses, including
+the pinned ForgeLoop archive described above.
